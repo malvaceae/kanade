@@ -38,21 +38,43 @@ class PlaybackPersistence(
   }
 
   /** 保存した状態をプレイヤーに戻す。すでに曲が入っていれば何もしない */
-  suspend fun restore(player: Player) {
+  /** 保存した再生キューと位置 */
+  class Saved(
+    val items: List<MediaItem>,
+    val index: Int,
+    val positionMs: Long,
+    val shuffle: Boolean,
+    val repeatMode: Int,
+  )
+
+  /** 保存した再生キューを読む。無ければnull */
+  suspend fun load(): Saved? {
     val ids = stateDao.queue()
-    val saved = stateDao.state() ?: return
-    if (ids.isEmpty()) return
+    val saved = stateDao.state() ?: return null
+    if (ids.isEmpty()) return null
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
     // 端末から消えた曲は除き、今の曲の位置を合わせ直す
     val currentId = ids.getOrNull(saved.currentIndex)
     val items = ids.mapNotNull { tracks[it]?.toMediaItem() }
-    if (items.isEmpty() || player.mediaItemCount > 0) return
+    if (items.isEmpty()) return null
     val index = items.indexOfFirst { it.mediaId == currentId?.toString() }
-    player.setMediaItems(items, index.coerceAtLeast(0), if (index >= 0) saved.positionMs else 0L)
+    return Saved(
+      items = items,
+      index = index.coerceAtLeast(0),
+      positionMs = if (index >= 0) saved.positionMs else 0L,
+      shuffle = saved.shuffle,
+      repeatMode = saved.repeatMode,
+    )
+  }
+
+  suspend fun restore(player: Player) {
+    val saved = load() ?: return
+    if (player.mediaItemCount > 0) return
+    player.setMediaItems(saved.items, saved.index, saved.positionMs)
     player.shuffleModeEnabled = saved.shuffle
     player.repeatMode = saved.repeatMode
     player.prepare()
-    Timber.d("再生状態を復元: %d曲, %d曲目, %dms", items.size, index, saved.positionMs)
+    Timber.d("再生状態を復元: %d曲, %d曲目, %dms", saved.items.size, saved.index, saved.positionMs)
   }
 
   override fun onEvents(player: Player, events: Player.Events) {

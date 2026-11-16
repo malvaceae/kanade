@@ -214,6 +214,21 @@ class PlaybackService : MediaSessionService() {
       return super.onCustomCommand(session, controller, customCommand, args)
     }
 
+    /**
+     * アプリが動いていないときに、システムのメディア操作やBluetoothの再生ボタンから再生を求められたら、
+     * 前回の再生キューと位置から再開する。
+     */
+    override fun onPlaybackResumption(
+      mediaSession: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      isForPlayback: Boolean,
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
+      val saved = persistence.load() ?: throw UnsupportedOperationException("再開できる再生キューがない")
+      mediaSession.player.shuffleModeEnabled = saved.shuffle
+      mediaSession.player.repeatMode = saved.repeatMode
+      MediaSession.MediaItemsWithStartPosition(saved.items, saved.index, saved.positionMs)
+    }
+
     override fun onAddMediaItems(
       mediaSession: MediaSession,
       controller: MediaSession.ControllerInfo,
