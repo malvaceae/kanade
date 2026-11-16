@@ -26,4 +26,7 @@ data class TrackEntity(
   val mime: String?,
   @ColumnInfo(name = "date_added") val dateAdded: Long,
   @ColumnInfo(name = "date_modified") val dateModified: Long,
+  /** 「Music/Album/」のようなストレージ内のフォルダー */
+  @ColumnInfo(name = "relative_path") val relativePath: String? = null,
+  val genre: String? = null,
 )

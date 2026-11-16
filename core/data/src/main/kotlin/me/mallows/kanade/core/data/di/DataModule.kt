@@ -14,6 +14,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import me.mallows.kanade.core.data.db.KanadeDatabase
 import me.mallows.kanade.core.data.db.PlaybackStateDao
+import me.mallows.kanade.core.data.db.PlaylistDao
 import me.mallows.kanade.core.data.db.TrackDao
 
 @Module
@@ -30,6 +31,9 @@ object DataModule {
 
   @Provides
   fun providePlaybackStateDao(db: KanadeDatabase): PlaybackStateDao = db.playbackStateDao()
+
+  @Provides
+  fun providePlaylistDao(db: KanadeDatabase): PlaylistDao = db.playlistDao()
 
   @Provides
   @Singleton

@@ -29,6 +29,8 @@ class MediaStoreScanner @Inject constructor(
       MediaStore.Audio.Media.DISPLAY_NAME,
       MediaStore.Audio.Media.DATE_ADDED,
       MediaStore.Audio.Media.DATE_MODIFIED,
+      MediaStore.Audio.Media.RELATIVE_PATH,
+      MediaStore.Audio.Media.GENRE,
     )
     val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
     val tracks = mutableListOf<TrackEntity>()
@@ -53,6 +55,8 @@ class MediaStoreScanner @Inject constructor(
           mime = c.string(MediaStore.Audio.Media.MIME_TYPE),
           dateAdded = c.long(MediaStore.Audio.Media.DATE_ADDED) ?: 0,
           dateModified = c.long(MediaStore.Audio.Media.DATE_MODIFIED) ?: 0,
+          relativePath = c.string(MediaStore.Audio.Media.RELATIVE_PATH),
+          genre = c.string(MediaStore.Audio.Media.GENRE).orUnknownNull(),
         )
       }
     }
