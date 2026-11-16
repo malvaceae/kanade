@@ -38,6 +38,8 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -115,6 +117,15 @@ fun PlaylistDetailScreen(
   val selecting = selected.isNotEmpty()
   var sheet by rememberSaveable { mutableStateOf<String?>(null) }
   var menuOpen by remember { mutableStateOf(false) }
+  val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+    if (uri != null) {
+      scope.launch {
+        val message = runCatching { viewModel.exportM3u(uri) }
+          .fold({ n -> res.getQuantityString(R.plurals.message_m3u_exported, n, n) }, { res.getString(R.string.message_m3u_failed) })
+        snackbar.showMessage(message)
+      }
+    }
+  }
 
   DisposableEffect(selecting) {
     barActive.value = selecting
@@ -199,6 +210,10 @@ fun PlaylistDetailScreen(
             IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
               DropdownMenuItem(text = { Text(stringResource(R.string.playlist_rename)) }, onClick = { menuOpen = false; sheet = "rename" })
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.playlist_export_m3u)) },
+                onClick = { menuOpen = false; exportLauncher.launch("${playlist?.name ?: "playlist"}.m3u8") },
+              )
               DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = { menuOpen = false; sheet = "delete" })
             }
           }

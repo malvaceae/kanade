@@ -55,6 +55,16 @@
     <string name="smart_recently_added">最近追加した曲</string>
     <string name="smart_recently_played">最近再生した曲</string>
     <string name="smart_most_played">よく再生する曲</string>
+    <string name="playlist_import_m3u">M3Uを読み込む</string>
+    <string name="playlist_export_m3u">M3Uで書き出す</string>
+    <plurals name="message_m3u_imported">
+        <item quantity="other">%1$d曲を「%2$s」に読み込みました</item>
+    </plurals>
+    <string name="message_m3u_missing">\u0020(見つからない曲: %1$d曲)</string>
+    <plurals name="message_m3u_exported">
+        <item quantity="other">%d曲を書き出しました</item>
+    </plurals>
+    <string name="message_m3u_failed">ファイルを読み書きできませんでした</string>
     <string name="playlist_new">新しいプレイリスト</string>
     <string name="playlist_name">名前</string>
     <string name="playlist_rename">名前を変更</string>

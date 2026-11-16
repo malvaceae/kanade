@@ -8,13 +8,19 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import me.mallows.kanade.core.data.db.PlaylistSummary
+import me.mallows.kanade.core.data.playlist.M3uFiles
+import me.mallows.kanade.core.data.playlist.M3uImportResult
 import me.mallows.kanade.core.data.playlist.PlaylistRepository
 
 /** プレイリストの一覧・作成・曲の追加 */
 @HiltViewModel
 class PlaylistsViewModel @Inject constructor(
   private val repository: PlaylistRepository,
+  private val m3u: M3uFiles,
 ) : ViewModel() {
+
+  suspend fun importM3u(uri: android.net.Uri): M3uImportResult = m3u.import(uri)
+
 
   val playlists: StateFlow<List<PlaylistSummary>?> =
     repository.playlists.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
