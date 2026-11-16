@@ -23,10 +23,12 @@ kotlin {
 dependencies {
   implementation(project(":core:common"))
   implementation(project(":core:data"))
+  api(project(":audio-engine"))
 
   api(libs.media3.exoplayer)
   api(libs.media3.session)
   implementation(libs.kotlinx.coroutines.guava)
+  implementation(libs.datastore.preferences)
   implementation(libs.hilt.android)
   ksp(libs.hilt.compiler)
   implementation(libs.timber)

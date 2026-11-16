@@ -1,6 +1,12 @@
 package me.mallows.kanade.playback
 
+import android.content.Context
 import android.content.Intent
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import me.mallows.kanade.audio.DspChain
+import me.mallows.kanade.audio.EqAudioProcessor
 import android.os.Bundle
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -32,6 +38,8 @@ class PlaybackService : MediaSessionService() {
 
   @Inject lateinit var trackDao: TrackDao
   @Inject lateinit var playbackStateDao: PlaybackStateDao
+  @Inject lateinit var dsp: DspChain
+  @Inject lateinit var eqSettings: EqRepository
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
@@ -40,7 +48,20 @@ class PlaybackService : MediaSessionService() {
 
   override fun onCreate() {
     super.onCreate()
-    val player = ExoPlayer.Builder(this)
+    // イコライザーを再生処理に差し込む
+    val renderers = object : DefaultRenderersFactory(this) {
+      override fun buildAudioSink(
+        context: Context,
+        enableFloatOutput: Boolean,
+        enableAudioOutputPlaybackParams: Boolean,
+      ): AudioSink = DefaultAudioSink.Builder(context)
+        .setAudioProcessorChain(EqProcessorChain(EqAudioProcessor(dsp)))
+        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+        .build()
+    }
+    scope.launch { eqSettings.settings.collect(dsp::update) }
+
+    val player = ExoPlayer.Builder(this, renderers)
       .setAudioAttributes(
         AudioAttributes.Builder()
           .setUsage(C.USAGE_MEDIA)

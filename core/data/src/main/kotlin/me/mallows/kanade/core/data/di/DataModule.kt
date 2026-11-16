@@ -36,6 +36,9 @@ object DataModule {
   fun providePlaylistDao(db: KanadeDatabase): PlaylistDao = db.playlistDao()
 
   @Provides
+  fun provideEqPresetDao(db: KanadeDatabase): me.mallows.kanade.core.data.db.EqPresetDao = db.eqPresetDao()
+
+  @Provides
   @Singleton
   fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
     PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
