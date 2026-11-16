@@ -2,6 +2,8 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.ksp)
+  alias(libs.plugins.hilt)
 }
 
 android {
@@ -53,6 +55,10 @@ dependencies {
 
   // Logging
   implementation(libs.timber)
+
+  // DI
+  implementation(libs.hilt.android)
+  ksp(libs.hilt.compiler)
 
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
