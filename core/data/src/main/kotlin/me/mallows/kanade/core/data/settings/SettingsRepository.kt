@@ -29,6 +29,13 @@ class SettingsRepository @Inject constructor(
     dataStore.edit { it[THEME_MODE] = mode.name }
   }
 
+  /** ライブラリのタブの並びと表示 ("TRACKS,!ALBUMS,..."、!は隠す)。未設定ならnull */
+  val libraryTabs: Flow<String?> = dataStore.data.map { it[LIBRARY_TABS] }
+
+  suspend fun setLibraryTabs(value: String) {
+    dataStore.edit { it[LIBRARY_TABS] = value }
+  }
+
   /** 一覧 ([category]) ごとに覚えているソート条件。未設定ならnull */
   fun sort(category: String): Flow<SortSetting?> = dataStore.data.map { prefs ->
     prefs[sortKey(category)]?.split(':')?.takeIf { it.size == 2 }?.let { SortSetting(it[0], it[1] == "desc") }
@@ -51,5 +58,6 @@ class SettingsRepository @Inject constructor(
 
   private companion object {
     val THEME_MODE = stringPreferencesKey("theme_mode")
+    val LIBRARY_TABS = stringPreferencesKey("library_tabs")
   }
 }

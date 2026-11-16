@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -76,7 +75,13 @@ fun LibraryHomeScreen(
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
   LaunchedEffect(Unit) { viewModel.scanOnce() }
-  var tab by rememberSaveable { mutableIntStateOf(0) }
+  val tabSettings by viewModel.tabs.collectAsStateWithLifecycle()
+  val visibleTabs = tabSettings.filter { it.visible }.map { it.tab }
+  var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
+  // 隠したタブを選んでいたら、先頭のタブにする
+  val current = visibleTabs.firstOrNull { it.name == selectedName } ?: visibleTabs.first()
+  val tab = visibleTabs.indexOf(current)
+  var editingTabs by rememberSaveable { mutableStateOf(false) }
 
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(
@@ -89,12 +94,13 @@ fun LibraryHomeScreen(
         modifier = Modifier.weight(1f),
       )
       IconButton(onClick = onSearch) { Icon(KanadeIcons.Search, contentDescription = stringResource(R.string.action_search)) }
+      IconButton(onClick = { editingTabs = true }) { Icon(KanadeIcons.Edit, contentDescription = stringResource(R.string.tabs_title)) }
     }
     PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp, divider = {}) {
-      LibraryTab.entries.forEachIndexed { i, t ->
+      visibleTabs.forEachIndexed { i, t ->
         Tab(
           selected = tab == i,
-          onClick = { tab = i },
+          onClick = { selectedName = t.name },
           text = { Text(stringResource(t.label)) },
           selectedContentColor = MaterialTheme.colorScheme.primary,
           unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -102,7 +108,7 @@ fun LibraryHomeScreen(
       }
     }
     Box(Modifier.weight(1f)) {
-      when (LibraryTab.entries[tab]) {
+      when (current) {
         LibraryTab.TRACKS -> TracksTab(viewModel, playingMediaStoreId, actions, bottomPadding)
         LibraryTab.ALBUMS -> AlbumsTab(viewModel, onOpenGroup, bottomPadding)
         LibraryTab.ARTISTS -> GroupsTab(viewModel, GroupKind.ARTIST, onOpenGroup, bottomPadding)
@@ -111,6 +117,9 @@ fun LibraryHomeScreen(
         LibraryTab.PLAYLISTS -> playlistsTab(bottomPadding)
       }
     }
+  }
+  if (editingTabs) {
+    TabsSheet(tabs = tabSettings, onChange = viewModel::setTabs, onDismiss = { editingTabs = false })
   }
 }
 

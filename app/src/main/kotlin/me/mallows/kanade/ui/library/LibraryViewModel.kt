@@ -37,6 +37,13 @@ class LibraryViewModel @Inject constructor(
   private fun <T> Flow<T>.state(initial: T): StateFlow<T> =
     stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
+  /** タブの並びと表示 */
+  val tabs: StateFlow<List<TabSetting>> = settings.libraryTabs.map(TabSetting::decode).state(TabSetting.decode(null))
+
+  fun setTabs(tabs: List<TabSetting>) {
+    viewModelScope.launch { settings.setLibraryTabs(TabSetting.encode(tabs)) }
+  }
+
   val trackSort: StateFlow<SortSetting?> = settings.sort(SortCategory.TRACKS).state(null)
   val albumSort: StateFlow<SortSetting?> = settings.sort(SortCategory.ALBUMS).state(null)
   val albumGrid: StateFlow<Boolean> = settings.gridView(SortCategory.ALBUMS).map { it ?: true }.state(true)
