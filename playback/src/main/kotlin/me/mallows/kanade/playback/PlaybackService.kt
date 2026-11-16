@@ -1,6 +1,10 @@
 package me.mallows.kanade.playback
 
 import android.content.Intent
+import android.os.Bundle
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -32,6 +36,7 @@ class PlaybackService : MediaSessionService() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
   private lateinit var persistence: PlaybackPersistence
+  private lateinit var sleepTimer: SleepTimer
 
   override fun onCreate() {
     super.onCreate()
@@ -54,6 +59,7 @@ class PlaybackService : MediaSessionService() {
     persistence = PlaybackPersistence(playbackStateDao, trackDao, scope)
     persistence.attach(player)
     scope.launch { persistence.restore(player) }
+    sleepTimer = SleepTimer(player, scope)
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -85,6 +91,31 @@ class PlaybackService : MediaSessionService() {
   }
 
   private inner class SessionCallback : MediaSession.Callback {
+    override fun onConnect(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo,
+    ): MediaSession.ConnectionResult {
+      val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+        .add(SleepCommand.command)
+        .build()
+      return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+        .setAvailableSessionCommands(commands)
+        .build()
+    }
+
+    override fun onCustomCommand(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      customCommand: SessionCommand,
+      args: Bundle,
+    ): ListenableFuture<SessionResult> {
+      if (customCommand.customAction == SleepCommand.ACTION) {
+        sleepTimer.set(args.getInt(SleepCommand.ARG_MINUTES), args.getBoolean(SleepCommand.ARG_END_OF_TRACK))
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+      }
+      return super.onCustomCommand(session, controller, customCommand, args)
+    }
+
     override fun onAddMediaItems(
       mediaSession: MediaSession,
       controller: MediaSession.ControllerInfo,

@@ -117,6 +117,21 @@
     <string name="search_no_results">見つかりませんでした</string>
     <string name="action_clear">消去</string>
 
+    <string name="sleep_title">スリープタイマー</string>
+    <string name="sleep_minutes">%d分後に停止</string>
+    <string name="sleep_end_of_track">この曲の終わりで停止</string>
+    <string name="sleep_cancel">タイマーを解除</string>
+    <string name="sleep_remaining">残り%d分で停止</string>
+    <string name="action_track_info">曲の情報</string>
+    <string name="info_artist">アーティスト</string>
+    <string name="info_album">アルバム</string>
+    <string name="info_format">形式</string>
+    <string name="info_sample_rate">サンプルレート</string>
+    <string name="info_bit_depth">ビット深度</string>
+    <string name="info_channels">チャンネル</string>
+    <string name="info_bitrate">ビットレート</string>
+    <string name="info_size">ファイルサイズ</string>
+
     <string name="action_move">移動</string>
     <string name="action_swap">入れ替え</string>
     <string name="action_reverse">逆順</string>

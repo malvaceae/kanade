@@ -15,6 +15,9 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
   val state: StateFlow<PlayerState> = connection.state
+  val sleep: StateFlow<PlayerConnection.Sleep> = connection.sleep
+
+  fun setSleepTimer(minutes: Int, endOfTrack: Boolean) = connection.setSleepTimer(minutes, endOfTrack)
 
   init {
     connection.connect()

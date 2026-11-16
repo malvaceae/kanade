@@ -44,7 +44,9 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import kotlinx.coroutines.launch
 import me.mallows.kanade.R
+import me.mallows.kanade.playback.PlayerConnection
 import me.mallows.kanade.playback.PlayerState
+import androidx.compose.runtime.produceState
 import me.mallows.kanade.ui.common.TrackArtwork
 import me.mallows.kanade.ui.common.audioUri
 import me.mallows.kanade.ui.common.formatDuration
@@ -62,8 +64,11 @@ fun PlayerScreen(
   onSeek: (Long) -> Unit,
   onToggleShuffle: () -> Unit,
   onCycleRepeat: () -> Unit,
+  sleep: PlayerConnection.Sleep,
+  onSetSleep: (minutes: Int, endOfTrack: Boolean) -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
+  var sheet by remember { mutableStateOf<String?>(null) }
   val target = rememberArtworkBackground(
     artworkData = state.artworkData,
     key = state.mediaStoreId,
@@ -181,7 +186,56 @@ fun PlayerScreen(
         )
       }
     }
-    Spacer(Modifier.height(40.dp))
+
+    // スリープタイマーと曲の情報
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      androidx.compose.material3.TextButton(onClick = { sheet = "sleep" }) {
+        Icon(KanadeIcons.Timer, contentDescription = null, tint = if (sleep.active) scheme.primary else scheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Text(
+          sleepLabel(sleep),
+          style = MaterialTheme.typography.bodySmall,
+          color = if (sleep.active) scheme.primary else scheme.onSurfaceVariant,
+          modifier = Modifier.padding(start = 6.dp),
+        )
+      }
+      IconButton(onClick = { sheet = "info" }) {
+        Icon(KanadeIcons.Info, contentDescription = stringResource(R.string.action_track_info), tint = scheme.onSurfaceVariant)
+      }
+    }
+    Spacer(Modifier.height(16.dp))
+  }
+
+  when (sheet) {
+    "sleep" -> SleepTimerSheet(
+      active = sleep.active,
+      onSet = { m, end -> onSetSleep(m, end); sheet = null },
+      onDismiss = { sheet = null },
+    )
+    "info" -> TrackInfoDialog(state = state, onDismiss = { sheet = null })
+  }
+}
+
+@Composable
+private fun sleepLabel(sleep: PlayerConnection.Sleep): String {
+  val until = sleep.until
+  return when {
+    sleep.endOfTrack -> stringResource(R.string.sleep_end_of_track)
+    until != null -> {
+      // 1分ごとに残り時間を更新する
+      val now by produceState(System.currentTimeMillis(), until) {
+        while (true) {
+          value = System.currentTimeMillis()
+          kotlinx.coroutines.delay(15_000)
+        }
+      }
+      val minutes = ((until - now) / 60_000 + 1).coerceAtLeast(1)
+      stringResource(R.string.sleep_remaining, minutes.toInt())
+    }
+    else -> stringResource(R.string.sleep_title)
   }
 }
 

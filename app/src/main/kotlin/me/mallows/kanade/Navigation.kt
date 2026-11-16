@@ -42,6 +42,7 @@ import me.mallows.kanade.ui.selection.TrackActions
 fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
   val backStack = rememberNavBackStack(Library)
   val player by playerViewModel.state.collectAsStateWithLifecycle()
+  val sleep by playerViewModel.sleep.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
   val bottomBarActive = remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
@@ -124,6 +125,8 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 onSeek = playerViewModel::seekTo,
                 onToggleShuffle = playerViewModel::toggleShuffle,
                 onCycleRepeat = playerViewModel::cycleRepeat,
+                sleep = sleep,
+                onSetSleep = playerViewModel::setSleepTimer,
               )
             }
           },

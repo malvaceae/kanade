@@ -168,6 +168,24 @@ class PlayerConnection @Inject constructor(
     }
   }
 
+  /** スリープタイマーの状態。[until]は止まる時刻 (ミリ秒)、[endOfTrack]は曲の終わりで止める指定 */
+  data class Sleep(val until: Long? = null, val endOfTrack: Boolean = false) {
+    val active: Boolean get() = until != null || endOfTrack
+  }
+
+  private val _sleep = MutableStateFlow(Sleep())
+  val sleep: StateFlow<Sleep> = _sleep.asStateFlow()
+
+  /** [minutes]分後に止める。[endOfTrack]なら今の曲の終わりで止める。両方なしなら解除 */
+  fun setSleepTimer(minutes: Int, endOfTrack: Boolean) = withController {
+    it.sendCustomCommand(SleepCommand.command, SleepCommand.args(minutes, endOfTrack))
+    _sleep.value = when {
+      endOfTrack -> Sleep(endOfTrack = true)
+      minutes > 0 -> Sleep(until = System.currentTimeMillis() + minutes * 60_000L)
+      else -> Sleep()
+    }
+  }
+
   /** キューの[index]番目 (プレイヤー上の位置) から再生する */
   fun playAt(index: Int) = withController {
     it.seekToDefaultPosition(index)
@@ -251,6 +269,10 @@ class PlayerConnection @Inject constructor(
   }
 
   private fun publish(player: Player) {
+    // スリープタイマーで止まった後は表示を消す
+    val sleep = _sleep.value
+    if (sleep.until != null && System.currentTimeMillis() >= sleep.until) _sleep.value = Sleep()
+    if (sleep.endOfTrack && !player.playWhenReady) _sleep.value = Sleep()
     val metadata = player.mediaMetadata
     _state.value = PlayerState(
       connected = true,
