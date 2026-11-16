@@ -1,0 +1,249 @@
+package me.mallows.kanade.ui.player
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.media3.common.Player
+import kotlinx.coroutines.launch
+import me.mallows.kanade.R
+import me.mallows.kanade.playback.PlayerState
+import me.mallows.kanade.ui.common.TrackArtwork
+import me.mallows.kanade.ui.common.audioUri
+import me.mallows.kanade.ui.common.formatDuration
+import me.mallows.kanade.ui.icons.KanadeIcons
+
+/** 再生中の曲の画面。アートワークが主役 */
+@Composable
+fun PlayerScreen(
+  state: PlayerState,
+  onClose: () -> Unit,
+  onTogglePlay: () -> Unit,
+  onNext: () -> Unit,
+  onPrevious: () -> Unit,
+  onSeek: (Long) -> Unit,
+  onToggleShuffle: () -> Unit,
+  onCycleRepeat: () -> Unit,
+) {
+  val scheme = MaterialTheme.colorScheme
+  val target = rememberArtworkBackground(
+    artworkData = state.artworkData,
+    key = state.mediaStoreId,
+    fallback = scheme.background,
+    base = scheme.background,
+  )
+  val background by animateColorAsState(target, label = "background")
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(background)
+      .safeDrawingPadding(),
+  ) {
+    // 上部
+    Row(
+      modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconButton(onClick = onClose) {
+        Icon(KanadeIcons.ChevronDown, contentDescription = stringResource(R.string.action_close), modifier = Modifier.size(26.dp))
+      }
+      Text(
+        text = state.album.orEmpty(),
+        style = MaterialTheme.typography.bodyMedium,
+        color = scheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f),
+      )
+      Spacer(Modifier.size(48.dp))
+    }
+
+    // アートワーク (左右にスワイプで曲送り)
+    BoxWithConstraints(
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .padding(horizontal = 32.dp, vertical = 16.dp),
+      contentAlignment = Alignment.Center,
+    ) {
+      val size = minOf(maxWidth, maxHeight)
+      SwipeableArtwork(
+        mediaStoreId = state.mediaStoreId,
+        onNext = onNext,
+        onPrevious = onPrevious,
+      ) {
+        val id = state.mediaStoreId
+        if (id != null) {
+          TrackArtwork(uri = audioUri(id), size = size, cornerRadius = 20.dp)
+        } else {
+          Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
+        }
+      }
+    }
+
+    // 曲名
+    Column(modifier = Modifier.padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text(
+        text = state.title.orEmpty(),
+        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Text(
+        text = state.artist ?: stringResource(R.string.unknown_artist),
+        style = MaterialTheme.typography.bodyLarge,
+        color = scheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+
+    // シークバー
+    SeekBar(state = state, onSeek = onSeek, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+
+    // 操作ボタン
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconButton(onClick = onToggleShuffle) {
+        Icon(
+          KanadeIcons.Shuffle,
+          contentDescription = stringResource(R.string.action_shuffle),
+          tint = if (state.shuffle) scheme.primary else scheme.onSurfaceVariant,
+        )
+      }
+      IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
+        Icon(KanadeIcons.Previous, contentDescription = stringResource(R.string.action_previous), modifier = Modifier.size(30.dp))
+      }
+      IconButton(
+        onClick = onTogglePlay,
+        modifier = Modifier.size(76.dp).clip(CircleShape).background(scheme.primary),
+      ) {
+        Icon(
+          if (state.isPlaying) KanadeIcons.Pause else KanadeIcons.Play,
+          contentDescription = stringResource(if (state.isPlaying) R.string.action_pause else R.string.action_play),
+          tint = scheme.onPrimary,
+          modifier = Modifier.size(32.dp),
+        )
+      }
+      IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
+        Icon(KanadeIcons.Next, contentDescription = stringResource(R.string.action_next), modifier = Modifier.size(30.dp))
+      }
+      IconButton(onClick = onCycleRepeat) {
+        Icon(
+          if (state.repeatMode == Player.REPEAT_MODE_ONE) KanadeIcons.RepeatOne else KanadeIcons.Repeat,
+          contentDescription = stringResource(R.string.action_repeat),
+          tint = if (state.repeatMode == Player.REPEAT_MODE_OFF) scheme.onSurfaceVariant else scheme.primary,
+        )
+      }
+    }
+    Spacer(Modifier.height(40.dp))
+  }
+}
+
+/** 左右のスワイプで曲を切り替えるアートワーク */
+@Composable
+private fun SwipeableArtwork(
+  mediaStoreId: Long?,
+  onNext: () -> Unit,
+  onPrevious: () -> Unit,
+  content: @Composable () -> Unit,
+) {
+  val scope = rememberCoroutineScope()
+  val offset = remember(mediaStoreId) { Animatable(0f) }
+  Box(
+    modifier = Modifier
+      .aspectRatio(1f)
+      .graphicsLayer {
+        translationX = offset.value
+        alpha = 1f - (kotlin.math.abs(offset.value) / (size.width * 1.5f)).coerceIn(0f, 0.6f)
+      }
+      .pointerInput(mediaStoreId) {
+        val threshold = size.width * 0.25f
+        detectHorizontalDragGestures(
+          onDragEnd = {
+            val value = offset.value
+            when {
+              value < -threshold -> onNext()
+              value > threshold -> onPrevious()
+            }
+            scope.launch { offset.animateTo(0f) }
+          },
+          onDragCancel = { scope.launch { offset.animateTo(0f) } },
+        ) { change, dragAmount ->
+          change.consume()
+          scope.launch { offset.snapTo(offset.value + dragAmount) }
+        }
+      },
+  ) {
+    content()
+  }
+}
+
+@Composable
+private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
+  var dragging by remember { mutableStateOf<Float?>(null) }
+  val duration = state.durationMs.coerceAtLeast(1)
+  val fraction = dragging ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f)
+  Column(modifier = modifier) {
+    Slider(
+      value = fraction,
+      onValueChange = { dragging = it },
+      onValueChangeFinished = {
+        dragging?.let { onSeek((it * duration).toLong()) }
+        dragging = null
+      },
+      colors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.onSurface,
+        activeTrackColor = MaterialTheme.colorScheme.onSurface,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+      ),
+    )
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+      val shown = dragging?.let { (it * duration).toLong() } ?: state.positionMs
+      Text(formatDuration(shown), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(formatDuration(state.durationMs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}

@@ -5,3 +5,6 @@ import kotlinx.serialization.Serializable
 
 /** 全曲一覧 */
 @Serializable data object Library : NavKey
+
+/** プレイヤー画面 */
+@Serializable data object Player : NavKey

@@ -19,6 +19,7 @@ import androidx.navigation3.ui.NavDisplay
 import me.mallows.kanade.ui.library.LibraryScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
 import me.mallows.kanade.ui.player.MiniPlayer
+import me.mallows.kanade.ui.player.PlayerScreen
 import me.mallows.kanade.ui.player.PlayerViewModel
 
 @Composable
@@ -43,17 +44,31 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
               bottomPadding = if (player.hasMedia) 96.dp else 16.dp,
             )
           }
+          entry<Player> {
+            PlayerScreen(
+              state = player,
+              onClose = { backStack.removeLastOrNull() },
+              onTogglePlay = playerViewModel::togglePlayPause,
+              onNext = playerViewModel::next,
+              onPrevious = playerViewModel::previous,
+              onSeek = playerViewModel::seekTo,
+              onToggleShuffle = playerViewModel::toggleShuffle,
+              onCycleRepeat = playerViewModel::cycleRepeat,
+            )
+          }
         },
       )
-      MiniPlayer(
-        state = player,
-        onOpen = { },
-        onTogglePlay = playerViewModel::togglePlayPause,
-        modifier = Modifier
-          .align(Alignment.BottomCenter)
-          .navigationBarsPadding()
-          .padding(bottom = 8.dp),
-      )
+      if (backStack.lastOrNull() != Player) {
+        MiniPlayer(
+          state = player,
+          onOpen = { backStack.add(Player) },
+          onTogglePlay = playerViewModel::togglePlayPause,
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(bottom = 8.dp),
+        )
+      }
     }
   }
 }

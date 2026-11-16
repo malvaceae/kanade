@@ -63,6 +63,9 @@ dependencies {
   ksp(libs.hilt.compiler)
   implementation(libs.hilt.lifecycle.viewmodel.compose)
 
+  // アートワークからの配色
+  implementation(libs.androidx.palette)
+
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
