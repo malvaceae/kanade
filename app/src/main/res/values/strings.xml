@@ -145,6 +145,31 @@
     <string name="eq_bands_description">10バンドのイコライザー。横になぞると続けて設定できます</string>
     <string name="action_open_eq">イコライザー</string>
 
+    <string name="output_section">出力</string>
+    <string name="output_device">出力先</string>
+    <string name="output_processing">処理</string>
+    <string name="output_format">出力形式</string>
+    <string name="output_supported">出力先の対応</string>
+    <string name="output_bit_perfect_switch">USBビットパーフェクト</string>
+    <string name="output_bit_perfect_switch_desc">USB DACへ、音源と同じ形式のまま出します。その間はEQと他のアプリの音は使えません</string>
+    <string name="output_processing_eq">32bit floatでEQ</string>
+    <string name="output_processing_float">32bit float (EQはオフ)</string>
+    <string name="output_processing_none">なし</string>
+    <string name="output_float">32bit float</string>
+    <string name="output_max_rate">最大%1$s</string>
+    <string name="device_speaker">スピーカー</string>
+    <string name="device_wired">有線</string>
+    <string name="device_bluetooth">Bluetooth</string>
+    <string name="device_usb">USB</string>
+    <string name="device_hdmi">HDMI</string>
+    <string name="device_other">その他</string>
+    <string name="bit_perfect_active">ビットパーフェクトで出力中</string>
+    <string name="bit_perfect_not_usb">USB DACにつないだときに使えます</string>
+    <string name="bit_perfect_unsupported_device">このUSB DACまたは端末は対応していません</string>
+    <string name="bit_perfect_waiting">次の曲から切り替わります</string>
+    <string name="bit_perfect_unsupported_format">この曲の形式には対応していません</string>
+    <string name="eq_bit_perfect_note">ビットパーフェクトで出力中のため、EQは使われていません</string>
+
     <string name="action_move">移動</string>
     <string name="action_swap">入れ替え</string>
     <string name="action_reverse">逆順</string>

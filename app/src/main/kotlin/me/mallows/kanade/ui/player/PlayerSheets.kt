@@ -1,11 +1,13 @@
 package me.mallows.kanade.ui.player
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -67,7 +69,7 @@ fun TrackInfoDialog(state: PlayerState, onDismiss: () -> Unit) {
     onDismissRequest = onDismiss,
     title = { Text(state.title.orEmpty()) },
     text = {
-      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         InfoRow(stringResource(R.string.info_artist), state.artist ?: stringResource(R.string.unknown_artist))
         InfoRow(stringResource(R.string.info_album), state.album ?: stringResource(R.string.unknown_album))
         val f = format
@@ -81,6 +83,7 @@ fun TrackInfoDialog(state: PlayerState, onDismiss: () -> Unit) {
           InfoRow(stringResource(R.string.info_bitrate), f.bitrateKbps?.let { "${it}kbps" } ?: "-")
           InfoRow(stringResource(R.string.info_size), f.sizeBytes?.let { "%.1fMB".format(it / 1_048_576.0) } ?: "-")
         }
+        OutputSection(row = { label, value -> InfoRow(label, value) })
       }
     },
     confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
@@ -89,7 +92,7 @@ fun TrackInfoDialog(state: PlayerState, onDismiss: () -> Unit) {
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-  Row(Modifier.fillMaxWidth().height(24.dp)) {
+  Row(Modifier.fillMaxWidth().heightIn(min = 24.dp)) {
     Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.4f))
     Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(0.6f))
   }

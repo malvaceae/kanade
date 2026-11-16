@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import me.mallows.kanade.audio.DspChain
@@ -18,6 +19,8 @@ import me.mallows.kanade.audio.EqPreset
 import me.mallows.kanade.audio.EqSettings
 import me.mallows.kanade.playback.EqRepository
 import me.mallows.kanade.playback.UserPreset
+import me.mallows.kanade.playback.output.BitPerfectState
+import me.mallows.kanade.playback.output.OutputMonitor
 
 /**
  * イコライザーの編集。変更はすぐに音声処理へ反映し、保存は0.3秒待ってまとめて行う
@@ -27,7 +30,13 @@ import me.mallows.kanade.playback.UserPreset
 class EqualizerViewModel @Inject constructor(
   private val repository: EqRepository,
   private val dsp: DspChain,
+  output: OutputMonitor,
 ) : ViewModel() {
+
+  /** ビットパーフェクトで出力中 (EQは通らない) */
+  val bitPerfectActive: StateFlow<Boolean> = output.info
+    .map { it.bitPerfect == BitPerfectState.ACTIVE }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
   private val _settings = MutableStateFlow(dsp.settings)
   val settings: StateFlow<EqSettings> = _settings.asStateFlow()

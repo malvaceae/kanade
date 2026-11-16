@@ -4,11 +4,24 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.FormatHolder
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import me.mallows.kanade.audio.DspChain
-import me.mallows.kanade.audio.EqAudioProcessor
+import me.mallows.kanade.playback.output.HiResAudioSink
+import me.mallows.kanade.playback.output.KanadeOutputProvider
+import me.mallows.kanade.playback.output.OutputMonitor
+import me.mallows.kanade.playback.output.OutputRouter
+import me.mallows.kanade.playback.output.OutputSettings
 import android.os.Bundle
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -43,6 +56,9 @@ class PlaybackService : MediaSessionService() {
   @Inject lateinit var playbackStateDao: PlaybackStateDao
   @Inject lateinit var dsp: DspChain
   @Inject lateinit var eqSettings: EqRepository
+  @Inject lateinit var outputRouter: OutputRouter
+  @Inject lateinit var outputMonitor: OutputMonitor
+  @Inject lateinit var outputSettings: OutputSettings
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
@@ -51,17 +67,8 @@ class PlaybackService : MediaSessionService() {
 
   override fun onCreate() {
     super.onCreate()
-    // イコライザーを再生処理に差し込む
-    val renderers = object : DefaultRenderersFactory(this) {
-      override fun buildAudioSink(
-        context: Context,
-        enableFloatOutput: Boolean,
-        enableAudioOutputPlaybackParams: Boolean,
-      ): AudioSink = DefaultAudioSink.Builder(context)
-        .setAudioProcessorChain(EqProcessorChain(EqAudioProcessor(dsp)))
-        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-        .build()
-    }
+    outputRouter.start(Handler(Looper.getMainLooper()))
+    val renderers = KanadeRenderersFactory()
     scope.launch { eqSettings.settings.collect(dsp::update) }
 
     val player = ExoPlayer.Builder(this, renderers)
@@ -84,6 +91,27 @@ class PlaybackService : MediaSessionService() {
     persistence.attach(player)
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
+
+    // ビットパーフェクトの設定。出力の形式は曲を開くときに決まるため、切り替えたら開き直す
+    scope.launch {
+      var first = true
+      outputSettings.bitPerfect.collect { enabled ->
+        outputRouter.bitPerfectEnabled = enabled
+        outputRouter.refreshDevice()
+        if (!first) reopen(player)
+        first = false
+      }
+    }
+  }
+
+  /** 再生位置を保ったまま、音声の出力を作り直す */
+  private fun reopen(player: ExoPlayer) {
+    if (player.mediaItemCount == 0 || player.playbackState == ExoPlayer.STATE_IDLE) return
+    val index = player.currentMediaItemIndex
+    val position = player.currentPosition
+    player.stop()
+    player.seekTo(index, position)
+    player.prepare()
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -103,8 +131,54 @@ class PlaybackService : MediaSessionService() {
       release()
     }
     session = null
+    outputRouter.stop()
     scope.cancel()
     super.onDestroy()
+  }
+
+  /**
+   * 音声の出力部品を差し替える。
+   * - EQは16bitに落とさずfloatで通す ([HiResAudioSink])
+   * - ビットパーフェクトのときは、AudioTrackを音源と同じ整数PCMで開く ([KanadeOutputProvider])
+   * - 音源のビット深度を出力部品に伝えるため、音声レンダラーで入力形式を受け取る
+   */
+  private inner class KanadeRenderersFactory : DefaultRenderersFactory(this@PlaybackService) {
+    private var sink: HiResAudioSink? = null
+
+    override fun buildAudioSink(
+      context: Context,
+      enableFloatOutput: Boolean,
+      enableAudioOutputPlaybackParams: Boolean,
+    ): AudioSink {
+      val provider = KanadeOutputProvider(AudioTrackAudioOutputProvider.Builder(context).build(), outputMonitor)
+      val base = DefaultAudioSink.Builder(context)
+        .setEnableFloatOutput(true)
+        .setAudioOutputProvider(provider)
+        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+        .build()
+      return HiResAudioSink(base, dsp, provider, outputRouter, outputMonitor).also { sink = it }
+    }
+
+    override fun buildAudioRenderers(
+      context: Context,
+      extensionRendererMode: Int,
+      mediaCodecSelector: MediaCodecSelector,
+      enableDecoderFallback: Boolean,
+      audioSink: AudioSink,
+      eventHandler: Handler,
+      eventListener: AudioRendererEventListener,
+      out: ArrayList<Renderer>,
+    ) {
+      val adapterFactory = getCodecAdapterFactory()
+      out += object : MediaCodecAudioRenderer(
+        context, adapterFactory, mediaCodecSelector, enableDecoderFallback, eventHandler, eventListener, audioSink,
+      ) {
+        override fun onInputFormatChanged(formatHolder: FormatHolder): DecoderReuseEvaluation? {
+          sink?.sourceFormat = formatHolder.format
+          return super.onInputFormatChanged(formatHolder)
+        }
+      }
+    }
   }
 
   /** 画面から届いたIDだけの項目を、データベースの情報で再生できる項目に置き換える */

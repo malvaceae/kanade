@@ -68,6 +68,7 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   var presetMenu by remember { mutableStateOf(false) }
   var saving by remember { mutableStateOf(false) }
   val scheme = MaterialTheme.colorScheme
+  val bitPerfectActive by viewModel.bitPerfectActive.collectAsStateWithLifecycle()
   val presetName = settings.matchingPresetName(userPresets) ?: stringResource(R.string.eq_custom)
 
   Column(
@@ -85,6 +86,14 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
         modifier = Modifier.weight(1f),
       )
       Switch(checked = settings.enabled, onCheckedChange = viewModel::setEnabled, modifier = Modifier.padding(end = 12.dp))
+    }
+    if (bitPerfectActive) {
+      Text(
+        stringResource(R.string.eq_bit_perfect_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = scheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+      )
     }
 
     // プリセット
