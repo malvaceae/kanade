@@ -29,12 +29,17 @@ suspend fun readTrackFormat(context: Context, uri: String, durationMs: Long): Tr
     val size = runCatching {
       context.contentResolver.openAssetFileDescriptor(uri.toUri(), "r")?.use { it.length }
     }.getOrNull()?.takeIf { it > 0 }
+    // 端末によってはFLACなどを展開済みのPCM (audio/raw) として返すため、そのときはファイルの種類を使う
+    val extracted = format?.getString(MediaFormat.KEY_MIME)
+    val fileMime = runCatching { context.contentResolver.getType(uri.toUri()) }.getOrNull()
+    val decoded = extracted == "audio/raw" && fileMime != null && fileMime !in WAV_MIMES
     TrackFormat(
-      mime = format?.getString(MediaFormat.KEY_MIME),
+      mime = if (decoded) fileMime else extracted,
       sampleRate = format?.intOrNull(MediaFormat.KEY_SAMPLE_RATE),
       bitDepth = format?.bitDepth(),
       channels = format?.intOrNull(MediaFormat.KEY_CHANNEL_COUNT),
-      bitrateKbps = format?.intOrNull(MediaFormat.KEY_BIT_RATE)?.div(1000)
+      // 展開済みのときのビットレートはPCMの値なので、ファイルの大きさから求める
+      bitrateKbps = format?.takeUnless { decoded }?.intOrNull(MediaFormat.KEY_BIT_RATE)?.div(1000)
         ?: size?.let { s -> if (durationMs > 0) (s * 8 / durationMs).toInt() else null },
       sizeBytes = size,
     )
@@ -44,6 +49,8 @@ suspend fun readTrackFormat(context: Context, uri: String, durationMs: Long): Tr
     extractor.release()
   }
 }
+
+private val WAV_MIMES = setOf("audio/raw", "audio/wav", "audio/x-wav", "audio/vnd.wave")
 
 private fun MediaFormat.intOrNull(key: String): Int? = if (containsKey(key)) getInteger(key) else null
 
@@ -62,7 +69,7 @@ private fun MediaFormat.bitDepth(): Int? {
 /** 「audio/flac」→「FLAC」のように短い名前にする */
 fun shortFormatName(mime: String?): String? = when (mime) {
   null -> null
-  "audio/raw", "audio/wav", "audio/x-wav" -> "WAV (PCM)"
+  "audio/raw", "audio/wav", "audio/x-wav", "audio/vnd.wave" -> "WAV (PCM)"
   "audio/mpeg" -> "MP3"
   "audio/mp4a-latm" -> "AAC"
   "audio/flac" -> "FLAC"
