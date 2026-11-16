@@ -15,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.guava.future
+import kotlinx.coroutines.launch
+import me.mallows.kanade.core.data.db.PlaybackStateDao
 import me.mallows.kanade.core.data.db.TrackDao
 
 /**
@@ -25,9 +27,11 @@ import me.mallows.kanade.core.data.db.TrackDao
 class PlaybackService : MediaSessionService() {
 
   @Inject lateinit var trackDao: TrackDao
+  @Inject lateinit var playbackStateDao: PlaybackStateDao
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
+  private lateinit var persistence: PlaybackPersistence
 
   override fun onCreate() {
     super.onCreate()
@@ -45,11 +49,17 @@ class PlaybackService : MediaSessionService() {
     session = MediaSession.Builder(this, player)
       .setCallback(SessionCallback())
       .build()
+
+    // 前回の再生キューと位置に戻し、以後の変化を保存する
+    persistence = PlaybackPersistence(playbackStateDao, trackDao, scope)
+    persistence.attach(player)
+    scope.launch { persistence.restore(player) }
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
   override fun onTaskRemoved(rootIntent: Intent?) {
+    persistence.saveNow()
     val player = session?.player
     if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
       stopSelf()
@@ -57,6 +67,7 @@ class PlaybackService : MediaSessionService() {
   }
 
   override fun onDestroy() {
+    persistence.saveNow()
     session?.run {
       player.release()
       release()

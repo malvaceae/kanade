@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import me.mallows.kanade.core.data.db.KanadeDatabase
+import me.mallows.kanade.core.data.db.PlaybackStateDao
 import me.mallows.kanade.core.data.db.TrackDao
 
 @Module
@@ -26,6 +27,9 @@ object DataModule {
 
   @Provides
   fun provideTrackDao(db: KanadeDatabase): TrackDao = db.trackDao()
+
+  @Provides
+  fun providePlaybackStateDao(db: KanadeDatabase): PlaybackStateDao = db.playbackStateDao()
 
   @Provides
   @Singleton
