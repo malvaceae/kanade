@@ -33,3 +33,4 @@ plugins {
 rootProject.name = "Kanade"
 
 include(":app")
+include(":core:common")
