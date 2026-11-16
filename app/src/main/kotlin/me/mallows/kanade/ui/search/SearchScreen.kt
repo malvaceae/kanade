@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.playback.PlaySource
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -119,6 +120,7 @@ fun SearchScreen(
         playingMediaStoreId = playingMediaStoreId,
         actions = actions,
         bottomPadding = bottomPadding,
+        source = PlaySource("search:$query", stringResource(R.string.action_search)),
         numbered = false,
         header = { ListHeader(pluralStringResource(R.plurals.track_count, results.size, results.size)) },
       )

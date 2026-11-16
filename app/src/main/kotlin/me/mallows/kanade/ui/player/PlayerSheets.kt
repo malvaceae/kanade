@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +33,7 @@ import me.mallows.kanade.ui.common.audioUri
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepTimerSheet(active: Boolean, onSet: (minutes: Int, endOfTrack: Boolean) -> Unit, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.sleep_title),
@@ -52,7 +53,7 @@ fun SleepTimerSheet(active: Boolean, onSet: (minutes: Int, endOfTrack: Boolean) 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpeedSheet(current: Float, onSet: (Float) -> Unit, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.speed_title),

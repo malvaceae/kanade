@@ -8,6 +8,7 @@ import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.playback.CurrentLyrics
 import me.mallows.kanade.playback.LyricsMonitor
 import me.mallows.kanade.playback.PlayerConnection
+import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.playback.QueueState
 import me.mallows.kanade.playback.PlayerState
 
@@ -32,10 +33,13 @@ class PlayerViewModel @Inject constructor(
     connection.connect()
   }
 
-  fun play(tracks: List<TrackEntity>, index: Int) = connection.playTracks(tracks.map { it.mediaStoreId }, index)
-  fun shufflePlay(tracks: List<TrackEntity>) {
+  val source: StateFlow<PlaySource?> = connection.source
+
+  fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource?) =
+    connection.playTracks(tracks.map { it.mediaStoreId }, index, source = source)
+  fun shufflePlay(tracks: List<TrackEntity>, source: PlaySource?) {
     if (tracks.isEmpty()) return
-    connection.playTracks(tracks.map { it.mediaStoreId }, tracks.indices.random(), shuffle = true)
+    connection.playTracks(tracks.map { it.mediaStoreId }, tracks.indices.random(), shuffle = true, source = source)
   }
   fun playNext(tracks: List<TrackEntity>) = connection.playNext(tracks.map { it.mediaStoreId })
   fun addToQueue(tracks: List<TrackEntity>) = connection.addToQueue(tracks.map { it.mediaStoreId })

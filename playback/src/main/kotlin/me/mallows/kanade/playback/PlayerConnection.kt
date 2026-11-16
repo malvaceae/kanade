@@ -60,16 +60,13 @@ data class QueueState(
   val currentIndex: Int = 0,
   val upcoming: List<QueueItem> = emptyList(),
   val shuffle: Boolean = false,
-  /** 再生元の一覧 (自分で足した曲を除く) の曲。一覧の「再生中」表示を、再生元の一覧の中だけにするために使う */
-  val context: PlayingContext = PlayingContext(),
 )
 
-/** 再生元の一覧の曲の集まり */
-data class PlayingContext(val ids: Set<Long> = emptySet(), val size: Int = 0) {
-  /** [mediaStoreIds] の一覧が再生元と同じ曲の集まりか (並べ替えやシャッフルをしても同じとみなす) */
-  fun matches(mediaStoreIds: List<Long>): Boolean =
-    size > 0 && mediaStoreIds.size == size && mediaStoreIds.all { it in ids }
-}
+/**
+ * 再生元の一覧。[key] で一覧を見分け (「再生中」の表示はこの一覧の中だけに出す)、[title] はプレイヤー画面の上部に出す。
+ * 例: key = "tracks" (すべての曲)、"group:ALBUM:12" (アルバム)、"playlist:3" (プレイリスト)
+ */
+data class PlaySource(val key: String, val title: String?)
 
 /** 画面から再生サービスを操作する窓口。MediaController経由で通知やBluetoothと同じ経路を使う */
 @Singleton
@@ -79,6 +76,10 @@ class PlayerConnection @Inject constructor(
   private val scope = MainScope()
   private val _state = MutableStateFlow(PlayerState())
   val state: StateFlow<PlayerState> = _state.asStateFlow()
+
+  private val _source = MutableStateFlow<PlaySource?>(null)
+  /** 今の再生キューを、どの一覧から再生したか。アプリを開き直した後などは分からないのでnull */
+  val source: StateFlow<PlaySource?> = _source.asStateFlow()
 
   private val _queue = MutableStateFlow(QueueState())
   val queue: StateFlow<QueueState> = _queue.asStateFlow()
@@ -123,7 +124,8 @@ class PlayerConnection @Inject constructor(
 
   /** [mediaStoreIds]を再生順に並べ、[startIndex]の曲から再生する */
   /** [shuffle] ならシャッフルをオンにする (並びはそのまま。解除すれば元の順に戻る) */
-  fun playTracks(mediaStoreIds: List<Long>, startIndex: Int, shuffle: Boolean = false) = withController {
+  fun playTracks(mediaStoreIds: List<Long>, startIndex: Int, shuffle: Boolean = false, source: PlaySource? = null) = withController {
+    _source.value = source
     it.setMediaItems(mediaStoreIds.map(::mediaItemRequest), startIndex, 0L)
     if (shuffle) it.shuffleModeEnabled = true
     it.prepare()
@@ -290,9 +292,6 @@ class PlayerConnection @Inject constructor(
       current = if (count > 0) itemAt(index) else null,
       currentIndex = index,
       upcoming = upcomingIndices.map(::itemAt),
-      context = (0 until count).map { player.getMediaItemAt(it) }.filterNot { it.isQueued }
-        .map { it.mediaId.toLongOrNull() ?: -1 }
-        .let { PlayingContext(it.toSet(), it.size) },
       shuffle = player.shuffleModeEnabled,
     )
   }

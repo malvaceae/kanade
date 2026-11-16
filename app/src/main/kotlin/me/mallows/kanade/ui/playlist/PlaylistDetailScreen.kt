@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -41,7 +42,9 @@ import androidx.compose.material3.TextButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import me.mallows.kanade.ui.common.LocalPlayingContext
+import me.mallows.kanade.ui.selection.navigationBarHeight
+import me.mallows.kanade.ui.common.LocalPlaySource
+import me.mallows.kanade.playback.PlaySource
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -144,8 +147,8 @@ fun PlaylistDetailScreen(
 
   val all = items ?: return Loading()
   // 再生元の一覧と同じときだけ「再生中」を出す
-  val playingContext = LocalPlayingContext.current
-  val playingId = if (remember(all, playingContext) { playingContext.matches(all.map { it.track.mediaStoreId }) }) playingMediaStoreId else null
+  val source = PlaySource("playlist:$playlistId", playlist?.name)
+  val playingId = if (LocalPlaySource.current?.key == source.key) playingMediaStoreId else null
   // ドラッグ中の並び。保存された結果が届いたら置き換わる
   var local by remember(all) { mutableStateOf(all) }
   val ids = remember(all) { all.map { it.entryId }.toSet() }
@@ -208,7 +211,14 @@ fun PlaylistDetailScreen(
       } else {
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
-          Spacer(Modifier.weight(1f))
+          // 題名は戻るボタンと同じ行に出す (一覧の画面とそろえる)
+          Text(
+            playlist?.name.orEmpty(),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(start = 4.dp),
+          )
           SortButton(sorted) { sheet = "sort" }
           Box {
             IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
@@ -241,7 +251,7 @@ fun PlaylistDetailScreen(
 
       LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = if (selecting) 88.dp else bottomPadding),
+        contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
         modifier = Modifier
           .weight(1f)
           .dragToSelect(
@@ -253,14 +263,15 @@ fun PlaylistDetailScreen(
             excludeEnd = 56.dp,
           ),
       ) {
-        if (!selecting) {
+        // 見出しは選択中も残す (消すと一覧がずれる)
+        run {
           item(key = "header") {
             PlaylistHeader(
               name = playlist?.name.orEmpty(),
               items = all,
               sortLabel = sort.sort?.let { stringResource(it.label) },
-              onPlay = { actions.play(all.map { it.track }, 0) },
-              onShuffle = { actions.shufflePlay(all.map { it.track }) },
+              onPlay = { actions.play(all.map { it.track }, 0, source) },
+              onShuffle = { actions.shufflePlay(all.map { it.track }, source) },
             )
           }
         }
@@ -291,10 +302,9 @@ fun PlaylistDetailScreen(
                 onClick = {
                   if (selecting) {
                     selected = if (isSelected) selected - item.entryId else selected + item.entryId
-                  } else if (item.track.mediaStoreId == playingId) {
-                    actions.openPlayer()
                   } else {
-                    actions.play(local.map { it.track }, index)
+                    if (item.track.mediaStoreId != playingId) actions.play(local.map { it.track }, index, source)
+                    actions.openPlayer()
                   }
                 },
                 onLongClick = null,
@@ -418,7 +428,6 @@ private fun PlaylistHeader(
   onShuffle: () -> Unit,
 ) {
   Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-    Text(name, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
       Row(Modifier.weight(1f)) {
         Text(
@@ -453,7 +462,7 @@ private fun MoveSheet(
   onDismiss: () -> Unit,
 ) {
   var number by rememberSaveable { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         pluralStringResource(R.plurals.move_title, count, count),
@@ -510,7 +519,7 @@ private fun PlaylistSortSheet(
   onSave: () -> Unit,
   onDismiss: () -> Unit,
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.sort_title_sheet),

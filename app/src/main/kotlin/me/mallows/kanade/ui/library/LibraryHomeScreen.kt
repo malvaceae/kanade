@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.playback.PlaySource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import me.mallows.kanade.ui.common.initialOf
 import me.mallows.kanade.ui.common.FastScroller
@@ -232,6 +233,7 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
       playingMediaStoreId = playingId,
       actions = actions,
       bottomPadding = bottomPadding,
+      source = PlaySource("tracks", stringResource(R.string.tab_tracks)),
       header = {
         ListHeader(stringResource(R.string.library_summary, list.size, (list.sumOf { it.durationMs } / 60_000).toInt())) {
           SortButton(sort != null) { showSort = true }

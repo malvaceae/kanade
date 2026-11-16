@@ -69,6 +69,8 @@ fun PlayerScreen(
   sleep: PlayerConnection.Sleep,
   onSetSleep: (minutes: Int, endOfTrack: Boolean) -> Unit,
   onSetSpeed: (Float) -> Unit,
+  /** 再生元の一覧の名前 (分からなければアルバム名を出す) */
+  sourceTitle: String?,
   lyrics: Lyrics?,
 ) {
   val scheme = MaterialTheme.colorScheme
@@ -96,7 +98,7 @@ fun PlayerScreen(
         Icon(KanadeIcons.ChevronDown, contentDescription = stringResource(R.string.action_close), modifier = Modifier.size(26.dp))
       }
       Text(
-        text = state.album.orEmpty(),
+        text = sourceTitle ?: state.album.orEmpty(),
         style = MaterialTheme.typography.bodyMedium,
         color = scheme.onSurfaceVariant,
         textAlign = TextAlign.Center,

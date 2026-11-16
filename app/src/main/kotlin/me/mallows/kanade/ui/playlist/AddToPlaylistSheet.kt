@@ -18,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,6 +51,8 @@ import me.mallows.kanade.ui.icons.KanadeIcons
 fun AddToPlaylistSheet(
   tracks: List<TrackEntity>,
   onDismiss: () -> Unit,
+  /** 追加し終えたときのメッセージを出す (シートを閉じた後も出せるよう、呼び出し元で出す) */
+  onMessage: (String) -> Unit,
   viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
   val playlists by viewModel.playlists.collectAsStateWithLifecycle()
@@ -66,8 +69,8 @@ fun AddToPlaylistSheet(
     val toAdd = ids.filter { it !in skip }
     scope.launch {
       viewModel.add(id, toAdd)
+      onMessage(addedMessage(name, toAdd.size))
       onDismiss()
-      snackbar.showMessage(addedMessage(name, toAdd.size))
     }
   }
 
@@ -78,7 +81,7 @@ fun AddToPlaylistSheet(
     }
   }
 
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Text(
       pluralStringResource(R.plurals.add_to_playlist_title, tracks.size, tracks.size),
       style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),

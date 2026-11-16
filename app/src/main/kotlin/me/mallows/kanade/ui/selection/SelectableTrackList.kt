@@ -14,12 +14,18 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.WindowInsets
+import me.mallows.kanade.ui.common.LocalPlaySource
+import me.mallows.kanade.playback.PlaySource
 import androidx.compose.foundation.gestures.scrollBy
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Job
-import me.mallows.kanade.ui.common.LocalPlayingContext
 import me.mallows.kanade.ui.common.initialOf
 import me.mallows.kanade.ui.common.FastScroller
 import androidx.compose.runtime.DisposableEffect
@@ -50,9 +56,9 @@ import me.mallows.kanade.ui.icons.KanadeIcons
 /** 曲の一覧に対する操作 */
 interface TrackActions {
   /** [tracks]を再生順に並べ、[index]の曲から再生する */
-  fun play(tracks: List<TrackEntity>, index: Int)
+  fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource? = null)
   /** シャッフルをオンにして、ランダムな曲から再生する */
-  fun shufflePlay(tracks: List<TrackEntity>)
+  fun shufflePlay(tracks: List<TrackEntity>, source: PlaySource? = null)
   /** プレイヤー画面を開く (再生中の曲をタップしたとき。最初から再生し直さない) */
   fun openPlayer()
   fun playNext(tracks: List<TrackEntity>)
@@ -72,6 +78,8 @@ fun SelectableTrackList(
   playingMediaStoreId: Long?,
   actions: TrackActions,
   bottomPadding: Dp,
+  /** この一覧を再生元として記録する名前など */
+  source: PlaySource,
   modifier: Modifier = Modifier,
   numbered: Boolean = true,
   header: (@Composable () -> Unit)? = null,
@@ -98,23 +106,14 @@ fun SelectableTrackList(
   val clear = { selected = emptySet() }
 
   // 再生元の一覧と同じときだけ「再生中」を出す (別の一覧で同じ曲を見たときは出さない)
-  val playingContext = LocalPlayingContext.current
-  val inContext = remember(tracks, playingContext) { playingContext.matches(tracks.map { it.mediaStoreId }) }
-  val playingId = if (inContext) playingMediaStoreId else null
+  val playingId = if (LocalPlaySource.current?.key == source.key) playingMediaStoreId else null
 
   Box(modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
-      if (selecting) {
-        SelectionTopBar(
-          count = selected.size,
-          allSelected = selected.size == tracks.size,
-          onSelectAll = { selected = if (selected.size == tracks.size) emptySet() else ids },
-          onClose = clear,
-        )
-      }
       LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = if (selecting) 88.dp else bottomPadding),
+        // 選択中は下の操作バー (と画面下のナビゲーションバー) に最後の曲が隠れないようにする
+        contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
         modifier = Modifier
           .weight(1f)
           .dragToSelect(
@@ -125,7 +124,8 @@ fun SelectableTrackList(
             onChange = { selected = it },
           ),
       ) {
-        if (header != null && !selecting) item(key = "header") { header() }
+        // 見出しは選択中も残す (消すと一覧がずれる)。選択中のバーは上に重ねて出す
+        if (header != null) item(key = "header") { header() }
         itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
           val isSelected = track.id in selected
           TrackRow(
@@ -137,10 +137,10 @@ fun SelectableTrackList(
             onClick = {
               if (selecting) {
                 selected = if (isSelected) selected - track.id else selected + track.id
-              } else if (track.mediaStoreId == playingId) {
-                actions.openPlayer()
               } else {
-                actions.play(tracks, index)
+                // 再生中の曲なら最初からにせず、そうでなければこの一覧として再生し、どちらもプレイヤー画面を開く
+                if (track.mediaStoreId != playingId) actions.play(tracks, index, source)
+                actions.openPlayer()
               }
             },
             onLongClick = null,
@@ -158,6 +158,15 @@ fun SelectableTrackList(
       )
     }
     if (selecting) {
+      SelectionTopBar(
+        count = selected.size,
+        allSelected = selected.size == tracks.size,
+        onSelectAll = { selected = if (selected.size == tracks.size) emptySet() else ids },
+        onClose = clear,
+        modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
+      )
+    }
+    if (selecting) {
       val n = selected.size
       val playNextDone = stringResource(R.string.message_play_next, n)
       val queueDone = stringResource(R.string.message_added_to_queue, n)
@@ -165,7 +174,7 @@ fun SelectableTrackList(
         modifier = Modifier.align(Alignment.BottomCenter),
         actions = listOfNotNull(
           BarAction(KanadeIcons.Play, stringResource(R.string.action_play)) {
-            actions.play(selectedTracks(), 0); clear()
+            actions.play(selectedTracks(), 0, PlaySource("selection:${source.key}", source.title)); clear()
           },
           BarAction(KanadeIcons.PlayNext, stringResource(R.string.action_play_next)) {
             actions.playNext(selectedTracks()); clear()
@@ -272,3 +281,7 @@ fun Modifier.dragToSelect(
     }
   }
 }
+
+/** 画面下のナビゲーションバーの高さ */
+@Composable
+fun navigationBarHeight(): Dp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

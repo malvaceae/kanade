@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.common.showMessage
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,7 +37,8 @@ import androidx.navigation3.ui.NavDisplay
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalIsPlaying
-import me.mallows.kanade.ui.common.LocalPlayingContext
+import me.mallows.kanade.ui.common.LocalPlaySource
+import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
@@ -52,6 +56,7 @@ import me.mallows.kanade.ui.search.SearchScreen
 import me.mallows.kanade.ui.player.PlayerScreen
 import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
+import me.mallows.kanade.ui.selection.navigationBarHeight
 
 @Composable
 fun MainNavigation(
@@ -69,16 +74,18 @@ fun MainNavigation(
   val player by playerViewModel.state.collectAsStateWithLifecycle()
   val sleep by playerViewModel.sleep.collectAsStateWithLifecycle()
   val lyrics by playerViewModel.lyrics.collectAsStateWithLifecycle()
-  val queue by playerViewModel.queue.collectAsStateWithLifecycle()
+  val playSource by playerViewModel.source.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
+  /** 画面をまたいで続く処理 (シートを閉じた後のメッセージなど) */
+  val appScope = rememberCoroutineScope()
   val bottomBarActive = remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
   var pendingAdd by remember { mutableStateOf<List<TrackEntity>?>(null) }
 
   val actions = remember(playerViewModel) {
     object : TrackActions {
-      override fun play(tracks: List<TrackEntity>, index: Int) = playerViewModel.play(tracks, index)
-      override fun shufflePlay(tracks: List<TrackEntity>) = playerViewModel.shufflePlay(tracks)
+      override fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource?) = playerViewModel.play(tracks, index, source)
+      override fun shufflePlay(tracks: List<TrackEntity>, source: PlaySource?) = playerViewModel.shufflePlay(tracks, source)
       override fun openPlayer() {
         if (backStack.lastOrNull() != Player) backStack.add(Player)
       }
@@ -91,13 +98,14 @@ fun MainNavigation(
   }
   val top = backStack.lastOrNull()
   val showMini = player.hasMedia && top != Player && top != Queue && top != Equalizer && !bottomBarActive.value
-  val bottomPadding = if (player.hasMedia) 96.dp else 16.dp
+  // 一覧の下の余白: ミニプレイヤーの高さと、画面下のナビゲーションバーの高さの分を空ける
+  val bottomPadding = (if (player.hasMedia) 112.dp else 24.dp) + navigationBarHeight()
 
   CompositionLocalProvider(
     LocalSnackbarHost provides snackbar,
     LocalBottomBarActive provides bottomBarActive,
     LocalIsPlaying provides player.isPlaying,
-    LocalPlayingContext provides queue.context,
+    LocalPlaySource provides playSource,
   ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {
@@ -192,6 +200,7 @@ fun MainNavigation(
               Page {
                 PlayerScreen(
                   state = player,
+                  sourceTitle = playSource?.title,
                   onClose = { backStack.removeLastOrNull() },
                   onOpenQueue = { backStack.add(Queue) },
                   onOpenEqualizer = { backStack.add(Equalizer) },
@@ -223,7 +232,11 @@ fun MainNavigation(
           )
         }
         pendingAdd?.let { tracks ->
-          AddToPlaylistSheet(tracks = tracks, onDismiss = { pendingAdd = null })
+          AddToPlaylistSheet(
+            tracks = tracks,
+            onDismiss = { pendingAdd = null },
+            onMessage = { message -> appScope.launch { snackbar.showMessage(message) } },
+          )
         }
         SnackbarHost(
           hostState = snackbar,

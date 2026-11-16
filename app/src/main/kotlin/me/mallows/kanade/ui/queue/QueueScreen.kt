@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.selection.navigationBarHeight
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -158,7 +159,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
       }
       LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = 96.dp),
+        contentPadding = PaddingValues(bottom = 96.dp + navigationBarHeight()),
         modifier = Modifier.weight(1f).dragToSelect(
           state = listState,
           keys = local.map { it.origin.toLong() },

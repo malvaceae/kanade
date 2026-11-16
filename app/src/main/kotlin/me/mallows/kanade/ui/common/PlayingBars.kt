@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** 再生元の一覧の曲の集まり。一覧の「再生中」表示は、この一覧と同じときだけ出す */
-val LocalPlayingContext = compositionLocalOf { me.mallows.kanade.playback.PlayingContext() }
+/** 今の再生元の一覧。一覧の「再生中」表示は、この一覧と同じときだけ出す */
+val LocalPlaySource = compositionLocalOf<me.mallows.kanade.playback.PlaySource?> { null }
 
 /** いま音が出ているか (一時停止中はfalse)。一覧の「再生中の印」を動かすかどうかに使う */
 val LocalIsPlaying = compositionLocalOf { false }

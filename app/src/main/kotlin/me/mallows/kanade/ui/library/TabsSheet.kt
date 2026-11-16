@@ -98,6 +98,7 @@ fun TabsSheet(tabs: List<TabSetting>, onChange: (List<TabSetting>) -> Unit, onDi
                 .background(if (dragging) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent)
                 .clickable(enabled = canToggle) {
                   list = list.map { if (it.tab == item.tab) it.copy(visible = !it.visible) else it }
+                  onChange(list)
                 }
                 .padding(start = 12.dp, end = 4.dp),
               verticalAlignment = Alignment.CenterVertically,

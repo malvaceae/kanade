@@ -125,8 +125,10 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
           }
         }
       }
-      TextButton(onClick = { saving = true }) { Text(stringResource(R.string.eq_save_preset)) }
-      TextButton(onClick = viewModel::reset) { Text(stringResource(R.string.eq_reset)) }
+      // 今の値がどれかのプリセットと同じなら保存は要らない。すでにフラットならリセットも要らない
+      val matched = settings.matchingPresetName(userPresets)
+      TextButton(onClick = { saving = true }, enabled = matched == null) { Text(stringResource(R.string.eq_save_preset)) }
+      TextButton(onClick = viewModel::reset, enabled = matched != EqPreset.BUILT_IN.first().name) { Text(stringResource(R.string.eq_reset)) }
     }
 
     val dim = Modifier.alpha(if (settings.enabled) 1f else 0.45f)

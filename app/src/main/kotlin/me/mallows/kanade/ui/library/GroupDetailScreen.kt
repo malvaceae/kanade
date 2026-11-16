@@ -17,6 +17,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.playback.PlaySource
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,22 +80,26 @@ fun GroupDetailScreen(
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
+      // 題名は戻るボタンと同じ行に出す (一覧の画面とそろえる)
+      Text(
+        key.title,
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f).padding(start = 4.dp, end = 12.dp),
+      )
     }
     val list = tracks ?: return@Column Loading()
+    val source = PlaySource("group:${key.kind}:${key.key}", key.title)
     SelectableTrackList(
       tracks = list,
       playingMediaStoreId = playingMediaStoreId,
       actions = actions,
       bottomPadding = bottomPadding,
+      source = source,
       numbered = key.kind == GroupKind.ALBUM.name,
       header = {
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text(
-            key.title,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-          )
           Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
               "${pluralStringResource(R.plurals.track_count, list.size, list.size)} · ${list.sumOf { it.durationMs } / 60_000}${stringResource(R.string.minutes_suffix)}",
@@ -102,10 +107,10 @@ fun GroupDetailScreen(
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               modifier = Modifier.weight(1f),
             )
-            FilledTonalIconButton(onClick = { actions.shufflePlay(list) }, shape = CircleShape) {
+            FilledTonalIconButton(onClick = { actions.shufflePlay(list, source) }, shape = CircleShape) {
               Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
             }
-            Button(onClick = { actions.play(list, 0) }, modifier = Modifier.padding(start = 8.dp)) {
+            Button(onClick = { actions.play(list, 0, source) }, modifier = Modifier.padding(start = 8.dp)) {
               Icon(KanadeIcons.Play, contentDescription = null, modifier = Modifier.size(18.dp))
               Text(stringResource(R.string.action_play), modifier = Modifier.padding(start = 6.dp))
             }

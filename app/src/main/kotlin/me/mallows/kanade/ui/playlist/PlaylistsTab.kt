@@ -21,10 +21,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.selection.TrackActions
 import me.mallows.kanade.core.data.db.PlaylistSummary
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import me.mallows.kanade.ui.common.showMessage
 import me.mallows.kanade.ui.common.LocalSnackbarHost
@@ -120,7 +122,7 @@ fun PlaylistsTab(
     PlaylistMenuSheet(
       name = p.name,
       onDismiss = { menuFor = null },
-      onPlay = { scope.launch { viewModel.tracks(p.id).takeIf { it.isNotEmpty() }?.let { actions.play(it, 0) } } },
+      onPlay = { scope.launch { viewModel.tracks(p.id).takeIf { it.isNotEmpty() }?.let { actions.play(it, 0, PlaySource("playlist:${p.id}", p.name)) } } },
       onPlayNext = {
         scope.launch {
           val tracks = viewModel.tracks(p.id)
@@ -239,7 +241,7 @@ private fun PlaylistMenuSheet(
   onExport: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         name,

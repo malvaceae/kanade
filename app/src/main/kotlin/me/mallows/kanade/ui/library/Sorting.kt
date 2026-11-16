@@ -1,16 +1,15 @@
 package me.mallows.kanade.ui.library
 
 import androidx.annotation.StringRes
-import java.text.Collator
-import java.util.Locale
+import me.mallows.kanade.core.domain.text.TextOrder
 import me.mallows.kanade.R
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.core.data.settings.SortSetting
 
-/** 日本語の読みの順に近い比較 (かな・カナ・英字の大小を区別しない) */
-private val collator: Collator = Collator.getInstance(Locale.JAPANESE).apply { strength = Collator.SECONDARY }
+/** 文字の並べ方: 数字・記号 → 英字 → かな → 漢字の順 (詳しくは TextOrder) */
+private val collator: Comparator<String> = TextOrder
 
 /** 値がないものは常に後ろ */
 private fun <T> nullsLastBy(selector: (T) -> String?): Comparator<T> = Comparator { a, b ->
