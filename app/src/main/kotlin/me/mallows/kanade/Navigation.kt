@@ -1,5 +1,12 @@
 package me.mallows.kanade
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -79,73 +86,91 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator(),
           ),
+          // 進むときは右から重ね、戻るとき (戻るスワイプの途中も) は上の画面を右へずらして下の画面を見せる
+          transitionSpec = { pushTransition() },
+          popTransitionSpec = { popTransition() },
+          predictivePopTransitionSpec = { popTransition() },
           entryProvider = entryProvider {
             entry<Library> {
-              LibraryHomeScreen(
-                playingMediaStoreId = player.mediaStoreId,
-                actions = actions,
-                onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
-                onSearch = { backStack.add(Search) },
-                playlistsTab = { padding ->
-                  PlaylistsTab(
-                    onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) },
-                    onOpenSmart = { kind, title -> backStack.add(GroupDetail(kind.name, null, title)) },
-                    bottomPadding = padding,
-                  )
-                },
-                bottomPadding = bottomPadding,
-              )
+              Page {
+                LibraryHomeScreen(
+                  playingMediaStoreId = player.mediaStoreId,
+                  actions = actions,
+                  onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
+                  onSearch = { backStack.add(Search) },
+                  playlistsTab = { padding ->
+                    PlaylistsTab(
+                      onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) },
+                      onOpenSmart = { kind, title -> backStack.add(GroupDetail(kind.name, null, title)) },
+                      bottomPadding = padding,
+                    )
+                  },
+                  bottomPadding = bottomPadding,
+                )
+              }
             }
             entry<PlaylistDetail> { key ->
-              PlaylistDetailScreen(
-                playlistId = key.id,
-                playingMediaStoreId = player.mediaStoreId,
-                actions = actions,
-                onBack = { backStack.removeLastOrNull() },
-                bottomPadding = bottomPadding,
-              )
+              Page {
+                PlaylistDetailScreen(
+                  playlistId = key.id,
+                  playingMediaStoreId = player.mediaStoreId,
+                  actions = actions,
+                  onBack = { backStack.removeLastOrNull() },
+                  bottomPadding = bottomPadding,
+                )
+              }
             }
             entry<GroupDetail> { key ->
-              GroupDetailScreen(
-                key = key,
-                playingMediaStoreId = player.mediaStoreId,
-                actions = actions,
-                onBack = { backStack.removeLastOrNull() },
-                bottomPadding = bottomPadding,
-              )
+              Page {
+                GroupDetailScreen(
+                  key = key,
+                  playingMediaStoreId = player.mediaStoreId,
+                  actions = actions,
+                  onBack = { backStack.removeLastOrNull() },
+                  bottomPadding = bottomPadding,
+                )
+              }
             }
             entry<Search> {
-              SearchScreen(
-                playingMediaStoreId = player.mediaStoreId,
-                actions = actions,
-                onBack = { backStack.removeLastOrNull() },
-                bottomPadding = bottomPadding,
-              )
+              Page {
+                SearchScreen(
+                  playingMediaStoreId = player.mediaStoreId,
+                  actions = actions,
+                  onBack = { backStack.removeLastOrNull() },
+                  bottomPadding = bottomPadding,
+                )
+              }
             }
             entry<Equalizer> {
-              EqualizerScreen(onBack = { backStack.removeLastOrNull() })
+              Page {
+                EqualizerScreen(onBack = { backStack.removeLastOrNull() })
+              }
             }
             entry<Queue> {
-              QueueScreen(onBack = { backStack.removeLastOrNull() })
+              Page {
+                QueueScreen(onBack = { backStack.removeLastOrNull() })
+              }
             }
             entry<Player> {
-              PlayerScreen(
-                state = player,
-                onClose = { backStack.removeLastOrNull() },
-                onOpenQueue = { backStack.add(Queue) },
-                onOpenEqualizer = { backStack.add(Equalizer) },
-                onTogglePlay = playerViewModel::togglePlayPause,
-                onNext = playerViewModel::next,
-                onPrevious = playerViewModel::previous,
-                onSeek = playerViewModel::seekTo,
-                onToggleShuffle = playerViewModel::toggleShuffle,
-                onCycleRepeat = playerViewModel::cycleRepeat,
-                sleep = sleep,
-                onSetSleep = playerViewModel::setSleepTimer,
-                onSetSpeed = playerViewModel::setSpeed,
-                // 別の曲の歌詞が残っていても出さない
-                lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
-              )
+              Page {
+                PlayerScreen(
+                  state = player,
+                  onClose = { backStack.removeLastOrNull() },
+                  onOpenQueue = { backStack.add(Queue) },
+                  onOpenEqualizer = { backStack.add(Equalizer) },
+                  onTogglePlay = playerViewModel::togglePlayPause,
+                  onNext = playerViewModel::next,
+                  onPrevious = playerViewModel::previous,
+                  onSeek = playerViewModel::seekTo,
+                  onToggleShuffle = playerViewModel::toggleShuffle,
+                  onCycleRepeat = playerViewModel::cycleRepeat,
+                  sleep = sleep,
+                  onSetSleep = playerViewModel::setSleepTimer,
+                  onSetSpeed = playerViewModel::setSpeed,
+                  // 別の曲の歌詞が残っていても出さない
+                  lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
+                )
+              }
             }
           },
         )
@@ -173,4 +198,20 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
       }
     }
   }
+}
+
+private const val TRANSITION_MS = 300
+
+private fun pushTransition(): ContentTransform =
+  slideInHorizontally(tween(TRANSITION_MS)) { it } togetherWith slideOutHorizontally(tween(TRANSITION_MS)) { -it / 4 }
+
+/** 戻るとき。下になる画面を奥に置き、上の画面だけが右へ抜けていくようにする */
+private fun popTransition(): ContentTransform =
+  (slideInHorizontally(tween(TRANSITION_MS)) { -it / 4 } togetherWith slideOutHorizontally(tween(TRANSITION_MS)) { it })
+    .apply { targetContentZIndex = -1f }
+
+/** 1画面分の背景。画面の切り替え中に、下の画面が透けて見えないようにする */
+@Composable
+private fun Page(content: @Composable () -> Unit) {
+  Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
 }
