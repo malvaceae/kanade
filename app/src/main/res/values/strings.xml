@@ -138,7 +138,7 @@
     </plurals>
     <string name="action_open_queue">再生キュー</string>
 
-    <string name="search_hint">曲名・アーティスト・アルバムで検索</string>
+    <string name="search_hint">曲・アーティスト・アルバム</string>
     <string name="search_no_results">見つかりませんでした</string>
     <string name="action_clear">消去</string>
 

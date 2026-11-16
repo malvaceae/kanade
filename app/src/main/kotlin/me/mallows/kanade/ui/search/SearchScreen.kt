@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -88,7 +89,8 @@ fun SearchScreen(
       TextField(
         value = query,
         onValueChange = viewModel::setQuery,
-        placeholder = { Text(stringResource(R.string.search_hint)) },
+        // 案内は1行に収める (狭い画面では末尾を省く)
+        placeholder = { Text(stringResource(R.string.search_hint), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         singleLine = true,
         modifier = Modifier.weight(1f).focusRequester(focus),
         colors = TextFieldDefaults.colors(
