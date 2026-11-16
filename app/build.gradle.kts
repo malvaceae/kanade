@@ -52,6 +52,7 @@ dependencies {
 
   // Project modules
   implementation(project(":core:common"))
+  implementation(project(":core:data"))
 
   // Logging
   implementation(libs.timber)
