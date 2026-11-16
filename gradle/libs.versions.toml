@@ -21,6 +21,7 @@ datastore = "1.3.0"
 media3 = "1.11.1"
 hiltLifecycleViewmodelCompose = "1.4.0"
 palette = "1.1.0"
+reorderable = "3.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -47,7 +48,8 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
+androidx-palette ={ module = "androidx.palette:palette", version.ref = "palette" }
 hilt-lifecycle-viewmodel-compose ={ module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hiltLifecycleViewmodelCompose" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

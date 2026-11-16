@@ -102,7 +102,7 @@ fun SelectableTrackList(
           .weight(1f)
           .dragToSelect(
             state = listState,
-            tracks = tracks,
+            keys = tracks.map { it.id },
             currentSelection = { selected },
             onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
             onChange = { selected = it },
@@ -164,11 +164,13 @@ fun SelectableTrackList(
  */
 fun Modifier.dragToSelect(
   state: LazyListState,
-  tracks: List<TrackEntity>,
+  keys: List<Long>,
   currentSelection: () -> Set<Long>,
   onStart: () -> Unit,
   onChange: (Set<Long>) -> Unit,
-): Modifier = pointerInput(tracks) {
+  /** 行の右端のこの幅は対象外 (ドラッグハンドル用) */
+  excludeEnd: Dp = 0.dp,
+): Modifier = pointerInput(keys) {
   var anchor = -1
   var base = emptySet<Long>()
   var adding = true
@@ -176,17 +178,18 @@ fun Modifier.dragToSelect(
   fun indexAt(offset: Offset): Int? {
     val item = state.layoutInfo.visibleItemsInfo.firstOrNull { offset.y.toInt() in it.offset until it.offset + it.size }
     val key = item?.key as? Long ?: return null
-    return tracks.indexOfFirst { it.id == key }.takeIf { it >= 0 }
+    return keys.indexOf(key).takeIf { it >= 0 }
   }
 
   awaitEachGesture {
     val down = awaitFirstDown(requireUnconsumed = false)
+    if (down.position.x > size.width - excludeEnd.toPx()) return@awaitEachGesture
     // 長押しになる前に指が動いたら通常のスクロールに任せる
     val longPress = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
     val i = indexAt(longPress.position) ?: return@awaitEachGesture
     anchor = i
     onStart()
-    val id = tracks[i].id
+    val id = keys[i]
     base = currentSelection()
     adding = id !in base
     onChange(if (adding) base + id else base - id)
@@ -201,7 +204,7 @@ fun Modifier.dragToSelect(
         break
       }
       indexAt(change.position)?.let { j ->
-        val range = tracks.subList(minOf(anchor, j), maxOf(anchor, j) + 1).map { it.id }.toSet()
+        val range = keys.subList(minOf(anchor, j), maxOf(anchor, j) + 1).toSet()
         onChange(if (adding) base + range else base - range)
       }
       change.consume()

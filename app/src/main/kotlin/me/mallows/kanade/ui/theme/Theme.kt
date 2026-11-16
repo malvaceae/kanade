@@ -29,6 +29,7 @@ private val DarkColors = darkColorScheme(
   outlineVariant = DarkSurfaceContainerHighest,
   inverseSurface = DarkOnSurface,
   inverseOnSurface = DarkBackground,
+  inversePrimary = LightAccent,
 )
 
 private val LightColors = lightColorScheme(
@@ -53,6 +54,7 @@ private val LightColors = lightColorScheme(
   outlineVariant = LightSurfaceContainerHighest,
   inverseSurface = LightOnSurface,
   inverseOnSurface = LightBackground,
+  inversePrimary = DarkAccent,
 )
 
 @Composable

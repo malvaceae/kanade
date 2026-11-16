@@ -11,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,9 @@ import me.mallows.kanade.ui.library.GroupDetailScreen
 import me.mallows.kanade.ui.library.LibraryHomeScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
 import me.mallows.kanade.ui.player.MiniPlayer
+import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
+import me.mallows.kanade.ui.playlist.PlaylistDetailScreen
+import me.mallows.kanade.ui.playlist.PlaylistsTab
 import me.mallows.kanade.ui.player.PlayerScreen
 import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
@@ -38,14 +42,17 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
   val player by playerViewModel.state.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
   val bottomBarActive = remember { mutableStateOf(false) }
+  /** プレイリストへの追加を待っている曲 */
+  var pendingAdd by remember { mutableStateOf<List<TrackEntity>?>(null) }
 
   val actions = remember(playerViewModel) {
     object : TrackActions {
       override fun play(tracks: List<TrackEntity>, index: Int) = playerViewModel.play(tracks, index)
       override fun playNext(tracks: List<TrackEntity>) = playerViewModel.playNext(tracks)
       override fun addToQueue(tracks: List<TrackEntity>) = playerViewModel.addToQueue(tracks)
-      override fun addToPlaylist(tracks: List<TrackEntity>) = Unit
-      override val canAddToPlaylist: Boolean get() = false
+      override fun addToPlaylist(tracks: List<TrackEntity>) {
+        pendingAdd = tracks
+      }
     }
   }
   val showMini = player.hasMedia && backStack.lastOrNull() != Player && !bottomBarActive.value
@@ -68,7 +75,18 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 actions = actions,
                 onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
                 onSearch = { },
-                playlistsTab = { },
+                playlistsTab = { padding ->
+                  PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, bottomPadding = padding)
+                },
+                bottomPadding = bottomPadding,
+              )
+            }
+            entry<PlaylistDetail> { key ->
+              PlaylistDetailScreen(
+                playlistId = key.id,
+                playingMediaStoreId = player.mediaStoreId,
+                actions = actions,
+                onBack = { backStack.removeLastOrNull() },
                 bottomPadding = bottomPadding,
               )
             }
@@ -105,6 +123,9 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
               .navigationBarsPadding()
               .padding(bottom = 8.dp),
           )
+        }
+        pendingAdd?.let { tracks ->
+          AddToPlaylistSheet(tracks = tracks, onDismiss = { pendingAdd = null })
         }
         SnackbarHost(
           hostState = snackbar,

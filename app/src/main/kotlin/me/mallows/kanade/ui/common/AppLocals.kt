@@ -16,8 +16,7 @@ val LocalBottomBarActive = compositionLocalOf<MutableState<Boolean>> { mutableSt
 /** 「元に戻す」付きのメッセージを出し、押されたら[onUndo]を呼ぶ */
 suspend fun SnackbarHostState.showUndo(message: String, undoLabel: String, onUndo: () -> Unit) {
   currentSnackbarData?.dismiss()
-  val result = showSnackbar(message, actionLabel = undoLabel, duration = SnackbarDuration.Long)
-  if (result == SnackbarResult.ActionPerformed) onUndo()
+  val result = showSnackbar(message, actionLabel = undoLabel, duration = SnackbarDuration.Long)  if (result == SnackbarResult.ActionPerformed) onUndo()
 }
 
 /** メッセージだけを出す */

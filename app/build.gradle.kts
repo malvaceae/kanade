@@ -66,6 +66,11 @@ dependencies {
   // アートワークからの配色
   implementation(libs.androidx.palette)
 
+  // ドラッグでの並べ替え
+  implementation(libs.reorderable)
+
+  implementation(project(":core:domain"))
+
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)

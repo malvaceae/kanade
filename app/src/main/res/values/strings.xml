@@ -52,6 +52,62 @@
     <string name="message_play_next">%d曲を次に再生に追加しました</string>
     <string name="message_added_to_queue">%d曲をキューに追加しました</string>
 
+    <string name="playlist_new">新しいプレイリスト</string>
+    <string name="playlist_name">名前</string>
+    <string name="playlist_rename">名前を変更</string>
+    <string name="playlist_delete">プレイリストを削除</string>
+    <string name="playlist_delete_confirm">「%1$s」を削除しますか？曲のファイルは削除されません。</string>
+    <string name="playlist_empty">まだ曲がありません。ライブラリで曲を長押しして選び、「プレイリスト」から追加できます。</string>
+    <plurals name="add_to_playlist_title">
+        <item quantity="other">%d曲をプレイリストに追加</item>
+    </plurals>
+    <string name="message_added_to_playlist">%1$d曲を「%2$s」に追加しました</string>
+    <string name="duplicate_title">すでに入っている曲があります</string>
+    <string name="duplicate_body">%1$d曲はすでに「%2$s」に入っています。</string>
+    <string name="duplicate_skip">重複をスキップ</string>
+    <string name="duplicate_add_anyway">そのまま追加</string>
+
+    <string name="sort_saved_order">保存された順番</string>
+    <string name="sort_save_this_order">この並びで保存</string>
+    <string name="sort_save_this_order_desc">今の表示の並びを、保存された順番にします</string>
+
+    <plurals name="move_title">
+        <item quantity="other">%d曲を移動</item>
+    </plurals>
+    <string name="move_top">先頭へ</string>
+    <string name="move_bottom">末尾へ</string>
+    <string name="move_to_number">位置 (番号)</string>
+    <string name="move_hint">1 ~ %1$dの番号を指定すると、選んだ曲がその位置からまとめて並びます</string>
+    <plurals name="message_moved">
+        <item quantity="other">%d曲を移動しました</item>
+    </plurals>
+    <plurals name="message_moved_top">
+        <item quantity="other">%d曲を先頭へ移動しました</item>
+    </plurals>
+    <plurals name="message_moved_bottom">
+        <item quantity="other">%d曲を末尾へ移動しました</item>
+    </plurals>
+    <plurals name="message_moved_number">
+        <item quantity="other">%1$d曲を%2$d番目へ移動しました</item>
+    </plurals>
+    <plurals name="message_reversed">
+        <item quantity="other">%d曲を逆順にしました</item>
+    </plurals>
+    <plurals name="message_removed">
+        <item quantity="other">%d曲を削除しました</item>
+    </plurals>
+    <string name="message_swapped">2曲を入れ替えました</string>
+    <string name="message_sort_saved">この並びで保存しました</string>
+
+    <string name="action_move">移動</string>
+    <string name="action_swap">入れ替え</string>
+    <string name="action_reverse">逆順</string>
+    <string name="action_delete">削除</string>
+    <string name="action_drag">ドラッグして移動</string>
+    <string name="action_more">その他</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">キャンセル</string>
+
     <string name="action_play">再生</string>
     <string name="action_shuffle_play">シャッフル再生</string>
     <string name="action_pause">一時停止</string>
