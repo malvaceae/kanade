@@ -3,6 +3,7 @@ package me.mallows.kanade.ui.player
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -149,14 +150,15 @@ fun PlayerScreen(
         text = state.title.orEmpty(),
         style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        // 長い曲名は省かず、横に流して全体を読めるようにする
+        modifier = Modifier.basicMarquee(initialDelayMillis = 2_000),
       )
       Text(
         text = state.artist ?: stringResource(R.string.unknown_artist),
         style = MaterialTheme.typography.bodyLarge,
         color = scheme.onSurfaceVariant,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.basicMarquee(initialDelayMillis = 2_000),
       )
     }
 

@@ -47,6 +47,7 @@ import me.mallows.kanade.ui.library.LibraryHomeScreen
 import me.mallows.kanade.core.data.library.GroupKind
 import me.mallows.kanade.ui.library.LibraryTab
 import me.mallows.kanade.ui.library.CategoryScreen
+import me.mallows.kanade.ui.about.LicensesScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
 import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
@@ -136,9 +137,13 @@ fun MainNavigation(
                     }
                   },
                   onSearch = { backStack.add(Search) },
+                  onLicenses = { backStack.add(Licenses) },
                   bottomPadding = bottomPadding,
                 )
               }
+            }
+            entry<Licenses> {
+              Page { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }
             }
             entry<Category> { key ->
               Page {

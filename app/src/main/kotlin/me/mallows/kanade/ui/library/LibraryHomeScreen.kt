@@ -88,6 +88,7 @@ enum class LibraryTab(@StringRes val label: Int, val icon: ImageVector) {
 fun LibraryHomeScreen(
   onOpen: (tab: LibraryTab, title: String) -> Unit,
   onSearch: () -> Unit,
+  onLicenses: () -> Unit,
   bottomPadding: Dp,
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -141,6 +142,7 @@ fun LibraryHomeScreen(
             text = { Text(stringResource(R.string.backup_restore)) },
             onClick = { menuOpen = false; restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
           )
+          DropdownMenuItem(text = { Text(stringResource(R.string.licenses_title)) }, onClick = { menuOpen = false; onLicenses() })
         }
       }
     }
