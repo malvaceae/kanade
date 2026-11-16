@@ -1,5 +1,7 @@
 package me.mallows.kanade.audio
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor.AudioFormat
 import androidx.media3.common.audio.AudioProcessor.UnhandledAudioFormatException
@@ -11,6 +13,7 @@ import java.nio.ByteBuffer
  * 16bitまたはfloatのPCMを受け取り、floatで計算してfloatで出す。
  * EQが無効でも常に通る (設定の切り替えを再生を止めずに反映するため)。
  */
+@OptIn(UnstableApi::class)
 class EqAudioProcessor(private val chain: DspChain) : BaseAudioProcessor() {
 
   private var inputEncoding = C.ENCODING_PCM_16BIT

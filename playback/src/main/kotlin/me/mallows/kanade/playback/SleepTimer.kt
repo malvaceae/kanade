@@ -1,5 +1,7 @@
 package me.mallows.kanade.playback
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import android.os.Bundle
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -11,6 +13,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /** スリープタイマーの指示 (画面 → 再生サービス) */
+@OptIn(UnstableApi::class)
 object SleepCommand {
   const val ACTION = "me.mallows.kanade.SLEEP_TIMER"
   const val ARG_MINUTES = "minutes"
@@ -25,6 +28,7 @@ object SleepCommand {
 }
 
 /** 指定時間後、または今の曲の終わりで一時停止する (再生サービス側で動く) */
+@OptIn(UnstableApi::class)
 class SleepTimer(private val player: ExoPlayer, private val scope: CoroutineScope) {
 
   private var job: Job? = null

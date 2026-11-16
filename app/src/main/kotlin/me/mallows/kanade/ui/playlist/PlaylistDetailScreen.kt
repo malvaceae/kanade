@@ -49,7 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -106,7 +106,7 @@ fun PlaylistDetailScreen(
 
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
-  val context = LocalContext.current
+  val res = LocalResources.current
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
   val undoLabel = stringResource(R.string.action_undo)
@@ -169,7 +169,7 @@ fun PlaylistDetailScreen(
     val slot = local.subList(0, index.coerceAtLeast(0)).count { it.entryId !in block }
     moving = emptySet()
     grabbed = null
-    val message = context.resources.getQuantityString(R.plurals.message_moved, block.size, block.size)
+    val message = res.getQuantityString(R.plurals.message_moved, block.size, block.size)
     scope.launch {
       val undo = viewModel.moveBlock(block, slot)
       if (undo == null) {
@@ -299,20 +299,20 @@ fun PlaylistDetailScreen(
         actions = listOf(
           BarAction(KanadeIcons.Move, stringResource(R.string.action_move), enabled = !sorted) { sheet = "move" },
           BarAction(KanadeIcons.Swap, stringResource(R.string.action_swap), enabled = !sorted && n == 2) {
-            perform(context.getString(R.string.message_swapped)) { viewModel.swap(selected) }
+            perform(res.getString(R.string.message_swapped)) { viewModel.swap(selected) }
           },
           BarAction(KanadeIcons.Reverse, stringResource(R.string.action_reverse), enabled = !sorted && n >= 2) {
-            perform(context.resources.getQuantityString(R.plurals.message_reversed, n, n)) { viewModel.reverse(selected) }
+            perform(res.getQuantityString(R.plurals.message_reversed, n, n)) { viewModel.reverse(selected) }
           },
           BarAction(KanadeIcons.PlayNext, stringResource(R.string.action_play_next)) {
             actions.playNext(all.filter { it.entryId in selected }.map { it.track })
             selected = emptySet()
-            scope.launch { snackbar.showMessage(context.getString(R.string.message_play_next, n)) }
+            scope.launch { snackbar.showMessage(res.getString(R.string.message_play_next, n)) }
           },
           BarAction(KanadeIcons.Delete, stringResource(R.string.action_delete)) {
             val target = selected
             selected = emptySet()
-            perform(context.resources.getQuantityString(R.plurals.message_removed, n, n)) { viewModel.remove(target) }
+            perform(res.getQuantityString(R.plurals.message_removed, n, n)) { viewModel.remove(target) }
           },
         ),
       )
@@ -326,17 +326,17 @@ fun PlaylistDetailScreen(
       onTop = {
         sheet = null
         val n = selected.size
-        perform(context.resources.getQuantityString(R.plurals.message_moved_top, n, n)) { viewModel.moveToTop(selected) }
+        perform(res.getQuantityString(R.plurals.message_moved_top, n, n)) { viewModel.moveToTop(selected) }
       },
       onBottom = {
         sheet = null
         val n = selected.size
-        perform(context.resources.getQuantityString(R.plurals.message_moved_bottom, n, n)) { viewModel.moveToBottom(selected) }
+        perform(res.getQuantityString(R.plurals.message_moved_bottom, n, n)) { viewModel.moveToBottom(selected) }
       },
       onNumber = { number ->
         sheet = null
         val n = selected.size
-        perform(context.resources.getQuantityString(R.plurals.message_moved_number, n, n, number)) { viewModel.moveToNumber(selected, number) }
+        perform(res.getQuantityString(R.plurals.message_moved_number, n, n, number)) { viewModel.moveToNumber(selected, number) }
       },
       onDismiss = { sheet = null },
     )
@@ -345,7 +345,7 @@ fun PlaylistDetailScreen(
       onSelect = { viewModel.setSort(it) },
       onSave = {
         sheet = null
-        perform(context.getString(R.string.message_sort_saved)) { viewModel.saveSortedOrder() }
+        perform(res.getString(R.string.message_sort_saved)) { viewModel.saveSortedOrder() }
       },
       onDismiss = { sheet = null },
     )

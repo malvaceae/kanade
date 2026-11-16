@@ -1,5 +1,7 @@
 package me.mallows.kanade.playback
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import android.content.Context
 import android.content.Intent
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -33,6 +35,7 @@ import me.mallows.kanade.core.data.db.TrackDao
  * 再生サービス。
  * Android 17のバックグラウンド音声制限に対応するため、再生の開始はMediaSession経由 (アプリの画面、通知、メディアボタン) に限る。
  */
+@OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 

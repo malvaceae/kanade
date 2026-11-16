@@ -36,7 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -77,7 +77,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
   val queue by viewModel.queue.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
-  val context = LocalContext.current
+  val res = LocalResources.current
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
   val undoLabel = stringResource(R.string.action_undo)
@@ -131,7 +131,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
     moving = emptySet()
     grabbed = null
     selected = emptySet()
-    val message = context.resources.getQuantityString(R.plurals.message_moved, block.size, block.size)
+    val message = res.getQuantityString(R.plurals.message_moved, block.size, block.size)
     scope.launch {
       val undo = viewModel.moveBlock(block, slot)
       if (undo == null) local = entries else snackbar.showUndo(message, undoLabel) { scope.launch { undo() } }
@@ -244,13 +244,13 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
         modifier = Modifier.align(Alignment.BottomCenter),
         actions = listOf(
           BarAction(KanadeIcons.ToTop, stringResource(R.string.queue_play_next), enabled = !locked) {
-            perform(context.resources.getQuantityString(R.plurals.message_moved_top, n, n)) { viewModel.moveToTop(sel) }
+            perform(res.getQuantityString(R.plurals.message_moved_top, n, n)) { viewModel.moveToTop(sel) }
           },
           BarAction(KanadeIcons.ToBottom, stringResource(R.string.move_bottom), enabled = !locked) {
-            perform(context.resources.getQuantityString(R.plurals.message_moved_bottom, n, n)) { viewModel.moveToBottom(sel) }
+            perform(res.getQuantityString(R.plurals.message_moved_bottom, n, n)) { viewModel.moveToBottom(sel) }
           },
           BarAction(KanadeIcons.Delete, stringResource(R.string.action_delete)) {
-            perform(context.resources.getQuantityString(R.plurals.message_removed_queue, n, n)) { viewModel.remove(sel) }
+            perform(res.getQuantityString(R.plurals.message_removed_queue, n, n)) { viewModel.remove(sel) }
           },
         ),
       )

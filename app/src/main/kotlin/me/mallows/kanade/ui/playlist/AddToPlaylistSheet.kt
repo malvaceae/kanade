@@ -29,7 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,8 +59,8 @@ fun AddToPlaylistSheet(
   /** 重複の確認中: プレイリストIDと名前、重複している曲 */
   var confirm by remember { mutableStateOf<Triple<Long, String, Set<Long>>?>(null) }
   val ids = tracks.map { it.id }
-  val context = LocalContext.current
-  val addedMessage = { name: String, n: Int -> context.getString(R.string.message_added_to_playlist, n, name) }
+  val res = LocalResources.current
+  val addedMessage = { name: String, n: Int -> res.getString(R.string.message_added_to_playlist, n, name) }
 
   fun addTo(id: Long, name: String, skip: Set<Long>) {
     val toAdd = ids.filter { it !in skip }
