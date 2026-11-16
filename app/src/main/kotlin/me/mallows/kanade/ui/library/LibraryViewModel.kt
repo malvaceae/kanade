@@ -18,6 +18,8 @@ import me.mallows.kanade.core.data.db.GroupSummary
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.core.data.library.GroupKind
 import me.mallows.kanade.core.data.library.LibraryRepository
+import me.mallows.kanade.core.data.backup.BackupManager
+import me.mallows.kanade.core.data.backup.RestoreResult
 import me.mallows.kanade.core.data.settings.SettingsRepository
 import me.mallows.kanade.core.data.settings.SortSetting
 
@@ -32,7 +34,12 @@ object SortCategory {
 class LibraryViewModel @Inject constructor(
   private val library: LibraryRepository,
   private val settings: SettingsRepository,
+  private val backup: BackupManager,
 ) : ViewModel() {
+
+  suspend fun exportBackup(uri: android.net.Uri) = backup.export(uri)
+  suspend fun restoreBackup(uri: android.net.Uri): RestoreResult = backup.restore(uri)
+
 
   private fun <T> Flow<T>.state(initial: T): StateFlow<T> =
     stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)

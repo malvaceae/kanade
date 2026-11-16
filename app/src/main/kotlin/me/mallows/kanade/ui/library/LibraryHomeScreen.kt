@@ -26,6 +26,16 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.common.showMessage
+import me.mallows.kanade.ui.common.LocalSnackbarHost
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +92,23 @@ fun LibraryHomeScreen(
   val current = visibleTabs.firstOrNull { it.name == selectedName } ?: visibleTabs.first()
   val tab = visibleTabs.indexOf(current)
   var editingTabs by rememberSaveable { mutableStateOf(false) }
+  var menuOpen by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+  val snackbar = LocalSnackbarHost.current
+  val res = LocalResources.current
+  val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    if (uri != null) scope.launch {
+      val ok = runCatching { viewModel.exportBackup(uri) }.isSuccess
+      snackbar.showMessage(res.getString(if (ok) R.string.message_backup_exported else R.string.message_backup_failed))
+    }
+  }
+  val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    if (uri != null) scope.launch {
+      runCatching { viewModel.restoreBackup(uri) }
+        .onSuccess { r -> snackbar.showMessage(res.getString(R.string.message_backup_restored, r.playlists, r.presets, r.missingTracks)) }
+        .onFailure { snackbar.showMessage(res.getString(R.string.message_backup_failed)) }
+    }
+  }
 
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(
@@ -94,7 +121,20 @@ fun LibraryHomeScreen(
         modifier = Modifier.weight(1f),
       )
       IconButton(onClick = onSearch) { Icon(KanadeIcons.Search, contentDescription = stringResource(R.string.action_search)) }
-      IconButton(onClick = { editingTabs = true }) { Icon(KanadeIcons.Edit, contentDescription = stringResource(R.string.tabs_title)) }
+      Box {
+        IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+          DropdownMenuItem(text = { Text(stringResource(R.string.tabs_title)) }, onClick = { menuOpen = false; editingTabs = true })
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.backup_export)) },
+            onClick = { menuOpen = false; exportLauncher.launch("kanade-backup.json") },
+          )
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.backup_restore)) },
+            onClick = { menuOpen = false; restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+          )
+        }
+      }
     }
     PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp, divider = {}) {
       visibleTabs.forEachIndexed { i, t ->
