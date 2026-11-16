@@ -15,6 +15,9 @@ import java.nio.ByteOrder
 import me.mallows.kanade.audio.DspChain
 import me.mallows.kanade.audio.EqAudioProcessor
 import me.mallows.kanade.audio.PcmCodec
+import me.mallows.kanade.audio.ReplayGain
+import me.mallows.kanade.audio.ReplayGainMode
+import kotlin.math.log10
 import timber.log.Timber
 
 /**
@@ -27,14 +30,34 @@ import timber.log.Timber
 @OptIn(UnstableApi::class)
 class HiResAudioSink(
   sink: AudioSink,
-  dsp: DspChain,
+  private val dsp: DspChain,
   private val provider: KanadeOutputProvider,
   private val router: OutputRouter,
   private val monitor: OutputMonitor,
 ) : ForwardingAudioSink(sink) {
 
-  /** デコーダーに入る前の形式 (FLACやWAVならビット深度が分かる)。レンダラーが再生スレッドで設定する */
-  @Volatile var sourceFormat: Format? = null
+  /** デコーダーに入る前の形式 (FLACやWAVならビット深度が分かる) */
+  @Volatile private var sourceFormat: Format? = null
+
+  /** ReplayGainの使い方 (設定) */
+  @Volatile var replayGainMode: ReplayGainMode = ReplayGainMode.OFF
+  @Volatile private var replayGain = ReplayGain()
+
+  /** 次の曲の形式を受け取る。レンダラーが再生スレッドで、その曲のデータより先に呼ぶ */
+  fun onSourceFormat(format: Format?) {
+    sourceFormat = format
+    replayGain = replayGainOf(format)
+    applyReplayGain()
+  }
+
+  /** 今の曲と設定に合わせて、ReplayGainの倍率を音声処理に渡す */
+  fun applyReplayGain() {
+    val linear = replayGain.linearGain(replayGainMode)
+    dsp.setInputGain(linear)
+    monitor.update {
+      it.copy(replayGainDb = if (replayGainMode == ReplayGainMode.OFF || replayGain.isEmpty) null else (20 * log10(linear)).toFloat())
+    }
+  }
 
   private val eq = EqAudioProcessor(dsp)
   private var processing = false

@@ -22,6 +22,8 @@ import me.mallows.kanade.playback.UserPreset
 import me.mallows.kanade.playback.output.BitPerfectState
 import me.mallows.kanade.playback.output.OutputDevice
 import me.mallows.kanade.playback.output.OutputMonitor
+import me.mallows.kanade.playback.output.OutputSettings
+import me.mallows.kanade.audio.ReplayGainMode
 
 /**
  * イコライザーの編集。変更はすぐに音声処理へ反映し、保存は0.3秒待ってまとめて行う
@@ -32,7 +34,17 @@ class EqualizerViewModel @Inject constructor(
   private val repository: EqRepository,
   private val dsp: DspChain,
   output: OutputMonitor,
+  private val outputSettings: OutputSettings,
 ) : ViewModel() {
+
+  /** ReplayGainの使い方 */
+  val replayGain: StateFlow<ReplayGainMode> =
+    outputSettings.replayGain.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReplayGainMode.OFF)
+
+  fun setReplayGain(mode: ReplayGainMode) {
+    viewModelScope.launch { outputSettings.setReplayGain(mode) }
+  }
+
 
   /** ビットパーフェクトで出力中 (EQは通らない) */
   val bitPerfectActive: StateFlow<Boolean> = output.info

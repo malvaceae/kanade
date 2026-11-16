@@ -48,6 +48,16 @@ class DspChain {
   private var fadeLength = 960
   private var fadePosition = 0
 
+  /** ReplayGainの倍率。曲が変わるときに再生スレッドから設定する */
+  @Volatile private var inputGainTarget = 1.0
+  private var inputGain = 1.0
+  private var inputGainStep = 1.0 / 960
+
+  /** 入力に掛ける倍率 (ReplayGain)。EQのオン・オフに関係なく効き、約20msかけて切り替わる */
+  fun setInputGain(linear: Double) {
+    inputGainTarget = linear
+  }
+
   // リミッター
   private var limiterGain = 1.0
   private var releaseCoef = 0.0
@@ -65,6 +75,7 @@ class DspChain {
     fadeStates = newStates()
     releaseCoef = exp(-1.0 / (0.05 * sampleRate)) // 50ms で戻る
     fadeLength = (0.02 * sampleRate).toInt().coerceAtLeast(1) // 20ms で入れ替える
+    inputGainStep = 1.0 / fadeLength
     reset()
   }
 
@@ -77,6 +88,7 @@ class DspChain {
     applied = plan
     fading = null
     limiterGain = 1.0
+    inputGain = inputGainTarget
   }
 
   private fun newStates() = Array(plan.filters.size) { Array(channels) { BiquadState() } }
@@ -107,8 +119,14 @@ class DspChain {
       val base = f * channels
       val old = fading
       val mix = if (old != null) (fadePosition + 1).toDouble() / fadeLength else 1.0
+      // ReplayGainを目標へ少しずつ寄せる
+      val gainTarget = inputGainTarget
+      if (inputGain != gainTarget) {
+        val d = gainTarget - inputGain
+        inputGain = if (abs(d) <= inputGainStep) gainTarget else inputGain + inputGainStep * if (d > 0) 1 else -1
+      }
       for (c in 0 until channels) {
-        val input = samples[base + c].toDouble()
+        val input = samples[base + c] * inputGain
         var x = input * p.gain
         for (k in p.active) x = states[k][c].process(p.filters[k], x)
         frame[c] = x

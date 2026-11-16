@@ -53,6 +53,8 @@ data class OutputInfo(
   val output: StreamFormat? = null,
   val device: OutputDevice? = null,
   val bitPerfect: BitPerfectState = BitPerfectState.UNAVAILABLE,
+  /** ReplayGainで掛けている補正 (dB)。使っていないか、タグが無ければnull */
+  val replayGainDb: Float? = null,
 )
 
 /** 再生サービスで集めた出力情報を画面と共有する */

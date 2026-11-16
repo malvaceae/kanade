@@ -96,6 +96,12 @@ class PlaybackService : MediaSessionService() {
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
     PlayCounter(playStatsDao, scope).attach(player)
+    // ReplayGainの設定。切り替えたら今の曲にもすぐ反映する
+    scope.launch {
+      outputSettings.replayGain.collect { mode ->
+        renderers.sink?.let { it.replayGainMode = mode; it.applyReplayGain() }
+      }
+    }
     // 等速と等速以外を切り替えたら、出力の形式 (float / 16bit) を合わせるため開き直す
     player.addListener(object : Player.Listener {
       override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
@@ -188,7 +194,7 @@ class PlaybackService : MediaSessionService() {
         context, adapterFactory, mediaCodecSelector, enableDecoderFallback, eventHandler, eventListener, audioSink,
       ) {
         override fun onInputFormatChanged(formatHolder: FormatHolder): DecoderReuseEvaluation? {
-          sink?.sourceFormat = formatHolder.format
+          sink?.onSourceFormat(formatHolder.format)
           return super.onInputFormatChanged(formatHolder)
         }
       }

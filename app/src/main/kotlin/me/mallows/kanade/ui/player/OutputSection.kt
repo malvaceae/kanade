@@ -74,6 +74,7 @@ fun OutputSection(row: @Composable (label: String, value: String) -> Unit, viewM
   }
   row(stringResource(R.string.output_processing), processing)
   info.output?.let { row(stringResource(R.string.output_format), formatText(it)) }
+  info.replayGainDb?.let { row(stringResource(R.string.replay_gain), "%+.1fdB".format(it)) }
   info.device?.let { device ->
     val parts = buildList {
       device.sampleRates.maxOrNull()?.let { add(stringResource(R.string.output_max_rate, rateText(it))) }

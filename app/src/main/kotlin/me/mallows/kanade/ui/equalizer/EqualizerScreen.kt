@@ -55,6 +55,7 @@ import kotlin.math.pow
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import me.mallows.kanade.R
+import me.mallows.kanade.audio.ReplayGainMode
 import me.mallows.kanade.ui.player.deviceLabel
 import me.mallows.kanade.audio.DspChain
 import me.mallows.kanade.audio.EqPreset
@@ -73,6 +74,8 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   val bitPerfectActive by viewModel.bitPerfectActive.collectAsStateWithLifecycle()
   val device by viewModel.device.collectAsStateWithLifecycle()
   val perDevice by viewModel.perDevice.collectAsStateWithLifecycle()
+  val replayGain by viewModel.replayGain.collectAsStateWithLifecycle()
+  var replayGainMenu by remember { mutableStateOf(false) }
   val presetName = settings.matchingPresetName(userPresets) ?: stringResource(R.string.eq_custom)
 
   Column(
@@ -177,6 +180,22 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
           Text(stringResource(R.string.eq_mono_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
         }
         Switch(checked = settings.mono, onCheckedChange = viewModel::setMono)
+      }
+    }
+
+    // ReplayGain (EQがオフでも効く)
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+      Column(Modifier.weight(1f)) {
+        Text(stringResource(R.string.replay_gain), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.replay_gain_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+      }
+      Box {
+        OutlinedButton(onClick = { replayGainMenu = true }) { Text(replayGainLabel(replayGain)) }
+        DropdownMenu(expanded = replayGainMenu, onDismissRequest = { replayGainMenu = false }) {
+          ReplayGainMode.entries.forEach { m ->
+            DropdownMenuItem(text = { Text(replayGainLabel(m)) }, onClick = { replayGainMenu = false; viewModel.setReplayGain(m) })
+          }
+        }
       }
     }
 
@@ -337,6 +356,15 @@ private fun DbSlider(label: String, value: Float, min: Float, max: Float, onChan
     )
   }
 }
+
+@Composable
+private fun replayGainLabel(mode: ReplayGainMode): String = stringResource(
+  when (mode) {
+    ReplayGainMode.OFF -> R.string.replay_gain_off
+    ReplayGainMode.TRACK -> R.string.replay_gain_track
+    ReplayGainMode.ALBUM -> R.string.replay_gain_album
+  },
+)
 
 @Composable
 private fun balanceText(balance: Float): String {
