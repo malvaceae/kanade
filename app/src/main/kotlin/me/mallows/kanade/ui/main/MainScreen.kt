@@ -1,4 +1,4 @@
-package com.example.kanade.ui.main
+package me.mallows.kanade.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,9 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.example.kanade.R
-import com.example.kanade.data.DefaultDataRepository
-import com.example.kanade.ui.theme.KanadeTheme
+import me.mallows.kanade.R
+import me.mallows.kanade.data.DefaultDataRepository
+import me.mallows.kanade.ui.theme.KanadeTheme
 
 @Composable
 fun MainScreen(

@@ -1,4 +1,4 @@
-package com.example.kanade.data
+package me.mallows.kanade.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

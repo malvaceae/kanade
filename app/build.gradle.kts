@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-  namespace = "com.example.kanade"
+  namespace = "me.mallows.kanade"
   compileSdk = 37
   defaultConfig {
-    applicationId = "com.example.kanade"
+    applicationId = "me.mallows.kanade"
     minSdk = 31
     targetSdk = 37
     versionCode = 1

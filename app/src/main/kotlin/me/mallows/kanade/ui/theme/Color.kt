@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.kanade.ui.theme
+package me.mallows.kanade.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

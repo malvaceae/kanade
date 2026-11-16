@@ -1,6 +1,6 @@
-package com.example.kanade.ui.main
+package me.mallows.kanade.ui.main
 
-import com.example.kanade.data.DataRepository
+import me.mallows.kanade.data.DataRepository
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

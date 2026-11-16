@@ -1,9 +1,9 @@
-package com.example.kanade.ui.main
+package me.mallows.kanade.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.kanade.data.DataRepository
-import com.example.kanade.ui.main.MainScreenUiState.Success
+import me.mallows.kanade.data.DataRepository
+import me.mallows.kanade.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

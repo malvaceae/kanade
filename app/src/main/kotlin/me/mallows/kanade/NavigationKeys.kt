@@ -1,4 +1,4 @@
-package com.example.kanade
+package me.mallows.kanade
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
