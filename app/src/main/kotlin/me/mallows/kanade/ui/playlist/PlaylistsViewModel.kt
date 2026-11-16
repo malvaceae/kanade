@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import me.mallows.kanade.core.data.db.TrackEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -26,6 +28,12 @@ class PlaylistsViewModel @Inject constructor(
     repository.playlists.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
   suspend fun create(name: String): Long = repository.create(name.trim())
+
+  /** プレイリストの曲 (保存された順) */
+  suspend fun tracks(id: Long): List<TrackEntity> = repository.items(id).first().map { it.track }
+  suspend fun rename(id: Long, name: String) = repository.rename(id, name.trim())
+  suspend fun delete(id: Long) = repository.delete(id)
+  suspend fun exportM3u(id: Long, uri: android.net.Uri): Int = m3u.export(id, uri)
 
   suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> = repository.duplicates(playlistId, trackIds)
 

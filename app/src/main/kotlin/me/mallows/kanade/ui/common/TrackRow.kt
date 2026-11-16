@@ -109,12 +109,13 @@ fun GroupRow(
   artUri: String?,
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
+  onLongClick: (() -> Unit)? = null,
 ) {
   Row(
     modifier = modifier
       .fillMaxWidth()
       .height(72.dp)
-      .combinedClickableCompat(onClick)
+      .combinedClickableCompat(onClick, onLongClick)
       .padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -128,7 +129,8 @@ fun GroupRow(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.combinedClickableCompat(onClick: () -> Unit) = combinedClickable(onClick = onClick)
+private fun Modifier.combinedClickableCompat(onClick: () -> Unit, onLongClick: (() -> Unit)?) =
+  combinedClickable(onClick = onClick, onLongClick = onLongClick)
 
 /** 小見出しの行 (件数とソートボタンなど) */
 @Composable

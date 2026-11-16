@@ -2,6 +2,9 @@ package me.mallows.kanade
 
 import android.graphics.Color
 import android.os.Bundle
+import me.mallows.kanade.playback.PlaybackService
+import androidx.compose.runtime.mutableStateOf
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -25,8 +28,19 @@ class MainActivity : ComponentActivity() {
 
   @Inject lateinit var settings: SettingsRepository
 
+  /** 通知などから開かれ、プレイヤー画面を出す必要がある */
+  private val openPlayer = mutableStateOf(false)
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    if (intent.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false)) openPlayer.value = true
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    if (savedInstanceState == null && intent?.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false) == true) {
+      openPlayer.value = true
+    }
     setContent {
       val themeMode by settings.themeMode.collectAsStateWithLifecycle(ThemeMode.DARK)
       val dark = isDarkTheme(themeMode)
@@ -42,7 +56,7 @@ class MainActivity : ComponentActivity() {
       }
       KanadeTheme(darkTheme = dark) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          MainNavigation()
+          MainNavigation(openPlayerRequest = openPlayer)
         }
       }
     }

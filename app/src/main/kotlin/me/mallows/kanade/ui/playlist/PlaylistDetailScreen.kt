@@ -41,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.common.LocalPlayingContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -142,6 +143,9 @@ fun PlaylistDetailScreen(
   }
 
   val all = items ?: return Loading()
+  // 再生元の一覧と同じときだけ「再生中」を出す
+  val playingContext = LocalPlayingContext.current
+  val playingId = if (remember(all, playingContext) { playingContext.matches(all.map { it.track.mediaStoreId }) }) playingMediaStoreId else null
   // ドラッグ中の並び。保存された結果が届いたら置き換わる
   var local by remember(all) { mutableStateOf(all) }
   val ids = remember(all) { all.map { it.entryId }.toSet() }
@@ -256,7 +260,7 @@ fun PlaylistDetailScreen(
               items = all,
               sortLabel = sort.sort?.let { stringResource(it.label) },
               onPlay = { actions.play(all.map { it.track }, 0) },
-              onShuffle = { actions.play(all.map { it.track }.shuffled(), 0) },
+              onShuffle = { actions.shufflePlay(all.map { it.track }) },
             )
           }
         }
@@ -281,12 +285,14 @@ fun PlaylistDetailScreen(
               TrackRow(
                 track = item.track,
                 number = index + 1,
-                playing = item.track.mediaStoreId == playingMediaStoreId,
+                playing = item.track.mediaStoreId == playingId,
                 selectionMode = selecting,
                 selected = isSelected && !dragging,
                 onClick = {
                   if (selecting) {
                     selected = if (isSelected) selected - item.entryId else selected + item.entryId
+                  } else if (item.track.mediaStoreId == playingId) {
+                    actions.openPlayer()
                   } else {
                     actions.play(local.map { it.track }, index)
                   }

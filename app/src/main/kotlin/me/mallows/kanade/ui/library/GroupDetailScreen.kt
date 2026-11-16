@@ -102,7 +102,7 @@ fun GroupDetailScreen(
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               modifier = Modifier.weight(1f),
             )
-            FilledTonalIconButton(onClick = { actions.play(list.shuffled(), 0) }, shape = CircleShape) {
+            FilledTonalIconButton(onClick = { actions.shufflePlay(list) }, shape = CircleShape) {
               Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
             }
             Button(onClick = { actions.play(list, 0) }, modifier = Modifier.padding(start = 8.dp)) {

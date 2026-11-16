@@ -21,6 +21,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.selection.TrackActions
+import me.mallows.kanade.core.data.db.PlaylistSummary
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
 import me.mallows.kanade.ui.common.showMessage
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import androidx.compose.ui.platform.LocalResources
@@ -56,11 +61,17 @@ import me.mallows.kanade.ui.library.Loading
 @Composable
 fun PlaylistsTab(
   onOpen: (id: Long, name: String) -> Unit,
+  actions: TrackActions,
   bottomPadding: Dp,
   viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
   val playlists by viewModel.playlists.collectAsStateWithLifecycle()
   var creating by rememberSaveable { mutableStateOf(false) }
+  /** 長押しでメニューを出しているプレイリスト */
+  var menuFor by remember { mutableStateOf<PlaylistSummary?>(null) }
+  var renaming by remember { mutableStateOf<PlaylistSummary?>(null) }
+  var deleting by remember { mutableStateOf<PlaylistSummary?>(null) }
+  var exporting by remember { mutableStateOf<PlaylistSummary?>(null) }
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
@@ -77,6 +88,17 @@ fun PlaylistsTab(
       }
     }
   }
+  val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+    val target = exporting
+    exporting = null
+    if (uri != null && target != null) {
+      scope.launch {
+        val message = runCatching { viewModel.exportM3u(target.id, uri) }
+          .fold({ n -> res.getQuantityString(R.plurals.message_m3u_exported, n, n) }, { res.getString(R.string.message_m3u_failed) })
+        snackbar.showMessage(message)
+      }
+    }
+  }
   val list = playlists ?: return Loading()
 
   LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
@@ -89,8 +111,53 @@ fun PlaylistsTab(
         subtitle = "${pluralStringResource(R.plurals.track_count, p.trackCount, p.trackCount)} · ${p.durationMs / 60_000}${stringResource(R.string.minutes_suffix)}",
         artUri = p.artUri ?: "",
         onClick = { onOpen(p.id, p.name) },
+        onLongClick = { menuFor = p },
       )
     }
+  }
+
+  menuFor?.let { p ->
+    PlaylistMenuSheet(
+      name = p.name,
+      onDismiss = { menuFor = null },
+      onPlay = { scope.launch { viewModel.tracks(p.id).takeIf { it.isNotEmpty() }?.let { actions.play(it, 0) } } },
+      onPlayNext = {
+        scope.launch {
+          val tracks = viewModel.tracks(p.id)
+          actions.playNext(tracks)
+          snackbar.showMessage(res.getString(R.string.message_play_next, tracks.size))
+        }
+      },
+      onAddToQueue = {
+        scope.launch {
+          val tracks = viewModel.tracks(p.id)
+          actions.addToQueue(tracks)
+          snackbar.showMessage(res.getString(R.string.message_added_to_queue, tracks.size))
+        }
+      },
+      onRename = { renaming = p },
+      onExport = { exporting = p; exportLauncher.launch("${p.name}.m3u8") },
+      onDelete = { deleting = p },
+    )
+  }
+  renaming?.let { p ->
+    PlaylistNameDialog(
+      title = stringResource(R.string.playlist_rename),
+      initial = p.name,
+      onConfirm = { name -> renaming = null; scope.launch { viewModel.rename(p.id, name) } },
+      onDismiss = { renaming = null },
+    )
+  }
+  deleting?.let { p ->
+    AlertDialog(
+      onDismissRequest = { deleting = null },
+      title = { Text(stringResource(R.string.playlist_delete)) },
+      text = { Text(stringResource(R.string.playlist_delete_confirm, p.name)) },
+      confirmButton = {
+        TextButton(onClick = { deleting = null; scope.launch { viewModel.delete(p.id) } }) { Text(stringResource(R.string.action_delete)) }
+      },
+      dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.action_cancel)) } },
+    )
   }
 
   if (creating) {
@@ -156,5 +223,47 @@ private fun IconRow(icon: ImageVector, title: String, onClick: () -> Unit) {
       contentAlignment = Alignment.Center,
     ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
     Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+  }
+}
+
+/** プレイリストを長押ししたときのメニュー */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaylistMenuSheet(
+  name: String,
+  onDismiss: () -> Unit,
+  onPlay: () -> Unit,
+  onPlayNext: () -> Unit,
+  onAddToQueue: () -> Unit,
+  onRename: () -> Unit,
+  onExport: () -> Unit,
+  onDelete: () -> Unit,
+) {
+  ModalBottomSheet(onDismissRequest = onDismiss) {
+    Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
+      Text(
+        name,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        maxLines = 1,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+      )
+      val items = listOf(
+        Triple(KanadeIcons.Play, R.string.action_play, onPlay),
+        Triple(KanadeIcons.PlayNext, R.string.action_play_next, onPlayNext),
+        Triple(KanadeIcons.AddToQueue, R.string.action_add_to_queue, onAddToQueue),
+        Triple(KanadeIcons.Edit, R.string.playlist_rename, onRename),
+        Triple(KanadeIcons.AddToPlaylist, R.string.playlist_export_m3u, onExport),
+        Triple(KanadeIcons.Delete, R.string.playlist_delete, onDelete),
+      )
+      items.forEach { (icon, label, action) ->
+        Row(
+          Modifier.fillMaxWidth().height(56.dp).clickable { onDismiss(); action() }.padding(horizontal = 24.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+          Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 20.dp))
+        }
+      }
+    }
   }
 }

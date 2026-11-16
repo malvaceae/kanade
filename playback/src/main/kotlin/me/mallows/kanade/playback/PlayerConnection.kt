@@ -50,6 +50,8 @@ data class QueueItem(
   val artist: String?,
   /** 「次に再生」「キューに追加」で入れた曲 */
   val queued: Boolean,
+  /** プレイヤー上の位置 (シャッフル中は表示の順と違う) */
+  val index: Int = -1,
 )
 
 /** 再生キュー。[upcoming]は今の曲の後ろに並んでいる曲 (プレイヤー上の並び順) */
@@ -58,7 +60,16 @@ data class QueueState(
   val currentIndex: Int = 0,
   val upcoming: List<QueueItem> = emptyList(),
   val shuffle: Boolean = false,
+  /** 再生元の一覧 (自分で足した曲を除く) の曲。一覧の「再生中」表示を、再生元の一覧の中だけにするために使う */
+  val context: PlayingContext = PlayingContext(),
 )
+
+/** 再生元の一覧の曲の集まり */
+data class PlayingContext(val ids: Set<Long> = emptySet(), val size: Int = 0) {
+  /** [mediaStoreIds] の一覧が再生元と同じ曲の集まりか (並べ替えやシャッフルをしても同じとみなす) */
+  fun matches(mediaStoreIds: List<Long>): Boolean =
+    size > 0 && mediaStoreIds.size == size && mediaStoreIds.all { it in ids }
+}
 
 /** 画面から再生サービスを操作する窓口。MediaController経由で通知やBluetoothと同じ経路を使う */
 @Singleton
@@ -111,8 +122,10 @@ class PlayerConnection @Inject constructor(
   }
 
   /** [mediaStoreIds]を再生順に並べ、[startIndex]の曲から再生する */
-  fun playTracks(mediaStoreIds: List<Long>, startIndex: Int) = withController {
+  /** [shuffle] ならシャッフルをオンにする (並びはそのまま。解除すれば元の順に戻る) */
+  fun playTracks(mediaStoreIds: List<Long>, startIndex: Int, shuffle: Boolean = false) = withController {
     it.setMediaItems(mediaStoreIds.map(::mediaItemRequest), startIndex, 0L)
+    if (shuffle) it.shuffleModeEnabled = true
     it.prepare()
     it.play()
   }
@@ -149,7 +162,16 @@ class PlayerConnection @Inject constructor(
     }
   }
 
-  fun next() = withController { it.seekToNext() }
+  /** 次の曲へ。リピートなしで最後の曲なら、先頭の曲に戻して一時停止する (何も起きないと壊れて見えるため) */
+  fun next() = withController {
+    if (!it.hasNextMediaItem() && it.repeatMode == Player.REPEAT_MODE_OFF && it.mediaItemCount > 0) {
+      val first = it.currentTimeline.getFirstWindowIndex(it.shuffleModeEnabled).coerceAtLeast(0)
+      it.seekTo(first, 0L)
+      it.pause()
+    } else {
+      it.seekToNext()
+    }
+  }
 
   /** 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る */
   fun previous() = withController { it.seekToPrevious() }
@@ -221,20 +243,19 @@ class PlayerConnection @Inject constructor(
   /** 今の曲の後ろの曲のうち、[positions] (0始まり) の曲を外す。元に戻すための内容を返す */
   suspend fun removeUpcoming(positions: Set<Int>): List<Pair<Int, QueueItem>> {
     val c = awaitController() ?: return emptyList()
-    val base = c.currentMediaItemIndex + 1
     val items = _queue.value.upcoming
     val removed = positions.sorted().mapNotNull { p -> items.getOrNull(p)?.let { p to it } }
-    // 後ろから消すと位置がずれない
-    removed.asReversed().forEach { (p, _) -> c.removeMediaItem(base + p) }
+    // プレイヤー上の位置の後ろから消すと、位置がずれない
+    removed.sortedByDescending { it.second.index }.forEach { (_, item) -> c.removeMediaItem(item.index) }
     return removed
   }
 
   /** [removeUpcoming]で外した曲を元の位置に戻す */
   suspend fun restoreUpcoming(removed: List<Pair<Int, QueueItem>>) {
     val c = awaitController() ?: return
-    val base = c.currentMediaItemIndex + 1
-    removed.forEach { (p, item) ->
-      c.addMediaItem((base + p).coerceAtMost(c.mediaItemCount), mediaItemRequest(item.mediaStoreId, item.queued))
+    // 前から元の位置に入れ直す
+    removed.sortedBy { it.second.index }.forEach { (_, item) ->
+      c.addMediaItem(item.index.coerceAtMost(c.mediaItemCount), mediaItemRequest(item.mediaStoreId, item.queued))
     }
   }
 
@@ -252,13 +273,26 @@ class PlayerConnection @Inject constructor(
         title = item.mediaMetadata.title?.toString().orEmpty(),
         artist = item.mediaMetadata.artist?.toString(),
         queued = item.isQueued,
+        index = i,
       )
     }
     val count = player.mediaItemCount
+    // シャッフル中は、実際に流れる順 (シャッフルの順) で並べる
+    val upcomingIndices = if (player.shuffleModeEnabled && count > 0) {
+      val timeline = player.currentTimeline
+      generateSequence(timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, true).takeIf { it != C.INDEX_UNSET }) {
+        timeline.getNextWindowIndex(it, Player.REPEAT_MODE_OFF, true).takeIf { n -> n != C.INDEX_UNSET }
+      }.toList()
+    } else {
+      ((index + 1) until count).toList()
+    }
     _queue.value = QueueState(
       current = if (count > 0) itemAt(index) else null,
       currentIndex = index,
-      upcoming = ((index + 1) until count).map(::itemAt),
+      upcoming = upcomingIndices.map(::itemAt),
+      context = (0 until count).map { player.getMediaItemAt(it) }.filterNot { it.isQueued }
+        .map { it.mediaId.toLongOrNull() ?: -1 }
+        .let { PlayingContext(it.toSet(), it.size) },
       shuffle = player.shuffleModeEnabled,
     )
   }

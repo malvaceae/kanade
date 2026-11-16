@@ -17,7 +17,10 @@ class QueueViewModel @Inject constructor(
 
   val queue: StateFlow<QueueState> = connection.queue
 
-  fun playAt(position: Int) = connection.playAt(queue.value.currentIndex + 1 + position)
+  fun playAt(position: Int) {
+    val item = queue.value.upcoming.getOrNull(position) ?: return
+    connection.playAt(item.index)
+  }
 
   private suspend fun apply(order: List<Int>): Undo? {
     if (IndexReorder.isIdentity(order)) return null

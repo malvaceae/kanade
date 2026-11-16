@@ -1,5 +1,6 @@
 package me.mallows.kanade.playback
 
+import android.app.PendingIntent
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import android.content.Context
@@ -89,7 +90,19 @@ class PlaybackService : MediaSessionService() {
       .setHandleAudioBecomingNoisy(true)
       .setWakeMode(C.WAKE_MODE_LOCAL)
       .build()
+    // 通知やロック画面の再生中の曲をタップしたら、アプリのプレイヤー画面を開く
+    val open = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+      putExtra(EXTRA_OPEN_PLAYER, true)
+      addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    }
     session = MediaSession.Builder(this, player)
+      .apply {
+        if (open != null) {
+          setSessionActivity(
+            PendingIntent.getActivity(this@PlaybackService, 0, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+          )
+        }
+      }
       .setCallback(SessionCallback())
       .build()
 
@@ -147,6 +160,11 @@ class PlaybackService : MediaSessionService() {
     player.stop()
     player.seekTo(index, position)
     player.prepare()
+  }
+
+  companion object {
+    /** 起動の意図に付ける印。付いていればプレイヤー画面を開く */
+    const val EXTRA_OPEN_PLAYER = "me.mallows.kanade.OPEN_PLAYER"
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session

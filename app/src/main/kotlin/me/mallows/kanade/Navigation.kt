@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +34,7 @@ import androidx.navigation3.ui.NavDisplay
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalIsPlaying
+import me.mallows.kanade.ui.common.LocalPlayingContext
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
@@ -51,11 +54,22 @@ import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
 
 @Composable
-fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
+fun MainNavigation(
+  openPlayerRequest: MutableState<Boolean> = remember { mutableStateOf(false) },
+  playerViewModel: PlayerViewModel = hiltViewModel(),
+) {
   val backStack = rememberNavBackStack(Library)
+  // 通知などから開かれたら、プレイヤー画面を出す
+  LaunchedEffect(openPlayerRequest.value) {
+    if (openPlayerRequest.value) {
+      if (backStack.lastOrNull() != Player) backStack.add(Player)
+      openPlayerRequest.value = false
+    }
+  }
   val player by playerViewModel.state.collectAsStateWithLifecycle()
   val sleep by playerViewModel.sleep.collectAsStateWithLifecycle()
   val lyrics by playerViewModel.lyrics.collectAsStateWithLifecycle()
+  val queue by playerViewModel.queue.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
   val bottomBarActive = remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
@@ -64,6 +78,10 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
   val actions = remember(playerViewModel) {
     object : TrackActions {
       override fun play(tracks: List<TrackEntity>, index: Int) = playerViewModel.play(tracks, index)
+      override fun shufflePlay(tracks: List<TrackEntity>) = playerViewModel.shufflePlay(tracks)
+      override fun openPlayer() {
+        if (backStack.lastOrNull() != Player) backStack.add(Player)
+      }
       override fun playNext(tracks: List<TrackEntity>) = playerViewModel.playNext(tracks)
       override fun addToQueue(tracks: List<TrackEntity>) = playerViewModel.addToQueue(tracks)
       override fun addToPlaylist(tracks: List<TrackEntity>) {
@@ -79,6 +97,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
     LocalSnackbarHost provides snackbar,
     LocalBottomBarActive provides bottomBarActive,
     LocalIsPlaying provides player.isPlaying,
+    LocalPlayingContext provides queue.context,
   ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {
@@ -121,7 +140,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                   onBack = { backStack.removeLastOrNull() },
                   onSearch = { backStack.add(Search) },
                   playlists = { padding ->
-                    PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, bottomPadding = padding)
+                    PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, actions = actions, bottomPadding = padding)
                   },
                   bottomPadding = bottomPadding,
                 )
