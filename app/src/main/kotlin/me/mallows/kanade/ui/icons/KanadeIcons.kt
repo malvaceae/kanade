@@ -27,6 +27,10 @@ object KanadeIcons {
     "M17 3l3 3-3 3", "M20 6H8a4 4 0 0 0-4 4v1", "M7 21l-3-3 3-3", "M4 18h12a4 4 0 0 0 4-4v-1", "M11 10.5l1.5-1v5",
   )
   val ChevronDown = stroke("chevron_down", "M6 9l6 6 6-6")
+  val Album = stroke("album", "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z")
+  val Artist = stroke("artist", "M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z", "M5 11a7 7 0 0 0 14 0", "M12 18v3")
+  val Folder = stroke("folder", "M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z")
+  val Genre = stroke("genre", "M3 12V4h8l10 10-8 8z", "M7.5 7.5h.01")
   val Back = stroke("back", "M15 5l-7 7 7 7")
   val Check = stroke("check", "M5 12.5l4.5 4.5L19 7.5")
   val Close = stroke("close", "M6 6l12 12", "M18 6L6 18")

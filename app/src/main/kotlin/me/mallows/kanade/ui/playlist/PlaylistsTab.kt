@@ -26,8 +26,6 @@ import me.mallows.kanade.ui.common.LocalSnackbarHost
 import androidx.compose.ui.platform.LocalResources
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
-import me.mallows.kanade.core.data.library.GroupKind
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +56,6 @@ import me.mallows.kanade.ui.library.Loading
 @Composable
 fun PlaylistsTab(
   onOpen: (id: Long, name: String) -> Unit,
-  onOpenSmart: (kind: GroupKind, title: String) -> Unit,
   bottomPadding: Dp,
   viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
@@ -83,20 +80,6 @@ fun PlaylistsTab(
   val list = playlists ?: return Loading()
 
   LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
-    // 自動のリスト
-    item {
-      val title = stringResource(R.string.smart_recently_added)
-      IconRow(KanadeIcons.Plus, title) { onOpenSmart(GroupKind.RECENTLY_ADDED, title) }
-    }
-    item {
-      val title = stringResource(R.string.smart_recently_played)
-      IconRow(KanadeIcons.Timer, title) { onOpenSmart(GroupKind.RECENTLY_PLAYED, title) }
-    }
-    item {
-      val title = stringResource(R.string.smart_most_played)
-      IconRow(KanadeIcons.Repeat, title) { onOpenSmart(GroupKind.MOST_PLAYED, title) }
-    }
-    item { HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
     item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
     item { IconRow(KanadeIcons.Plus, stringResource(R.string.playlist_new)) { creating = true } }
     item { IconRow(KanadeIcons.AddToPlaylist, stringResource(R.string.playlist_import_m3u)) { importLauncher.launch(M3U_TYPES) } }

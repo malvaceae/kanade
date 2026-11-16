@@ -22,8 +22,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -46,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,34 +65,36 @@ import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.selection.SelectableTrackList
 import me.mallows.kanade.ui.selection.TrackActions
 
-/** ライブラリのタブ */
-enum class LibraryTab(@StringRes val label: Int) {
-  TRACKS(R.string.tab_tracks),
-  ALBUMS(R.string.tab_albums),
-  ARTISTS(R.string.tab_artists),
-  FOLDERS(R.string.tab_folders),
-  GENRES(R.string.tab_genres),
-  PLAYLISTS(R.string.tab_playlists),
+/** ライブラリのホームに並べる項目 */
+enum class LibraryTab(@StringRes val label: Int, val icon: ImageVector) {
+  TRACKS(R.string.tab_tracks, KanadeIcons.MusicNote),
+  ALBUMS(R.string.tab_albums, KanadeIcons.Album),
+  ARTISTS(R.string.tab_artists, KanadeIcons.Artist),
+  FOLDERS(R.string.tab_folders, KanadeIcons.Folder),
+  GENRES(R.string.tab_genres, KanadeIcons.Genre),
+  PLAYLISTS(R.string.tab_playlists, KanadeIcons.ListView),
+  QUEUE(R.string.queue_title, KanadeIcons.Queue),
+  RECENTLY_ADDED(R.string.smart_recently_added, KanadeIcons.Plus),
+  RECENTLY_PLAYED(R.string.smart_recently_played, KanadeIcons.Timer),
+  MOST_PLAYED(R.string.smart_most_played, KanadeIcons.Repeat),
 }
 
-/** 曲・アルバム・アーティストなどをタブで切り替える画面 */
+/** ライブラリのホーム。すべての曲・アルバム・アーティストなどの項目を並べ、押すとそれぞれの一覧を開く */
 @Composable
 fun LibraryHomeScreen(
-  playingMediaStoreId: Long?,
-  actions: TrackActions,
-  onOpenGroup: (kind: GroupKind, key: String?, title: String) -> Unit,
+  onOpen: (tab: LibraryTab, title: String) -> Unit,
   onSearch: () -> Unit,
-  playlistsTab: @Composable (bottomPadding: Dp) -> Unit,
   bottomPadding: Dp,
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
   LaunchedEffect(Unit) { viewModel.scanOnce() }
   val tabSettings by viewModel.tabs.collectAsStateWithLifecycle()
   val visibleTabs = tabSettings.filter { it.visible }.map { it.tab }
-  var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
-  // 隠したタブを選んでいたら、先頭のタブにする
-  val current = visibleTabs.firstOrNull { it.name == selectedName } ?: visibleTabs.first()
-  val tab = visibleTabs.indexOf(current)
+  val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+  val albums by viewModel.albums.collectAsStateWithLifecycle()
+  val artists by viewModel.groups(GroupKind.ARTIST).collectAsStateWithLifecycle()
+  val folders by viewModel.groups(GroupKind.FOLDER).collectAsStateWithLifecycle()
+  val genres by viewModel.groups(GroupKind.GENRE).collectAsStateWithLifecycle()
   var editingTabs by rememberSaveable { mutableStateOf(false) }
   var menuOpen by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
@@ -139,30 +140,80 @@ fun LibraryHomeScreen(
         }
       }
     }
-    PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp, divider = {}) {
-      visibleTabs.forEachIndexed { i, t ->
-        Tab(
-          selected = tab == i,
-          onClick = { selectedName = t.name },
-          text = { Text(stringResource(t.label)) },
-          selectedContentColor = MaterialTheme.colorScheme.primary,
-          unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
-    Box(Modifier.weight(1f)) {
-      when (current) {
-        LibraryTab.TRACKS -> TracksTab(viewModel, playingMediaStoreId, actions, bottomPadding)
-        LibraryTab.ALBUMS -> AlbumsTab(viewModel, onOpenGroup, bottomPadding)
-        LibraryTab.ARTISTS -> GroupsTab(viewModel, GroupKind.ARTIST, onOpenGroup, bottomPadding)
-        LibraryTab.FOLDERS -> GroupsTab(viewModel, GroupKind.FOLDER, onOpenGroup, bottomPadding)
-        LibraryTab.GENRES -> GroupsTab(viewModel, GroupKind.GENRE, onOpenGroup, bottomPadding)
-        LibraryTab.PLAYLISTS -> playlistsTab(bottomPadding)
+    LazyColumn(contentPadding = PaddingValues(top = 4.dp, bottom = bottomPadding)) {
+      items(visibleTabs, key = { it.name }) { t ->
+        val count = when (t) {
+          LibraryTab.TRACKS -> tracks?.size?.let { pluralStringResource(R.plurals.track_count, it, it) }
+          LibraryTab.ALBUMS -> albums?.size?.let { pluralStringResource(R.plurals.item_count, it, it) }
+          LibraryTab.ARTISTS -> artists?.size?.let { pluralStringResource(R.plurals.item_count, it, it) }
+          LibraryTab.FOLDERS -> folders?.size?.let { pluralStringResource(R.plurals.item_count, it, it) }
+          LibraryTab.GENRES -> genres?.size?.let { pluralStringResource(R.plurals.item_count, it, it) }
+          else -> null
+        }
+        val title = stringResource(t.label)
+        MenuRow(t.icon, title, count) { onOpen(t, title) }
       }
     }
   }
   if (editingTabs) {
     TabsSheet(tabs = tabSettings, onChange = viewModel::setTabs, onDismiss = { editingTabs = false })
+  }
+}
+
+/** ホームの1項目 */
+@Composable
+private fun MenuRow(icon: ImageVector, title: String, count: String?, onClick: () -> Unit) {
+  Row(
+    Modifier.fillMaxWidth().height(64.dp).clickable(onClick = onClick).padding(horizontal = 20.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    Text(
+      title,
+      style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+      modifier = Modifier.weight(1f).padding(start = 20.dp),
+    )
+    if (count != null) {
+      Text(count, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
+/** ホームの項目 (すべての曲・アルバム・アーティスト・フォルダー・ジャンル・プレイリスト) の一覧 */
+@Composable
+fun CategoryScreen(
+  category: LibraryTab,
+  playingMediaStoreId: Long?,
+  actions: TrackActions,
+  onOpenGroup: (kind: GroupKind, key: String?, title: String) -> Unit,
+  onBack: () -> Unit,
+  onSearch: () -> Unit,
+  playlists: @Composable (bottomPadding: Dp) -> Unit,
+  bottomPadding: Dp,
+  viewModel: LibraryViewModel = hiltViewModel(),
+) {
+  Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
+      Text(
+        stringResource(category.label),
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.weight(1f).padding(start = 4.dp),
+      )
+      IconButton(onClick = onSearch) { Icon(KanadeIcons.Search, contentDescription = stringResource(R.string.action_search)) }
+    }
+    Box(Modifier.weight(1f)) {
+      when (category) {
+        LibraryTab.TRACKS -> TracksTab(viewModel, playingMediaStoreId, actions, bottomPadding)
+        LibraryTab.ALBUMS -> AlbumsTab(viewModel, onOpenGroup, bottomPadding)
+        LibraryTab.ARTISTS -> GroupsTab(viewModel, GroupKind.ARTIST, onOpenGroup, bottomPadding)
+        LibraryTab.FOLDERS -> GroupsTab(viewModel, GroupKind.FOLDER, onOpenGroup, bottomPadding)
+        LibraryTab.GENRES -> GroupsTab(viewModel, GroupKind.GENRE, onOpenGroup, bottomPadding)
+        LibraryTab.PLAYLISTS -> playlists(bottomPadding)
+        // キューと自動のリストは、それぞれの画面で開く
+        else -> Unit
+      }
+    }
   }
 }
 

@@ -19,9 +19,9 @@
     <string name="message_backup_exported">設定とプレイリストを書き出しました</string>
     <string name="message_backup_restored">復元しました (プレイリスト%1$d件、プリセット%2$d件、見つからない曲%3$d曲)</string>
     <string name="message_backup_failed">バックアップを読み書きできませんでした</string>
-    <string name="tabs_title">タブを編集</string>
+    <string name="tabs_title">メニューを編集</string>
     <string name="tabs_hint">チェックを外すと隠れます。右端をドラッグして並べ替えます</string>
-    <string name="tab_tracks">曲</string>
+    <string name="tab_tracks">すべての曲</string>
     <string name="tab_albums">アルバム</string>
     <string name="tab_artists">アーティスト</string>
     <string name="tab_folders">フォルダー</string>

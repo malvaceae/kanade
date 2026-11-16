@@ -12,6 +12,9 @@ import kotlinx.serialization.Serializable
 /** プレイリストの中身 */
 @Serializable data class PlaylistDetail(val id: Long) : NavKey
 
+/** ホームの項目 (すべての曲・アルバムなど) の一覧。[name] は LibraryTab の名前 */
+@Serializable data class Category(val name: String) : NavKey
+
 /** 検索 */
 @Serializable data object Search : NavKey
 

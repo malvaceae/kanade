@@ -36,6 +36,9 @@ import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
 import me.mallows.kanade.ui.library.LibraryHomeScreen
+import me.mallows.kanade.core.data.library.GroupKind
+import me.mallows.kanade.ui.library.LibraryTab
+import me.mallows.kanade.ui.library.CategoryScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
 import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
@@ -94,16 +97,31 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
             entry<Library> {
               Page {
                 LibraryHomeScreen(
+                  onOpen = { tab, title ->
+                    when (tab) {
+                      LibraryTab.QUEUE -> backStack.add(Queue)
+                      LibraryTab.RECENTLY_ADDED -> backStack.add(GroupDetail(GroupKind.RECENTLY_ADDED.name, null, title))
+                      LibraryTab.RECENTLY_PLAYED -> backStack.add(GroupDetail(GroupKind.RECENTLY_PLAYED.name, null, title))
+                      LibraryTab.MOST_PLAYED -> backStack.add(GroupDetail(GroupKind.MOST_PLAYED.name, null, title))
+                      else -> backStack.add(Category(tab.name))
+                    }
+                  },
+                  onSearch = { backStack.add(Search) },
+                  bottomPadding = bottomPadding,
+                )
+              }
+            }
+            entry<Category> { key ->
+              Page {
+                CategoryScreen(
+                  category = LibraryTab.valueOf(key.name),
                   playingMediaStoreId = player.mediaStoreId,
                   actions = actions,
-                  onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
+                  onOpenGroup = { kind, k, title -> backStack.add(GroupDetail(kind.name, k, title)) },
+                  onBack = { backStack.removeLastOrNull() },
                   onSearch = { backStack.add(Search) },
-                  playlistsTab = { padding ->
-                    PlaylistsTab(
-                      onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) },
-                      onOpenSmart = { kind, title -> backStack.add(GroupDetail(kind.name, null, title)) },
-                      bottomPadding = padding,
-                    )
+                  playlists = { padding ->
+                    PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, bottomPadding = padding)
                   },
                   bottomPadding = bottomPadding,
                 )
