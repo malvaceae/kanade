@@ -132,6 +132,19 @@
     <string name="info_bitrate">ビットレート</string>
     <string name="info_size">ファイルサイズ</string>
 
+    <string name="eq_title">イコライザー</string>
+    <string name="eq_custom">カスタム</string>
+    <string name="eq_save_preset">保存</string>
+    <string name="eq_reset">リセット</string>
+    <string name="eq_preamp">プリアンプ</string>
+    <string name="eq_bass">低音</string>
+    <string name="eq_treble">高音</string>
+    <string name="eq_limiter">リミッター</string>
+    <string name="eq_limiter_desc">持ち上げた音が割れないよう、大きすぎる音を抑えます</string>
+    <string name="eq_curve_description">周波数特性</string>
+    <string name="eq_bands_description">10バンドのイコライザー。横になぞると続けて設定できます</string>
+    <string name="action_open_eq">イコライザー</string>
+
     <string name="action_move">移動</string>
     <string name="action_swap">入れ替え</string>
     <string name="action_reverse">逆順</string>

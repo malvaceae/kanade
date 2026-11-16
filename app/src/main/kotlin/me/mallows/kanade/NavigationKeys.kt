@@ -15,6 +15,9 @@ import kotlinx.serialization.Serializable
 /** 検索 */
 @Serializable data object Search : NavKey
 
+/** イコライザー */
+@Serializable data object Equalizer : NavKey
+
 /** 再生キュー */
 @Serializable data object Queue : NavKey
 

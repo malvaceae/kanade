@@ -25,6 +25,7 @@ import androidx.navigation3.ui.NavDisplay
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalSnackbarHost
+import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
 import me.mallows.kanade.ui.library.LibraryHomeScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
@@ -59,7 +60,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
     }
   }
   val top = backStack.lastOrNull()
-  val showMini = player.hasMedia && top != Player && top != Queue && !bottomBarActive.value
+  val showMini = player.hasMedia && top != Player && top != Queue && top != Equalizer && !bottomBarActive.value
   val bottomPadding = if (player.hasMedia) 96.dp else 16.dp
 
   CompositionLocalProvider(LocalSnackbarHost provides snackbar, LocalBottomBarActive provides bottomBarActive) {
@@ -111,6 +112,9 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 bottomPadding = bottomPadding,
               )
             }
+            entry<Equalizer> {
+              EqualizerScreen(onBack = { backStack.removeLastOrNull() })
+            }
             entry<Queue> {
               QueueScreen(onBack = { backStack.removeLastOrNull() })
             }
@@ -119,6 +123,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 state = player,
                 onClose = { backStack.removeLastOrNull() },
                 onOpenQueue = { backStack.add(Queue) },
+                onOpenEqualizer = { backStack.add(Equalizer) },
                 onTogglePlay = playerViewModel::togglePlayPause,
                 onNext = playerViewModel::next,
                 onPrevious = playerViewModel::previous,
