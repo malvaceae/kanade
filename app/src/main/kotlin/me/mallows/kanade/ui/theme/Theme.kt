@@ -1,65 +1,76 @@
-/*
- * Copyright 2026 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package me.mallows.kanade.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import me.mallows.kanade.core.data.settings.ThemeMode
 
-private val DarkColorScheme = darkColorScheme(
-    primary = primaryDark,
-    primaryContainer = primaryContainerDark,
-    secondary = secondaryDark,
-    tertiary = tertiaryDark
+private val DarkColors = darkColorScheme(
+  primary = DarkAccent,
+  onPrimary = DarkOnAccent,
+  primaryContainer = DarkAccentContainer,
+  onPrimaryContainer = DarkAccent,
+  secondary = DarkAccent,
+  onSecondary = DarkOnAccent,
+  background = DarkBackground,
+  onBackground = DarkOnSurface,
+  surface = DarkBackground,
+  onSurface = DarkOnSurface,
+  surfaceVariant = DarkSurfaceContainerHigh,
+  onSurfaceVariant = DarkOnSurfaceVariant,
+  surfaceContainerLowest = DarkBackground,
+  surfaceContainerLow = DarkSurfaceContainer,
+  surfaceContainer = DarkSurfaceContainer,
+  surfaceContainerHigh = DarkSurfaceContainerHigh,
+  surfaceContainerHighest = DarkSurfaceContainerHighest,
+  outline = DarkOutline,
+  outlineVariant = DarkSurfaceContainerHighest,
+  inverseSurface = DarkOnSurface,
+  inverseOnSurface = DarkBackground,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = primaryLight,
-    primaryContainer = primaryContainerLight,
-    secondary = secondaryLight,
-    tertiary = tertiaryLight
+private val LightColors = lightColorScheme(
+  primary = LightAccent,
+  onPrimary = LightOnAccent,
+  primaryContainer = LightAccentContainer,
+  onPrimaryContainer = LightAccent,
+  secondary = LightAccent,
+  onSecondary = LightOnAccent,
+  background = LightBackground,
+  onBackground = LightOnSurface,
+  surface = LightBackground,
+  onSurface = LightOnSurface,
+  surfaceVariant = LightSurfaceContainerHigh,
+  onSurfaceVariant = LightOnSurfaceVariant,
+  surfaceContainerLowest = LightBackground,
+  surfaceContainerLow = LightSurfaceContainer,
+  surfaceContainer = LightSurfaceContainer,
+  surfaceContainerHigh = LightSurfaceContainerHigh,
+  surfaceContainerHighest = LightSurfaceContainerHighest,
+  outline = LightOutline,
+  outlineVariant = LightSurfaceContainerHighest,
+  inverseSurface = LightOnSurface,
+  inverseOnSurface = LightBackground,
 )
 
 @Composable
-fun KanadeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+fun isDarkTheme(mode: ThemeMode): Boolean = when (mode) {
+  ThemeMode.SYSTEM -> isSystemInDarkTheme()
+  ThemeMode.LIGHT -> false
+  ThemeMode.DARK -> true
 }
 
+/** ダーク基調のテーマ。アクセントカラーは再生中のアートワークに合わせて後から変える予定 */
+@Composable
+fun KanadeTheme(
+  darkTheme: Boolean = true,
+  content: @Composable () -> Unit,
+) {
+  MaterialTheme(
+    colorScheme = if (darkTheme) DarkColors else LightColors,
+    typography = Typography,
+    content = content,
+  )
+}
