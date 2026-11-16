@@ -35,4 +35,5 @@ rootProject.name = "Kanade"
 include(":app")
 include(":core:common")
 include(":core:data")
+include(":core:domain")
 include(":playback")
