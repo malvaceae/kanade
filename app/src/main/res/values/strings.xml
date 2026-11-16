@@ -113,6 +113,10 @@
     </plurals>
     <string name="action_open_queue">再生キュー</string>
 
+    <string name="search_hint">曲名・アーティスト・アルバムで検索</string>
+    <string name="search_no_results">見つかりませんでした</string>
+    <string name="action_clear">消去</string>
+
     <string name="action_move">移動</string>
     <string name="action_swap">入れ替え</string>
     <string name="action_reverse">逆順</string>

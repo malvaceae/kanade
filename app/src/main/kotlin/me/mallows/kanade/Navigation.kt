@@ -33,6 +33,7 @@ import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
 import me.mallows.kanade.ui.playlist.PlaylistDetailScreen
 import me.mallows.kanade.ui.playlist.PlaylistsTab
 import me.mallows.kanade.ui.queue.QueueScreen
+import me.mallows.kanade.ui.search.SearchScreen
 import me.mallows.kanade.ui.player.PlayerScreen
 import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
@@ -76,7 +77,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 playingMediaStoreId = player.mediaStoreId,
                 actions = actions,
                 onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
-                onSearch = { },
+                onSearch = { backStack.add(Search) },
                 playlistsTab = { padding ->
                   PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, bottomPadding = padding)
                 },
@@ -95,6 +96,14 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
             entry<GroupDetail> { key ->
               GroupDetailScreen(
                 key = key,
+                playingMediaStoreId = player.mediaStoreId,
+                actions = actions,
+                onBack = { backStack.removeLastOrNull() },
+                bottomPadding = bottomPadding,
+              )
+            }
+            entry<Search> {
+              SearchScreen(
                 playingMediaStoreId = player.mediaStoreId,
                 actions = actions,
                 onBack = { backStack.removeLastOrNull() },
