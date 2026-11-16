@@ -51,6 +51,9 @@ dependencies {
   // Project modules
   implementation(project(":core:common"))
 
+  // Logging
+  implementation(libs.timber)
+
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
