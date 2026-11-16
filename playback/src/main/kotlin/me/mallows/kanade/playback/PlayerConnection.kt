@@ -2,6 +2,11 @@ package me.mallows.kanade.playback
 
 import android.content.ComponentName
 import android.content.Context
+import kotlinx.coroutines.flow.first
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.core.DataStore
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -72,14 +77,38 @@ data class PlaySource(val key: String, val title: String?)
 @Singleton
 class PlayerConnection @Inject constructor(
   @ApplicationContext private val context: Context,
+  private val dataStore: DataStore<Preferences>,
 ) {
   private val scope = MainScope()
   private val _state = MutableStateFlow(PlayerState())
   val state: StateFlow<PlayerState> = _state.asStateFlow()
 
   private val _source = MutableStateFlow<PlaySource?>(null)
-  /** 今の再生キューを、どの一覧から再生したか。アプリを開き直した後などは分からないのでnull */
+  /** 今の再生キューを、どの一覧から再生したか。保存しておき、アプリを開き直しても戻す。分からなければnull */
   val source: StateFlow<PlaySource?> = _source.asStateFlow()
+
+  init {
+    // 前回の再生元を読む (再生キューも前回のものが戻るため、組み合わせが合う)
+    scope.launch {
+      val prefs = dataStore.data.first()
+      val key = prefs[SOURCE_KEY]
+      if (_source.value == null && key != null) _source.value = PlaySource(key, prefs[SOURCE_TITLE])
+    }
+  }
+
+  private fun saveSource(source: PlaySource?) {
+    scope.launch {
+      dataStore.edit { prefs ->
+        if (source == null) {
+          prefs.remove(SOURCE_KEY)
+          prefs.remove(SOURCE_TITLE)
+        } else {
+          prefs[SOURCE_KEY] = source.key
+          if (source.title != null) prefs[SOURCE_TITLE] = source.title else prefs.remove(SOURCE_TITLE)
+        }
+      }
+    }
+  }
 
   private val _queue = MutableStateFlow(QueueState())
   val queue: StateFlow<QueueState> = _queue.asStateFlow()
@@ -126,6 +155,7 @@ class PlayerConnection @Inject constructor(
   /** [shuffle] ならシャッフルをオンにする (並びはそのまま。解除すれば元の順に戻る) */
   fun playTracks(mediaStoreIds: List<Long>, startIndex: Int, shuffle: Boolean = false, source: PlaySource? = null) = withController {
     _source.value = source
+    saveSource(source)
     it.setMediaItems(mediaStoreIds.map(::mediaItemRequest), startIndex, 0L)
     if (shuffle) it.shuffleModeEnabled = true
     it.prepare()
@@ -328,3 +358,7 @@ class PlayerConnection @Inject constructor(
     )
   }
 }
+
+private val SOURCE_KEY = stringPreferencesKey("play_source_key")
+private val SOURCE_TITLE = stringPreferencesKey("play_source_title")
+
