@@ -76,7 +76,7 @@ fun TrackRow(
     Box(modifier = Modifier.width(28.dp), contentAlignment = Alignment.Center) {
       when {
         selectionMode -> SelectionCheck(selected)
-        playing -> Icon(KanadeIcons.Playing, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(18.dp))
+        playing -> PlayingBars(color = scheme.primary, animating = LocalIsPlaying.current)
         number != null -> Text(number.toString(), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
       }
     }

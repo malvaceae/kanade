@@ -24,6 +24,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalBottomBarActive
+import me.mallows.kanade.ui.common.LocalIsPlaying
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
@@ -63,7 +64,11 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
   val showMini = player.hasMedia && top != Player && top != Queue && top != Equalizer && !bottomBarActive.value
   val bottomPadding = if (player.hasMedia) 96.dp else 16.dp
 
-  CompositionLocalProvider(LocalSnackbarHost provides snackbar, LocalBottomBarActive provides bottomBarActive) {
+  CompositionLocalProvider(
+    LocalSnackbarHost provides snackbar,
+    LocalBottomBarActive provides bottomBarActive,
+    LocalIsPlaying provides player.isPlaying,
+  ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {
         NavDisplay(

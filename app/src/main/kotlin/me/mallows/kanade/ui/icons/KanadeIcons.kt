@@ -28,7 +28,6 @@ object KanadeIcons {
   )
   val ChevronDown = stroke("chevron_down", "M6 9l6 6 6-6")
   val Back = stroke("back", "M15 5l-7 7 7 7")
-  val Playing = filled("playing", "M4 9h3.5v11H4z", "M10.25 4h3.5v16h-3.5z", "M16.5 12H20v8h-3.5z")
   val Check = stroke("check", "M5 12.5l4.5 4.5L19 7.5")
   val Close = stroke("close", "M6 6l12 12", "M18 6L6 18")
   val Sort = stroke("sort", "M4 7h10", "M4 12h7", "M4 17h4", "M18 5v14", "M15 16l3 3 3-3")
