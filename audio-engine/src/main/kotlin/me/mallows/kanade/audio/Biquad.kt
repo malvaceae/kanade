@@ -110,4 +110,9 @@ class BiquadState {
     z1 = 0.0
     z2 = 0.0
   }
+
+  fun copyFrom(other: BiquadState) {
+    z1 = other.z1
+    z2 = other.z2
+  }
 }

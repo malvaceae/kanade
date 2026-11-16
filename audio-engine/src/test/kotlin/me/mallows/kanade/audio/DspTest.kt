@@ -60,6 +60,51 @@ class DspTest {
     assertEquals(0.0, gainOfSine(chain, 62.0), 0.3)
   }
 
+  /** 再生中に設定を変えたとき、隣り合うサンプルの差の最大 (変更の前後と、落ち着いた後) */
+  private fun jumpsAroundChange(before: EqSettings, after: EqSettings): Pair<Double, Double> {
+    val fs = 48_000
+    val chain = DspChain()
+    chain.update(before)
+    chain.configure(fs, 2)
+    val block = 480
+    var phase = 0
+    var last = 0f
+    var changeMax = 0.0
+    var steadyMax = 0.0
+    for (b in 0 until 200) { // 2秒
+      if (b == 100) chain.update(after)
+      val buf = FloatArray(block * 2) { i -> (0.3 * sin(2 * PI * 200.0 * (phase + i / 2) / fs)).toFloat() }
+      phase += block
+      chain.process(buf, buf.size)
+      for (i in buf.indices step 2) {
+        val d = abs((buf[i] - last).toDouble())
+        last = buf[i]
+        if (b in 100..104) changeMax = maxOf(changeMax, d)
+        if (b >= 150) steadyMax = maxOf(steadyMax, d)
+      }
+    }
+    return changeMax to steadyMax
+  }
+
+  @Test
+  fun 再生中にバンドを大きく変えても波形が跳ねない() {
+    val flat = EqSettings(enabled = true, limiter = false)
+    val boosted = flat.withBand(3, 12f).copy(preampDb = -6f) // 250Hz +12dB
+    val (change, steady) = jumpsAroundChange(flat, boosted)
+    // 変更の途中の変化は、変更前後どちらの音より大きく跳ねない
+    val (_, before) = jumpsAroundChange(flat, flat)
+    assertTrue("変更中 $change / 前 $before / 後 $steady", change <= maxOf(before, steady) * 1.05)
+  }
+
+  @Test
+  fun オンとオフを切り替えても波形が跳ねない() {
+    val on = EqSettings(enabled = true, limiter = false).withBand(3, 12f)
+    val off = on.copy(enabled = false)
+    val (change, steady) = jumpsAroundChange(on, off)
+    val (_, before) = jumpsAroundChange(on, on)
+    assertTrue("変更中 $change / 前 $before / 後 $steady", change <= maxOf(before, steady) * 1.05)
+  }
+
   @Test
   fun 無効のときは素通し() {
     val chain = DspChain()

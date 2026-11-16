@@ -7,6 +7,9 @@ import kotlin.math.pow
 /**
  * プリアンプ → 10バンドEQ → Bass/Treble → リミッター の順に処理する。
  * 再生スレッドから[process]を呼び、設定は別スレッドから[update]で差し替える (次の処理から反映)。
+ *
+ * 設定が変わったときは、古い設定と新しい設定の両方で約20ms処理し、出力を少しずつ入れ替える。
+ * 係数を急に替えるとプツッと鳴るため。オンとオフの切り替えも同じようになめらかにする。
  */
 class DspChain {
 
@@ -17,35 +20,40 @@ class DspChain {
     val preampGain: Double,
     val filters: Array<BiquadCoefficients>,
   ) {
-    /** 素通しでないフィルターの番号 */
-    val active: IntArray = filters.indices.filter { !filters[it].isIdentity }.toIntArray()
+    /** 素通しでないフィルターの番号。無効のときは空 */
+    val active: IntArray =
+      if (settings.enabled) filters.indices.filter { !filters[it].isIdentity }.toIntArray() else IntArray(0)
+    val gain: Double = if (settings.enabled) preampGain else 1.0
+    val limiter: Boolean = settings.enabled && settings.limiter
   }
 
   @Volatile private var plan: Plan = buildPlan(EqSettings(), 48_000.0)
+  /** 再生スレッドで使っている設定 */
+  private var applied: Plan = plan
 
   private var channels = 2
   private var states: Array<Array<BiquadState>> = emptyArray()
-  /** 1フレーム分の作業領域 (再生中に配列を作らないよう使い回す) */
-  private var frame = DoubleArray(2)
+  /** 入れ替え中の古い設定と、その状態 */
+  private var fading: Plan? = null
+  private var fadeStates: Array<Array<BiquadState>> = emptyArray()
+  private var fadeLength = 960
+  private var fadePosition = 0
 
   // リミッター
   private var limiterGain = 1.0
   private var releaseCoef = 0.0
-
-  /** プリアンプの急な変化でプツッと鳴らないよう、少しずつ近づける */
-  private var currentPreamp = 1.0
-  private var preampStep = 0.0
 
   val settings: EqSettings get() = plan.settings
 
   /** 音声の形式が決まったときに呼ぶ */
   fun configure(sampleRate: Int, channelCount: Int) {
     channels = channelCount
-    frame = DoubleArray(channelCount)
     plan = buildPlan(plan.settings, sampleRate.toDouble())
-    states = Array(plan.filters.size) { Array(channelCount) { BiquadState() } }
+    applied = plan
+    states = newStates()
+    fadeStates = newStates()
     releaseCoef = exp(-1.0 / (0.05 * sampleRate)) // 50ms で戻る
-    preampStep = 1.0 / (0.02 * sampleRate) // 20ms で目標に達する
+    fadeLength = (0.02 * sampleRate).toInt().coerceAtLeast(1) // 20ms で入れ替える
     reset()
   }
 
@@ -55,42 +63,55 @@ class DspChain {
 
   fun reset() {
     states.forEach { s -> s.forEach(BiquadState::reset) }
+    applied = plan
+    fading = null
     limiterGain = 1.0
-    currentPreamp = plan.preampGain
+  }
+
+  private fun newStates() = Array(plan.filters.size) { Array(channels) { BiquadState() } }
+
+  /** 新しい設定に切り替える。今の状態を古い設定用に移し、新しい設定は同じ状態から始める */
+  private fun beginFade(next: Plan) {
+    if (states.size != next.filters.size) states = newStates()
+    if (fadeStates.size != states.size) fadeStates = newStates()
+    for (k in states.indices) for (c in 0 until channels) fadeStates[k][c].copyFrom(states[k][c])
+    // 今まで使っていなかったフィルターは、古い値が残っているので空にする
+    val wasActive = applied.active
+    for (k in next.active) if (k !in wasActive) states[k].forEach(BiquadState::reset)
+    fading = applied
+    fadePosition = 0
+    applied = next
   }
 
   /** [samples] (チャンネル順に並んだfloat) をその場で処理する */
   fun process(samples: FloatArray, count: Int) {
-    val p = plan
-    val s = p.settings
-    if (!s.enabled) {
-      // 無効のときもリミッターで±1を超えないようにだけしておく
-      for (i in 0 until count) samples[i] = samples[i].coerceIn(-1f, 1f)
-      return
-    }
-    val filters = p.filters
-    val activeFilters = p.active
-    if (states.size != filters.size) states = Array(filters.size) { Array(channels) { BiquadState() } }
+    val latest = plan
+    // 入れ替え中に届いた変更は、今の入れ替えが終わってから反映する
+    if (latest !== applied && fading == null) beginFade(latest)
+    val p = applied
+    if (states.size != p.filters.size) states = newStates()
     val frames = count / channels
     val threshold = 0.966 // -0.3dBFS
     for (f in 0 until frames) {
-      // プリアンプを少しずつ目標に寄せる
-      val target = p.preampGain
-      currentPreamp = when {
-        currentPreamp < target -> minOf(target, currentPreamp + preampStep * target.coerceAtLeast(0.01))
-        currentPreamp > target -> maxOf(target, currentPreamp - preampStep * currentPreamp)
-        else -> currentPreamp
-      }
-      var peak = 0.0
       val base = f * channels
-      val out = frame
+      val old = fading
+      val mix = if (old != null) (fadePosition + 1).toDouble() / fadeLength else 1.0
+      var peak = 0.0
       for (c in 0 until channels) {
-        var x = samples[base + c] * currentPreamp
-        for (k in activeFilters) x = states[k][c].process(filters[k], x)
-        out[c] = x
+        val input = samples[base + c].toDouble()
+        var x = input * p.gain
+        for (k in p.active) x = states[k][c].process(p.filters[k], x)
+        if (old != null) {
+          var y = input * old.gain
+          for (k in old.active) y = fadeStates[k][c].process(old.filters[k], y)
+          x = y + (x - y) * mix
+        }
+        samples[base + c] = x.toFloat()
         peak = maxOf(peak, abs(x))
       }
-      if (s.limiter) {
+      if (old != null && ++fadePosition >= fadeLength) fading = null
+      val useLimiter = p.limiter || old?.limiter == true
+      if (useLimiter) {
         // 超えそうなら即座に下げ、戻すときはゆっくり戻す
         val needed = if (peak > threshold) threshold / peak else 1.0
         limiterGain = if (needed < limiterGain) needed else needed + (limiterGain - needed) * releaseCoef
@@ -98,7 +119,7 @@ class DspChain {
         limiterGain = 1.0
       }
       for (c in 0 until channels) {
-        samples[base + c] = (out[c] * limiterGain).coerceIn(-1.0, 1.0).toFloat()
+        samples[base + c] = (samples[base + c] * limiterGain).coerceIn(-1.0, 1.0).toFloat()
       }
     }
   }
