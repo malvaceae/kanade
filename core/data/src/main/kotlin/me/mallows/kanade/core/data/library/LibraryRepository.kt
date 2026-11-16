@@ -7,19 +7,25 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
+import me.mallows.kanade.core.data.db.PlayStatsDao
 import me.mallows.kanade.core.data.db.PlaylistDao
 import me.mallows.kanade.core.data.db.TrackDao
 import me.mallows.kanade.core.data.db.TrackEntity
 import timber.log.Timber
 
 /** 曲をまとめる単位 */
-enum class GroupKind { ALBUM, ARTIST, FOLDER, GENRE }
+enum class GroupKind {
+  ALBUM, ARTIST, FOLDER, GENRE,
+  /** 自動のリスト (最近追加・最近再生・よく再生) */
+  RECENTLY_ADDED, RECENTLY_PLAYED, MOST_PLAYED,
+}
 
 /** 端末内の曲の一覧 */
 @Singleton
 class LibraryRepository @Inject constructor(
   private val trackDao: TrackDao,
   private val playlistDao: PlaylistDao,
+  private val playStatsDao: PlayStatsDao,
   private val scanner: MediaStoreScanner,
 ) {
 
@@ -31,6 +37,7 @@ class LibraryRepository @Inject constructor(
     GroupKind.FOLDER -> trackDao.observeFolders()
     GroupKind.GENRE -> trackDao.observeGenres()
     GroupKind.ALBUM -> error("アルバムは albums を使う")
+    GroupKind.RECENTLY_ADDED, GroupKind.RECENTLY_PLAYED, GroupKind.MOST_PLAYED -> error("自動のリストは groupTracks を使う")
   }
 
   fun albumTracks(albumId: Long?): Flow<List<TrackEntity>> = trackDao.observeAlbumTracks(albumId)
@@ -40,6 +47,9 @@ class LibraryRepository @Inject constructor(
     GroupKind.FOLDER -> trackDao.observeFolderTracks(name)
     GroupKind.GENRE -> trackDao.observeGenreTracks(name)
     GroupKind.ALBUM -> trackDao.observeAlbumTracks(name?.toLongOrNull())
+    GroupKind.RECENTLY_ADDED -> trackDao.observeRecentlyAdded(SMART_LIMIT)
+    GroupKind.RECENTLY_PLAYED -> playStatsDao.observeRecentlyPlayed(SMART_LIMIT)
+    GroupKind.MOST_PLAYED -> playStatsDao.observeMostPlayed(SMART_LIMIT)
   }
 
   fun search(query: String): Flow<List<TrackEntity>> = trackDao.search(query)
@@ -57,3 +67,6 @@ class LibraryRepository @Inject constructor(
     Timber.d("ライブラリを更新: %d曲", found.size)
   }
 }
+
+/** 自動のリストに出す最大の曲数 */
+private const val SMART_LIMIT = 100

@@ -52,6 +52,9 @@
     <string name="message_play_next">%d曲を次に再生に追加しました</string>
     <string name="message_added_to_queue">%d曲をキューに追加しました</string>
 
+    <string name="smart_recently_added">最近追加した曲</string>
+    <string name="smart_recently_played">最近再生した曲</string>
+    <string name="smart_most_played">よく再生する曲</string>
     <string name="playlist_new">新しいプレイリスト</string>
     <string name="playlist_name">名前</string>
     <string name="playlist_rename">名前を変更</string>

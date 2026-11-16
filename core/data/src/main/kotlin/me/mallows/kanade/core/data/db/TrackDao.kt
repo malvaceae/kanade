@@ -15,6 +15,9 @@ interface TrackDao {
   @Query("SELECT * FROM track ORDER BY title COLLATE NOCASE")
   fun observeAll(): Flow<List<TrackEntity>>
 
+  @Query("SELECT * FROM track ORDER BY date_added DESC, title COLLATE NOCASE LIMIT :limit")
+  fun observeRecentlyAdded(limit: Int): Flow<List<TrackEntity>>
+
   @Query("SELECT * FROM track WHERE media_store_id IN (:mediaStoreIds)")
   suspend fun getByMediaStoreIds(mediaStoreIds: List<Long>): List<TrackEntity>
 

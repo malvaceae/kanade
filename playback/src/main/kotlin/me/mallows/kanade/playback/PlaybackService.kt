@@ -41,6 +41,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
+import me.mallows.kanade.core.data.db.PlayStatsDao
 import me.mallows.kanade.core.data.db.PlaybackStateDao
 import me.mallows.kanade.core.data.db.TrackDao
 
@@ -54,6 +55,7 @@ class PlaybackService : MediaSessionService() {
 
   @Inject lateinit var trackDao: TrackDao
   @Inject lateinit var playbackStateDao: PlaybackStateDao
+  @Inject lateinit var playStatsDao: PlayStatsDao
   @Inject lateinit var dsp: DspChain
   @Inject lateinit var eqSettings: EqRepository
   @Inject lateinit var outputRouter: OutputRouter
@@ -91,6 +93,7 @@ class PlaybackService : MediaSessionService() {
     persistence.attach(player)
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
+    PlayCounter(playStatsDao, scope).attach(player)
 
     // ビットパーフェクトの設定。出力の形式は曲を開くときに決まるため、切り替えたら開き直す
     scope.launch {

@@ -21,6 +21,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.core.data.library.GroupKind
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +53,7 @@ import me.mallows.kanade.ui.library.Loading
 @Composable
 fun PlaylistsTab(
   onOpen: (id: Long, name: String) -> Unit,
+  onOpenSmart: (kind: GroupKind, title: String) -> Unit,
   bottomPadding: Dp,
   viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
@@ -59,24 +63,22 @@ fun PlaylistsTab(
   val list = playlists ?: return Loading()
 
   LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
-    item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
+    // 自動のリスト
     item {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(72.dp)
-          .clickable { creating = true }
-          .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-      ) {
-        Box(
-          Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.primaryContainer),
-          contentAlignment = Alignment.Center,
-        ) { Icon(KanadeIcons.Plus, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-        Text(stringResource(R.string.playlist_new), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
-      }
+      val title = stringResource(R.string.smart_recently_added)
+      IconRow(KanadeIcons.Plus, title) { onOpenSmart(GroupKind.RECENTLY_ADDED, title) }
     }
+    item {
+      val title = stringResource(R.string.smart_recently_played)
+      IconRow(KanadeIcons.Timer, title) { onOpenSmart(GroupKind.RECENTLY_PLAYED, title) }
+    }
+    item {
+      val title = stringResource(R.string.smart_most_played)
+      IconRow(KanadeIcons.Repeat, title) { onOpenSmart(GroupKind.MOST_PLAYED, title) }
+    }
+    item { HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
+    item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
+    item { IconRow(KanadeIcons.Plus, stringResource(R.string.playlist_new)) { creating = true } }
     items(list, key = { it.id }) { p ->
       GroupRow(
         title = p.name,
@@ -125,4 +127,24 @@ fun PlaylistNameDialog(title: String, initial: String, onConfirm: (String) -> Un
     },
     dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
   )
+}
+
+/** アイコンつきの1行 (新しいプレイリスト・自動のリスト) */
+@Composable
+private fun IconRow(icon: ImageVector, title: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(72.dp)
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+  ) {
+    Box(
+      Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.primaryContainer),
+      contentAlignment = Alignment.Center,
+    ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+    Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+  }
 }

@@ -86,7 +86,11 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 onOpenGroup = { kind, key, title -> backStack.add(GroupDetail(kind.name, key, title)) },
                 onSearch = { backStack.add(Search) },
                 playlistsTab = { padding ->
-                  PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, bottomPadding = padding)
+                  PlaylistsTab(
+                    onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) },
+                    onOpenSmart = { kind, title -> backStack.add(GroupDetail(kind.name, null, title)) },
+                    bottomPadding = padding,
+                  )
                 },
                 bottomPadding = bottomPadding,
               )
