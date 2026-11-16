@@ -32,6 +32,7 @@ import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
 import me.mallows.kanade.ui.playlist.PlaylistDetailScreen
 import me.mallows.kanade.ui.playlist.PlaylistsTab
+import me.mallows.kanade.ui.queue.QueueScreen
 import me.mallows.kanade.ui.player.PlayerScreen
 import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
@@ -55,7 +56,8 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
       }
     }
   }
-  val showMini = player.hasMedia && backStack.lastOrNull() != Player && !bottomBarActive.value
+  val top = backStack.lastOrNull()
+  val showMini = player.hasMedia && top != Player && top != Queue && !bottomBarActive.value
   val bottomPadding = if (player.hasMedia) 96.dp else 16.dp
 
   CompositionLocalProvider(LocalSnackbarHost provides snackbar, LocalBottomBarActive provides bottomBarActive) {
@@ -99,10 +101,14 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 bottomPadding = bottomPadding,
               )
             }
+            entry<Queue> {
+              QueueScreen(onBack = { backStack.removeLastOrNull() })
+            }
             entry<Player> {
               PlayerScreen(
                 state = player,
                 onClose = { backStack.removeLastOrNull() },
+                onOpenQueue = { backStack.add(Queue) },
                 onTogglePlay = playerViewModel::togglePlayPause,
                 onNext = playerViewModel::next,
                 onPrevious = playerViewModel::previous,

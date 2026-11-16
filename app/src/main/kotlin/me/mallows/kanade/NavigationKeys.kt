@@ -12,5 +12,8 @@ import kotlinx.serialization.Serializable
 /** プレイリストの中身 */
 @Serializable data class PlaylistDetail(val id: Long) : NavKey
 
+/** 再生キュー */
+@Serializable data object Queue : NavKey
+
 /** プレイヤー画面 */
 @Serializable data object Player : NavKey

@@ -99,6 +99,20 @@
     <string name="message_swapped">2曲を入れ替えました</string>
     <string name="message_sort_saved">この並びで保存しました</string>
 
+    <string name="queue_title">再生キュー</string>
+    <string name="queue_now_playing">再生中</string>
+    <plurals name="queue_next_section">
+        <item quantity="other">次に再生 · %d曲</item>
+    </plurals>
+    <string name="queue_after_section">このあと再生</string>
+    <string name="queue_empty">この後に再生する曲はありません</string>
+    <string name="queue_shuffle_locked">シャッフル中は並べ替えできません</string>
+    <string name="queue_play_next">次に</string>
+    <plurals name="message_removed_queue">
+        <item quantity="other">%d曲をキューから外しました</item>
+    </plurals>
+    <string name="action_open_queue">再生キュー</string>
+
     <string name="action_move">移動</string>
     <string name="action_swap">入れ替え</string>
     <string name="action_reverse">逆順</string>

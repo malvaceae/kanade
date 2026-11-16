@@ -1,5 +1,27 @@
 package me.mallows.kanade.core.domain.reorder
 
+/**
+ * 位置だけで扱うリスト (再生キューなど) の並べ替え。
+ * どの関数も「新しい並びの各位置に、元のどの位置の項目が来るか」を返す。
+ */
+object IndexReorder {
+
+  /** [selected]の位置の項目をまとめて、それ以外の項目の中の[slot]番目に移す (選んだ項目どうしの順番は保つ) */
+  fun moveBlock(size: Int, selected: Set<Int>, slot: Int): List<Int> {
+    val moving = (0 until size).filter { it in selected }
+    val others = (0 until size).filter { it !in selected }
+    val s = slot.coerceIn(0, others.size)
+    return others.subList(0, s) + moving + others.subList(s, others.size)
+  }
+
+  fun moveToTop(size: Int, selected: Set<Int>): List<Int> = moveBlock(size, selected, 0)
+
+  fun moveToBottom(size: Int, selected: Set<Int>): List<Int> = moveBlock(size, selected, size)
+
+  /** 並びが変わらないか */
+  fun isIdentity(order: List<Int>): Boolean = order.withIndex().all { (i, v) -> i == v }
+}
+
 /** 並び順の値を持つ項目 (プレイリストの曲など) */
 data class Positioned(val id: Long, val position: Double)
 

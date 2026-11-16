@@ -55,6 +55,7 @@ import me.mallows.kanade.ui.icons.KanadeIcons
 fun PlayerScreen(
   state: PlayerState,
   onClose: () -> Unit,
+  onOpenQueue: () -> Unit,
   onTogglePlay: () -> Unit,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
@@ -94,7 +95,9 @@ fun PlayerScreen(
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.weight(1f),
       )
-      Spacer(Modifier.size(48.dp))
+      IconButton(onClick = onOpenQueue) {
+        Icon(KanadeIcons.Queue, contentDescription = stringResource(R.string.action_open_queue))
+      }
     }
 
     // アートワーク (左右にスワイプで曲送り)
