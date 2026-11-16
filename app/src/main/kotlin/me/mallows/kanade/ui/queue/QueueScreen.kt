@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import me.mallows.kanade.ui.selection.navigationBarHeight
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -66,7 +67,11 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /** キューの1行と、今の並びでの元の位置 */
-private data class Entry(val origin: Int, val item: QueueItem)
+/**
+ * キューの1曲。[origin] は今の並びでの位置 (操作に使う)、[key] は並べ替えても変わらない目印
+ * (曲のIDと、同じ曲の何番目か)。位置を目印にすると、並べ替えた曲が一瞬消えて見える。
+ */
+private data class Entry(val origin: Int, val item: QueueItem, val key: Long)
 
 /**
  * 再生キュー。今の曲の後ろに並ぶ曲を、「次に再生」で入れた曲とその後の曲に分けて見せる。
@@ -84,12 +89,25 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
   val undoLabel = stringResource(R.string.action_undo)
   val locked = queue.shuffle
 
-  val entries = remember(queue) { queue.upcoming.mapIndexed { i, item -> Entry(i, item) } }
-  var local by remember(entries) { mutableStateOf(entries) }
-  var selected by remember(entries) { mutableStateOf(setOf<Long>()) }
+  val entries = remember(queue) {
+    val seen = HashMap<Long, Int>()
+    queue.upcoming.mapIndexed { i, item ->
+      val n = seen.merge(item.mediaStoreId, 1, Int::plus)!!
+      Entry(i, item, item.mediaStoreId * 1000 + n)
+    }
+  }
+  // 画面に出す並び。ドラッグ中は手元で入れ替え、キューの更新が届いたら置き換える
+  var local by remember { mutableStateOf(entries) }
+  var selected by remember { mutableStateOf(setOf<Long>()) }
   val selecting = selected.isNotEmpty()
-  var moving by remember { mutableStateOf(emptySet<Int>()) }
-  var grabbed by remember { mutableStateOf<Int?>(null) }
+  var moving by remember { mutableStateOf(emptySet<Long>()) }
+  var grabbed by remember { mutableStateOf<Long?>(null) }
+  LaunchedEffect(entries) {
+    if (grabbed == null) local = entries
+    selected = selected intersect entries.map { it.key }.toSet()
+  }
+  /** 目印から、今の並びでの位置にする */
+  fun originsOf(keys: Set<Long>): Set<Int> = entries.filter { it.key in keys }.map { it.origin }.toSet()
 
   DisposableEffect(selecting) {
     barActive.value = selecting
@@ -107,34 +125,33 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
 
   val listState = rememberLazyListState()
   val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-    val fromKey = (from.key as? Long)?.toInt() ?: return@rememberReorderableLazyListState
-    val toKey = (to.key as? Long)?.toInt() ?: return@rememberReorderableLazyListState
-    val fi = local.indexOfFirst { it.origin == fromKey }
-    val ti = local.indexOfFirst { it.origin == toKey }
+    val fromKey = from.key as? Long ?: return@rememberReorderableLazyListState
+    val toKey = to.key as? Long ?: return@rememberReorderableLazyListState
+    val fi = local.indexOfFirst { it.key == fromKey }
+    val ti = local.indexOfFirst { it.key == toKey }
     if (fi < 0 || ti < 0) return@rememberReorderableLazyListState
     local = local.toMutableList().apply { add(ti, removeAt(fi)) }
     haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
   }
 
   fun startDrag(entry: Entry) {
-    val sel = selected.map { it.toInt() }.toSet()
-    val block = if (entry.origin in sel && sel.size > 1) sel else setOf(entry.origin)
+    val block = if (entry.key in selected && selected.size > 1) selected else setOf(entry.key)
     moving = block
-    grabbed = entry.origin
-    if (block.size > 1) local = local.filter { it.origin == entry.origin || it.origin !in block }
+    grabbed = entry.key
+    if (block.size > 1) local = local.filter { it.key == entry.key || it.key !in block }
   }
 
   fun endDrag() {
     val rep = grabbed ?: return
     val block = moving
-    val index = local.indexOfFirst { it.origin == rep }
-    val slot = local.subList(0, index.coerceAtLeast(0)).count { it.origin !in block }
+    val index = local.indexOfFirst { it.key == rep }
+    val slot = local.subList(0, index.coerceAtLeast(0)).count { it.key !in block }
     moving = emptySet()
     grabbed = null
     selected = emptySet()
     val message = res.getQuantityString(R.plurals.message_moved, block.size, block.size)
     scope.launch {
-      val undo = viewModel.moveBlock(block, slot)
+      val undo = viewModel.moveBlock(originsOf(block), slot)
       if (undo == null) local = entries else snackbar.showUndo(message, undoLabel) { scope.launch { undo() } }
     }
   }
@@ -148,7 +165,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
         SelectionTopBar(
           count = selected.size,
           allSelected = selected.size == local.size,
-          onSelectAll = { selected = if (selected.size == local.size) emptySet() else local.map { it.origin.toLong() }.toSet() },
+          onSelectAll = { selected = if (selected.size == local.size) emptySet() else local.map { it.key }.toSet() },
           onClose = { selected = emptySet() },
         )
       } else {
@@ -162,7 +179,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
         contentPadding = PaddingValues(bottom = 96.dp + navigationBarHeight()),
         modifier = Modifier.weight(1f).dragToSelect(
           state = listState,
-          keys = local.map { it.origin.toLong() },
+          keys = local.map { it.key },
           currentSelection = { selected },
           onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
           onChange = { selected = it },
@@ -191,9 +208,9 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
           if (index == queuedLead) {
             item(key = "label_after") { SectionLabel(stringResource(R.string.queue_after_section)) }
           }
-          item(key = entry.origin.toLong()) {
-          ReorderableItem(reorderState, key = entry.origin.toLong()) { dragging ->
-            val isSelected = entry.origin.toLong() in selected
+          item(key = entry.key) {
+          ReorderableItem(reorderState, key = entry.key) { dragging ->
+            val isSelected = entry.key in selected
             Surface(
               shadowElevation = if (dragging) 8.dp else 0.dp,
               shape = RoundedCornerShape(if (dragging) 12.dp else 0.dp),
@@ -205,7 +222,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
                 selected = isSelected && !dragging,
                 onClick = {
                   if (selecting) {
-                    val k = entry.origin.toLong()
+                    val k = entry.key
                     selected = if (isSelected) selected - k else selected + k
                   } else {
                     viewModel.playAt(entry.origin)
@@ -239,7 +256,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
     }
 
     if (selecting) {
-      val sel = selected.map { it.toInt() }.toSet()
+      val sel = originsOf(selected)
       val n = sel.size
       SelectionBottomBar(
         modifier = Modifier.align(Alignment.BottomCenter),

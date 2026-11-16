@@ -56,6 +56,7 @@
     <string name="action_play_next">次に再生</string>
     <string name="action_add_to_queue">キューに追加</string>
     <string name="action_add_to_playlist">プレイリスト</string>
+    <string name="action_add_to_playlist_long">プレイリストに追加</string>
     <string name="message_play_next">%d曲を次に再生に追加しました</string>
     <string name="message_added_to_queue">%d曲をキューに追加しました</string>
 

@@ -1,7 +1,10 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package me.mallows.kanade.ui.library
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -206,10 +209,10 @@ fun CategoryScreen(
     Box(Modifier.weight(1f)) {
       when (category) {
         LibraryTab.TRACKS -> TracksTab(viewModel, playingMediaStoreId, actions, bottomPadding)
-        LibraryTab.ALBUMS -> AlbumsTab(viewModel, onOpenGroup, bottomPadding)
-        LibraryTab.ARTISTS -> GroupsTab(viewModel, GroupKind.ARTIST, onOpenGroup, bottomPadding)
-        LibraryTab.FOLDERS -> GroupsTab(viewModel, GroupKind.FOLDER, onOpenGroup, bottomPadding)
-        LibraryTab.GENRES -> GroupsTab(viewModel, GroupKind.GENRE, onOpenGroup, bottomPadding)
+        LibraryTab.ALBUMS -> AlbumsTab(viewModel, onOpenGroup, actions, bottomPadding)
+        LibraryTab.ARTISTS -> GroupsTab(viewModel, GroupKind.ARTIST, onOpenGroup, actions, bottomPadding)
+        LibraryTab.FOLDERS -> GroupsTab(viewModel, GroupKind.FOLDER, onOpenGroup, actions, bottomPadding)
+        LibraryTab.GENRES -> GroupsTab(viewModel, GroupKind.GENRE, onOpenGroup, actions, bottomPadding)
         LibraryTab.PLAYLISTS -> playlists(bottomPadding)
         // キューと自動のリストは、それぞれの画面で開く
         else -> Unit
@@ -248,7 +251,9 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
 }
 
 @Composable
-private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, String) -> Unit, bottomPadding: Dp) {
+private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, String) -> Unit, actions: TrackActions, bottomPadding: Dp) {
+  var menuFor by remember { mutableStateOf<GroupTarget?>(null) }
+  menuFor?.let { GroupMenuSheet(it, viewModel, actions) { menuFor = null } }
   val albums by viewModel.albums.collectAsStateWithLifecycle()
   val sort by viewModel.albumSort.collectAsStateWithLifecycle()
   val grid by viewModel.albumGrid.collectAsStateWithLifecycle()
@@ -256,6 +261,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   val list = albums ?: return Loading()
   val unknown = stringResource(R.string.unknown_album)
   val open = { a: AlbumSummary -> onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
+  val menu = { a: AlbumSummary -> menuFor = GroupTarget(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
   val header = @Composable {
     ListHeader(pluralStringResource(R.plurals.album_count, list.size, list.size)) {
       IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
@@ -273,7 +279,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
     ) {
       item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
       items(list, key = { it.albumId ?: -1L }) { album ->
-        Column(Modifier.clickable { open(album) }) {
+        Column(Modifier.combinedClickable(onClick = { open(album) }, onLongClick = { menu(album) })) {
           androidx.compose.foundation.layout.BoxWithConstraints {
             TrackArtwork(uri = album.artUri, size = maxWidth, cornerRadius = 10.dp)
           }
@@ -292,6 +298,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
           subtitle = "${album.artist ?: stringResource(R.string.unknown_artist)} · ${pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)}",
           artUri = album.artUri,
           onClick = { open(album) },
+          onLongClick = { menu(album) },
         )
       }
     }
@@ -303,7 +310,9 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
 }
 
 @Composable
-private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (GroupKind, String?, String) -> Unit, bottomPadding: Dp) {
+private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (GroupKind, String?, String) -> Unit, actions: TrackActions, bottomPadding: Dp) {
+  var menuFor by remember { mutableStateOf<GroupTarget?>(null) }
+  menuFor?.let { GroupMenuSheet(it, viewModel, actions) { menuFor = null } }
   val groups by viewModel.groups(kind).collectAsStateWithLifecycle()
   val sort by viewModel.groupSort(kind).collectAsStateWithLifecycle()
   var showSort by rememberSaveable(kind) { mutableStateOf(false) }
@@ -330,6 +339,7 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
         subtitle = groupSubtitle(kind, group),
         artUri = group.artUri,
         onClick = { onOpen(kind, group.name, title) },
+        onLongClick = { menuFor = GroupTarget(kind, group.name, title) },
       )
     }
   }

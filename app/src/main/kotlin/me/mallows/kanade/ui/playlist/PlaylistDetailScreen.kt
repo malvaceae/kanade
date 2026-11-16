@@ -42,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import me.mallows.kanade.ui.selection.navigationBarHeight
 import me.mallows.kanade.ui.common.LocalPlaySource
 import me.mallows.kanade.playback.PlaySource
@@ -149,14 +150,16 @@ fun PlaylistDetailScreen(
   // 再生元の一覧と同じときだけ「再生中」を出す
   val source = PlaySource("playlist:$playlistId", playlist?.name)
   val playingId = if (LocalPlaySource.current?.key == source.key) playingMediaStoreId else null
-  // ドラッグ中の並び。保存された結果が届いたら置き換わる
-  var local by remember(all) { mutableStateOf(all) }
+  // ドラッグ中の並び。保存された結果が届いたら置き換わる。
+  // 入れ物は作り直さない (作り直すと、ドラッグを始める処理が古い入れ物を見たままになり、2回目のまとめて移動が効かない)
+  var local by remember { mutableStateOf(all) }
   val ids = remember(all) { all.map { it.entryId }.toSet() }
   if (!ids.containsAll(selected)) selected = selected intersect ids
 
   // ドラッグ中: 動かしている曲 (かたまり) と、掴んでいる代表の曲
   var moving by remember { mutableStateOf(emptySet<Long>()) }
   var grabbed by remember { mutableStateOf<Long?>(null) }
+  LaunchedEffect(all) { if (grabbed == null) local = all }
 
   val listState = rememberLazyListState()
   val reorderState = rememberReorderableLazyListState(listState) { from, to ->

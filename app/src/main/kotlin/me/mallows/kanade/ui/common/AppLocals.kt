@@ -13,6 +13,9 @@ val LocalSnackbarHost = compositionLocalOf { SnackbarHostState() }
 /** 選択モードの操作バーを出している間はミニプレイヤーを隠す */
 val LocalBottomBarActive = compositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
 
+/** メッセージを出す。シートを閉じた後も出せるよう、画面全体の処理として出す */
+val LocalShowMessage = compositionLocalOf<(String) -> Unit> { {} }
+
 /** 「元に戻す」付きのメッセージを出し、押されたら[onUndo]を呼ぶ */
 suspend fun SnackbarHostState.showUndo(message: String, undoLabel: String, onUndo: () -> Unit) {
   currentSnackbarData?.dismiss()

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +39,9 @@ class LibraryViewModel @Inject constructor(
   private val settings: SettingsRepository,
   private val backup: BackupManager,
 ) : ViewModel() {
+
+  /** アルバムなどの中の全曲 */
+  suspend fun groupTracks(kind: GroupKind, key: String?): List<TrackEntity> = library.groupTracks(kind, key).first()
 
   suspend fun exportBackup(uri: android.net.Uri) = backup.export(uri)
   suspend fun restoreBackup(uri: android.net.Uri): RestoreResult = backup.restore(uri)

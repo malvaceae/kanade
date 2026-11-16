@@ -25,6 +25,14 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +85,8 @@ fun PlayerScreen(
   var sheet by remember { mutableStateOf<String?>(null) }
   val target = rememberArtworkBackground(
     artworkData = state.artworkData,
-    key = state.mediaStoreId,
+    // アートワークは曲が変わった少し後に届くことがあるので、データが変わるたびに作り直す
+    key = state.artworkData,
     fallback = scheme.background,
     base = scheme.background,
   )
@@ -281,26 +290,40 @@ private fun SwipeableArtwork(
   content: @Composable () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
-  val offset = remember(mediaStoreId) { Animatable(0f) }
+  val offset = remember { Animatable(0f) }
+  val currentId by rememberUpdatedState(mediaStoreId)
   Box(
     modifier = Modifier
       .aspectRatio(1f)
       .graphicsLayer {
         translationX = offset.value
-        alpha = 1f - (kotlin.math.abs(offset.value) / (size.width * 1.5f)).coerceIn(0f, 0.6f)
+        alpha = 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f)
       }
-      .pointerInput(mediaStoreId) {
-        val threshold = size.width * 0.25f
+      .pointerInput(Unit) {
+        val width = size.width.toFloat()
+        val threshold = width * 0.25f
+        /** 今のアートワークを [direction] の側へ抜き、曲を切り替えて、反対側から新しいアートワークを入れる */
+        suspend fun slide(direction: Float, change: () -> Unit) {
+          val before = currentId
+          offset.animateTo(direction * width, tween(160, easing = FastOutLinearInEasing))
+          change()
+          // 新しい曲の情報が届くまで少し待つ (届く前に入れると、古いアートワークが戻ってくる)
+          withTimeoutOrNull(500) { snapshotFlow { currentId }.first { it != before } }
+          offset.snapTo(-direction * width)
+          offset.animateTo(0f, tween(240, easing = LinearOutSlowInEasing))
+        }
         detectHorizontalDragGestures(
           onDragEnd = {
             val value = offset.value
-            when {
-              value < -threshold -> onNext()
-              value > threshold -> onPrevious()
+            scope.launch {
+              when {
+                value < -threshold -> slide(-1f, onNext)
+                value > threshold -> slide(1f, onPrevious)
+                else -> offset.animateTo(0f, spring())
+              }
             }
-            scope.launch { offset.animateTo(0f) }
           },
-          onDragCancel = { scope.launch { offset.animateTo(0f) } },
+          onDragCancel = { scope.launch { offset.animateTo(0f, spring()) } },
         ) { change, dragAmount ->
           change.consume()
           scope.launch { offset.snapTo(offset.value + dragAmount) }

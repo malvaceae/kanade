@@ -38,6 +38,7 @@ import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalIsPlaying
 import me.mallows.kanade.ui.common.LocalPlaySource
+import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
@@ -106,6 +107,7 @@ fun MainNavigation(
     LocalBottomBarActive provides bottomBarActive,
     LocalIsPlaying provides player.isPlaying,
     LocalPlaySource provides playSource,
+    LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) }; Unit },
   ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {

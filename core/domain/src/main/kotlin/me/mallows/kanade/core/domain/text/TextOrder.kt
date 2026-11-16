@@ -1,6 +1,7 @@
 package me.mallows.kanade.core.domain.text
 
 import java.text.Collator
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -11,8 +12,11 @@ object TextOrder : Comparator<String> {
 
   private val collator: Collator = Collator.getInstance(Locale.JAPANESE).apply {
     strength = Collator.SECONDARY
-    decomposition = Collator.FULL_DECOMPOSITION
+    // Androidでは FULL_DECOMPOSITION が使えないので、全角・半角は比べる前に NFKC でそろえる
+    decomposition = Collator.CANONICAL_DECOMPOSITION
   }
+
+  private fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFKC)
 
   /** 先頭の文字の種類 (小さいほど前) */
   fun groupOf(text: String): Int {
@@ -40,7 +44,7 @@ object TextOrder : Comparator<String> {
   override fun compare(a: String, b: String): Int {
     val g = groupOf(a).compareTo(groupOf(b))
     if (g != 0) return g
-    val c = collator.compare(a, b)
+    val c = collator.compare(normalize(a), normalize(b))
     return if (c != 0) c else a.compareTo(b)
   }
 }
