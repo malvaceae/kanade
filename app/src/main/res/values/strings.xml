@@ -62,6 +62,11 @@
     <string name="smart_recently_added">最近追加した曲</string>
     <string name="smart_recently_played">最近再生した曲</string>
     <string name="smart_most_played">よく再生する曲</string>
+    <string name="playlist_remove_duplicates">重複を削除</string>
+    <string name="message_no_duplicates">重複している曲はありません</string>
+    <plurals name="message_duplicates_removed">
+        <item quantity="other">重複していた%d曲を削除しました</item>
+    </plurals>
     <string name="playlist_import_m3u">M3Uを読み込む</string>
     <string name="playlist_export_m3u">M3Uで書き出す</string>
     <plurals name="message_m3u_imported">

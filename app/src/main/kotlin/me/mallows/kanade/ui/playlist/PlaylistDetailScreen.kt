@@ -211,6 +211,21 @@ fun PlaylistDetailScreen(
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
               DropdownMenuItem(text = { Text(stringResource(R.string.playlist_rename)) }, onClick = { menuOpen = false; sheet = "rename" })
               DropdownMenuItem(
+                text = { Text(stringResource(R.string.playlist_remove_duplicates)) },
+                onClick = {
+                  menuOpen = false
+                  scope.launch {
+                    val result = viewModel.removeDuplicates()
+                    if (result == null) {
+                      snackbar.showMessage(res.getString(R.string.message_no_duplicates))
+                    } else {
+                      val (n, undo) = result
+                      snackbar.showUndo(res.getQuantityString(R.plurals.message_duplicates_removed, n, n), undoLabel) { scope.launch { undo() } }
+                    }
+                  }
+                },
+              )
+              DropdownMenuItem(
                 text = { Text(stringResource(R.string.playlist_export_m3u)) },
                 onClick = { menuOpen = false; exportLauncher.launch("${playlist?.name ?: "playlist"}.m3u8") },
               )
