@@ -31,6 +31,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -64,6 +65,7 @@ class PlaybackService : MediaSessionService() {
   @Inject lateinit var outputRouter: OutputRouter
   @Inject lateinit var outputMonitor: OutputMonitor
   @Inject lateinit var outputSettings: OutputSettings
+  @Inject lateinit var lyricsMonitor: LyricsMonitor
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
@@ -103,6 +105,13 @@ class PlaybackService : MediaSessionService() {
         renderers.sink?.let { it.replayGainMode = mode; it.applyReplayGain() }
       }
     }
+    // 今の曲の歌詞を、曲が変わるたびに画面へ渡す
+    player.addListener(object : Player.Listener {
+      override fun onTracksChanged(tracks: Tracks) {
+        val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }?.getTrackFormat(0)
+        lyricsMonitor.set(player.currentMediaItem?.mediaId, lyricsOf(format))
+      }
+    })
     // 等速と等速以外を切り替えたら、出力の形式 (float / 16bit) を合わせるため開き直す
     player.addListener(object : Player.Listener {
       override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {

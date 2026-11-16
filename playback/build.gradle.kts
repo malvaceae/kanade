@@ -23,6 +23,7 @@ kotlin {
 dependencies {
   implementation(project(":core:common"))
   implementation(project(":core:data"))
+  api(project(":core:domain"))
   api(project(":audio-engine"))
 
   api(libs.media3.exoplayer)

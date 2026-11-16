@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import kotlinx.coroutines.launch
 import me.mallows.kanade.R
+import me.mallows.kanade.core.domain.lyrics.Lyrics
 import me.mallows.kanade.playback.PlayerConnection
 import me.mallows.kanade.playback.PlayerState
 import androidx.compose.runtime.produceState
@@ -68,6 +69,7 @@ fun PlayerScreen(
   sleep: PlayerConnection.Sleep,
   onSetSleep: (minutes: Int, endOfTrack: Boolean) -> Unit,
   onSetSpeed: (Float) -> Unit,
+  lyrics: Lyrics?,
 ) {
   val scheme = MaterialTheme.colorScheme
   var sheet by remember { mutableStateOf<String?>(null) }
@@ -205,6 +207,15 @@ fun PlayerScreen(
         )
       }
       Row {
+      if (lyrics != null) {
+        androidx.compose.material3.TextButton(onClick = { sheet = "lyrics" }) {
+          Text(
+            stringResource(R.string.lyrics_title),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = scheme.onSurfaceVariant,
+          )
+        }
+      }
       // 再生速度 (等速のときは目立たせない)
       val changed = state.speed != 1f
       androidx.compose.material3.TextButton(onClick = { sheet = "speed" }) {
@@ -226,6 +237,9 @@ fun PlayerScreen(
   }
 
   when (sheet) {
+    "lyrics" -> lyrics?.let {
+      LyricsSheet(title = state.title, lyrics = it, positionMs = state.positionMs, onSeek = onSeek, onDismiss = { sheet = null })
+    }
     "speed" -> SpeedSheet(current = state.speed, onSet = { onSetSpeed(it); sheet = null }, onDismiss = { sheet = null })
     "sleep" -> SleepTimerSheet(
       active = sleep.active,

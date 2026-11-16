@@ -45,6 +45,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
   val backStack = rememberNavBackStack(Library)
   val player by playerViewModel.state.collectAsStateWithLifecycle()
   val sleep by playerViewModel.sleep.collectAsStateWithLifecycle()
+  val lyrics by playerViewModel.lyrics.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
   val bottomBarActive = remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
@@ -142,6 +143,8 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 sleep = sleep,
                 onSetSleep = playerViewModel::setSleepTimer,
                 onSetSpeed = playerViewModel::setSpeed,
+                // 別の曲の歌詞が残っていても出さない
+                lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
               )
             }
           },
