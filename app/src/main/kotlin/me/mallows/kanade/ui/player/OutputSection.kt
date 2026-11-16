@@ -29,6 +29,7 @@ import me.mallows.kanade.R
 import me.mallows.kanade.playback.EqRepository
 import me.mallows.kanade.playback.output.BitPerfectState
 import me.mallows.kanade.playback.output.DeviceKind
+import me.mallows.kanade.playback.output.OutputDevice
 import me.mallows.kanade.playback.output.OutputInfo
 import me.mallows.kanade.playback.output.OutputMonitor
 import me.mallows.kanade.playback.output.OutputSettings
@@ -65,21 +66,7 @@ fun OutputSection(row: @Composable (label: String, value: String) -> Unit, viewM
     color = scheme.primary,
     modifier = Modifier.padding(top = 8.dp),
   )
-  info.device?.let { device ->
-    val kind = stringResource(
-      when (device.kind) {
-        DeviceKind.SPEAKER -> R.string.device_speaker
-        DeviceKind.WIRED -> R.string.device_wired
-        DeviceKind.BLUETOOTH -> R.string.device_bluetooth
-        DeviceKind.USB -> R.string.device_usb
-        DeviceKind.HDMI -> R.string.device_hdmi
-        DeviceKind.OTHER -> R.string.device_other
-      },
-    )
-    // 内蔵スピーカーの製品名は端末名なので出さない
-    val showName = device.name.isNotBlank() && device.kind != DeviceKind.SPEAKER
-    row(stringResource(R.string.output_device), if (showName) "$kind · ${device.name}" else kind)
-  }
+  info.device?.let { row(stringResource(R.string.output_device), deviceLabel(it)) }
   val processing = when {
     !info.floatProcessing -> stringResource(R.string.output_processing_none)
     eqEnabled -> stringResource(R.string.output_processing_eq)
@@ -124,6 +111,23 @@ fun OutputSection(row: @Composable (label: String, value: String) -> Unit, viewM
       Switch(checked = bitPerfect, onCheckedChange = viewModel::setBitPerfect, modifier = Modifier.padding(start = 12.dp))
     }
   }
+}
+
+/** 出力先の表示名。「Bluetooth · 製品名」のように種類と製品名を並べる (内蔵スピーカーの製品名は端末名なので出さない) */
+@Composable
+fun deviceLabel(device: OutputDevice): String {
+  val kind = stringResource(
+    when (device.kind) {
+      DeviceKind.SPEAKER -> R.string.device_speaker
+      DeviceKind.WIRED -> R.string.device_wired
+      DeviceKind.BLUETOOTH -> R.string.device_bluetooth
+      DeviceKind.USB -> R.string.device_usb
+      DeviceKind.HDMI -> R.string.device_hdmi
+      DeviceKind.OTHER -> R.string.device_other
+    },
+  )
+  val showName = device.name.isNotBlank() && device.kind != DeviceKind.SPEAKER
+  return if (showName) "$kind · ${device.name}" else kind
 }
 
 @Composable

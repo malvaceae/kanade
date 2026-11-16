@@ -168,6 +168,10 @@
     <string name="bit_perfect_unsupported_device">このUSB DACまたは端末は対応していません</string>
     <string name="bit_perfect_waiting">次の曲から切り替わります</string>
     <string name="bit_perfect_unsupported_format">この曲の形式には対応していません</string>
+    <string name="eq_per_device">出力先ごとに設定を分ける</string>
+    <string name="eq_per_device_desc">イヤホンやスピーカーをつなぎ替えると、その出力先の設定に切り替わります</string>
+    <string name="eq_per_device_current">「%1$s」の設定を編集中</string>
+    <string name="eq_per_device_unknown">再生を始めると、今の出力先の設定になります</string>
     <string name="eq_bit_perfect_note">ビットパーフェクトで出力中のため、EQは使われていません</string>
 
     <string name="action_move">移動</string>

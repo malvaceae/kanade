@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,6 +20,7 @@ import me.mallows.kanade.audio.EqSettings
 import me.mallows.kanade.playback.EqRepository
 import me.mallows.kanade.playback.UserPreset
 import me.mallows.kanade.playback.output.BitPerfectState
+import me.mallows.kanade.playback.output.OutputDevice
 import me.mallows.kanade.playback.output.OutputMonitor
 
 /**
@@ -38,6 +39,18 @@ class EqualizerViewModel @Inject constructor(
     .map { it.bitPerfect == BitPerfectState.ACTIVE }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+  /** 今の出力先 */
+  val device: StateFlow<OutputDevice?> = output.info
+    .map { it.device }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+  /** 出力先ごとに設定を分けるか */
+  val perDevice: StateFlow<Boolean> =
+    repository.perDevice.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+  /** 編集中の設定の保存先 (出力先が変わっても、変更前の出力先に保存するため) */
+  private var target: String? = null
+
   private val _settings = MutableStateFlow(dsp.settings)
   val settings: StateFlow<EqSettings> = _settings.asStateFlow()
 
@@ -47,7 +60,14 @@ class EqualizerViewModel @Inject constructor(
   private var saveJob: Job? = null
 
   init {
-    viewModelScope.launch { _settings.value = repository.settings.first() }
+    // 出力先が変わって設定が切り替わったら、画面にも反映する (保存待ちの編集があるときは除く)
+    viewModelScope.launch {
+      repository.target.combine(repository.settings) { t, s -> t to s }.collect { (t, s) ->
+        if (saveJob?.isActive == true) return@collect
+        target = t
+        _settings.value = s
+      }
+    }
   }
 
   private fun edit(transform: (EqSettings) -> EqSettings) {
@@ -55,9 +75,19 @@ class EqualizerViewModel @Inject constructor(
     _settings.value = next
     dsp.update(next)
     saveJob?.cancel()
+    val to = target
     saveJob = viewModelScope.launch {
       delay(300)
-      repository.save(next)
+      repository.save(next, to)
+    }
+  }
+
+  fun setPerDevice(enabled: Boolean) {
+    viewModelScope.launch {
+      // 分けるときは今の設定をこの出力先の設定として引き継ぐ
+      saveJob?.join()
+      repository.setPerDevice(enabled)
+      if (enabled) repository.save(_settings.value)
     }
   }
 
@@ -85,8 +115,9 @@ class EqualizerViewModel @Inject constructor(
   override fun onCleared() {
     // 画面を閉じたときは待たずに保存する
     val pending = _settings.value
+    val to = target
     if (saveJob?.isActive == true) {
-      kotlinx.coroutines.MainScope().launch { repository.save(pending) }
+      kotlinx.coroutines.MainScope().launch { repository.save(pending, to) }
     }
   }
 }

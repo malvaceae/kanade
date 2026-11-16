@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.player.deviceLabel
 import me.mallows.kanade.audio.DspChain
 import me.mallows.kanade.audio.EqPreset
 import me.mallows.kanade.audio.EqSettings
@@ -69,6 +70,8 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   var saving by remember { mutableStateOf(false) }
   val scheme = MaterialTheme.colorScheme
   val bitPerfectActive by viewModel.bitPerfectActive.collectAsStateWithLifecycle()
+  val device by viewModel.device.collectAsStateWithLifecycle()
+  val perDevice by viewModel.perDevice.collectAsStateWithLifecycle()
   val presetName = settings.matchingPresetName(userPresets) ?: stringResource(R.string.eq_custom)
 
   Column(
@@ -145,6 +148,21 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
         }
         Switch(checked = settings.limiter, onCheckedChange = viewModel::setLimiter)
       }
+    }
+
+    // 出力先ごとの設定 (EQがオフでも切り替えられる)
+    Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+      Column(Modifier.weight(1f)) {
+        Text(stringResource(R.string.eq_per_device), style = MaterialTheme.typography.bodyLarge)
+        val current = device
+        val desc = when {
+          !perDevice -> stringResource(R.string.eq_per_device_desc)
+          current == null -> stringResource(R.string.eq_per_device_unknown)
+          else -> stringResource(R.string.eq_per_device_current, deviceLabel(current))
+        }
+        Text(desc, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+      }
+      Switch(checked = perDevice, onCheckedChange = viewModel::setPerDevice)
     }
   }
 
