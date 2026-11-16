@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 通知のステータスバーに出る小さなアイコン (Media3の既定のアイコンを置き換える)。白一色で描く -->
+<!-- 通知のステータスバーに出る小さなアイコン (Media3の既定のアイコンを置き換える)。アプリのアイコンと同じ波形を白一色で描く -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <group
-        android:scaleX="0.34"
-        android:scaleY="0.34"
-        android:translateX="-5"
-        android:translateY="-5">
+        android:scaleX="0.4167"
+        android:scaleY="0.4167"
+        android:translateX="-9.6667"
+        android:translateY="-10.5000">
         <path
             android:fillColor="#00000000"
             android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="8"
+            android:strokeWidth="5"
             android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M36,26 H64 M30,34.5 H70 M21,43 H79 M50,20 V43 M50,43 Q41,52 23,57 M50,43 Q59,52 77,57 M38,61.5 H62 M32,70 H68 M50,61.5 V70 M50,70 Q44,77.5 34,80.5 M50,70 Q56,77.5 66,80.5" />
+            android:pathData="M32,49 V59 M38,43 V65 M44,46 V62 M50,37 V71 M56,41 V67 M62,39 V69 M68,47 V61 M74,50 V58" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.4"
+            android:strokeLineCap="round"
+            android:pathData="M53,30 V78" />
     </group>
 </vector>
