@@ -29,6 +29,8 @@ import com.google.common.util.concurrent.Futures
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -94,6 +96,14 @@ class PlaybackService : MediaSessionService() {
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
     PlayCounter(playStatsDao, scope).attach(player)
+    // 等速と等速以外を切り替えたら、出力の形式 (float / 16bit) を合わせるため開き直す
+    player.addListener(object : Player.Listener {
+      override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+        scope.launch {
+          if (renderers.sink?.needsReopen() == true) reopen(player)
+        }
+      }
+    })
 
     // ビットパーフェクトの設定。出力の形式は曲を開くときに決まるため、切り替えたら開き直す
     scope.launch {
@@ -146,7 +156,8 @@ class PlaybackService : MediaSessionService() {
    * - 音源のビット深度を出力部品に伝えるため、音声レンダラーで入力形式を受け取る
    */
   private inner class KanadeRenderersFactory : DefaultRenderersFactory(this@PlaybackService) {
-    private var sink: HiResAudioSink? = null
+    var sink: HiResAudioSink? = null
+      private set
 
     override fun buildAudioSink(
       context: Context,

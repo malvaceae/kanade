@@ -4,12 +4,14 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioSink.AudioSinkConfig
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import me.mallows.kanade.audio.DspChain
 import me.mallows.kanade.audio.EqAudioProcessor
 import me.mallows.kanade.audio.PcmCodec
@@ -39,6 +41,24 @@ class HiResAudioSink(
   private var pending: ByteBuffer? = null
   private var pendingTimeUs = 0L
 
+  /** プレイヤーが求めている再生速度 */
+  @Volatile private var requestedSpeed = 1f
+  /**
+   * 16bitにしてMedia3の速度変更 (Sonic) を通しているか。
+   * Media3の速度変更は16bitにしか効かず、floatで出すと速度が変わらないため、等速以外のときだけ16bitにする。
+   */
+  private var toInt16 = false
+  private var work = FloatArray(0)
+  private var int16: ByteBuffer = ByteBuffer.allocateDirect(0)
+
+  /** 今の速度に合わない形式で開いているか (等速と等速以外を切り替えたら、開き直す必要がある) */
+  fun needsReopen(): Boolean = processing && toInt16 != (requestedSpeed != 1f)
+
+  override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+    requestedSpeed = playbackParameters.speed
+    super.setPlaybackParameters(playbackParameters)
+  }
+
   override fun configure(audioSinkConfig: AudioSinkConfig) {
     val format = audioSinkConfig.format
     pending = null
@@ -51,13 +71,21 @@ class HiResAudioSink(
       return
     }
     val sourceEncoding = source?.pcmEncoding?.takeIf { it != Format.NO_VALUE }
-    val negotiation = router.negotiate(sourceEncoding, format.pcmEncoding, format.sampleRate, format.channelCount)
+    val variableSpeed = requestedSpeed != 1f
+    // 速度を変えているときはビットパーフェクトにしない (時間伸縮で値が変わるため)
+    val negotiation = if (variableSpeed) {
+      router.clearMixer()
+      Negotiation(BitPerfectState.OFF)
+    } else {
+      router.negotiate(sourceEncoding, format.pcmEncoding, format.sampleRate, format.channelCount)
+    }
     provider.targetEncoding = negotiation.targetEncoding
     processing = !negotiation.active
+    toInt16 = processing && variableSpeed
     if (processing) {
       eq.configure(AudioProcessor.AudioFormat(format.sampleRate, format.channelCount, format.pcmEncoding))
       eq.flush(AudioProcessor.StreamMetadata.DEFAULT)
-      val floatFormat = format.buildUpon().setPcmEncoding(C.ENCODING_PCM_FLOAT).build()
+      val floatFormat = format.buildUpon().setPcmEncoding(if (toInt16) C.ENCODING_PCM_16BIT else C.ENCODING_PCM_FLOAT).build()
       @Suppress("DEPRECATION")
       super.configure(
         AudioSinkConfig.Builder(floatFormat)
@@ -77,7 +105,7 @@ class HiResAudioSink(
       if (format.pcmEncoding == C.ENCODING_PCM_FLOAT) "(float)" else "",
       format.sampleRate,
       format.channelCount,
-      if (processing) "float" else "なし",
+      if (!processing) "なし" else if (toInt16) "float → 16bit (速度変更)" else "float",
       negotiation.state,
     )
     report(source, format, processing, negotiation)
@@ -89,11 +117,24 @@ class HiResAudioSink(
     val output = pending ?: run {
       eq.queueInput(buffer)
       pendingTimeUs = presentationTimeUs
-      eq.output.also { pending = it }
+      val processed = eq.output
+      (if (toInt16) toInt16(processed) else processed).also { pending = it }
     }
     if (!super.handleBuffer(output, pendingTimeUs, encodedAccessUnitCount)) return false
     pending = null
     return true
+  }
+
+  /** EQ後のfloatを16bitにする (速度変更のときだけ) */
+  private fun toInt16(floats: ByteBuffer): ByteBuffer {
+    val samples = floats.remaining() / 4
+    if (work.size < samples) work = FloatArray(samples)
+    PcmCodec.decode(floats, PcmCodec.PCM_FLOAT, work)
+    if (int16.capacity() < samples * 2) int16 = ByteBuffer.allocateDirect(samples * 2).order(ByteOrder.nativeOrder())
+    int16.clear()
+    PcmCodec.encode(work, samples, PcmCodec.PCM_16BIT, int16)
+    int16.flip()
+    return int16
   }
 
   override fun flush() {

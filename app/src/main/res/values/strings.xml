@@ -130,6 +130,7 @@
     <string name="search_no_results">見つかりませんでした</string>
     <string name="action_clear">消去</string>
 
+    <string name="speed_title">再生速度</string>
     <string name="sleep_title">スリープタイマー</string>
     <string name="sleep_minutes">%d分後に停止</string>
     <string name="sleep_end_of_track">この曲の終わりで停止</string>

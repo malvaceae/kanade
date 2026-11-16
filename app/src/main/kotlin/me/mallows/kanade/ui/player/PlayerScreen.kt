@@ -67,6 +67,7 @@ fun PlayerScreen(
   onCycleRepeat: () -> Unit,
   sleep: PlayerConnection.Sleep,
   onSetSleep: (minutes: Int, endOfTrack: Boolean) -> Unit,
+  onSetSpeed: (Float) -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
   var sheet by remember { mutableStateOf<String?>(null) }
@@ -204,6 +205,15 @@ fun PlayerScreen(
         )
       }
       Row {
+      // 再生速度 (等速のときは目立たせない)
+      val changed = state.speed != 1f
+      androidx.compose.material3.TextButton(onClick = { sheet = "speed" }) {
+        Text(
+          speedLabel(state.speed),
+          style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+          color = if (changed) scheme.primary else scheme.onSurfaceVariant,
+        )
+      }
       androidx.compose.material3.TextButton(onClick = onOpenEqualizer) {
         Text("EQ", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = scheme.onSurfaceVariant)
       }
@@ -216,6 +226,7 @@ fun PlayerScreen(
   }
 
   when (sheet) {
+    "speed" -> SpeedSheet(current = state.speed, onSet = { onSetSpeed(it); sheet = null }, onDismiss = { sheet = null })
     "sleep" -> SleepTimerSheet(
       active = sleep.active,
       onSet = { m, end -> onSetSleep(m, end); sheet = null },

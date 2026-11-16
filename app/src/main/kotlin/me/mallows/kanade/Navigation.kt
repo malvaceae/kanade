@@ -141,6 +141,7 @@ fun MainNavigation(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 onCycleRepeat = playerViewModel::cycleRepeat,
                 sleep = sleep,
                 onSetSleep = playerViewModel::setSleepTimer,
+                onSetSpeed = playerViewModel::setSpeed,
               )
             }
           },

@@ -48,6 +48,35 @@ fun SleepTimerSheet(active: Boolean, onSet: (minutes: Int, endOfTrack: Boolean) 
   }
 }
 
+/** 再生速度を選ぶシート */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SpeedSheet(current: Float, onSet: (Float) -> Unit, onDismiss: () -> Unit) {
+  ModalBottomSheet(onDismissRequest = onDismiss) {
+    Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
+      Text(
+        stringResource(R.string.speed_title),
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+      )
+      SPEEDS.forEach { s ->
+        Text(
+          speedLabel(s),
+          style = MaterialTheme.typography.bodyLarge,
+          color = if (s == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.fillMaxWidth().clickable { onSet(s) }.padding(horizontal = 24.dp, vertical = 16.dp),
+        )
+      }
+    }
+  }
+}
+
+private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+
+/** 「1.25x」のような表示 */
+fun speedLabel(speed: Float): String =
+  (if (speed % 1f == 0f) "%.0f" else if ((speed * 10) % 1f == 0f) "%.1f" else "%.2f").format(speed) + "x"
+
 @Composable
 private fun SheetText(text: String, onClick: () -> Unit) {
   Text(

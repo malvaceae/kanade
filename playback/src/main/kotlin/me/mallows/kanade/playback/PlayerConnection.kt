@@ -37,6 +37,8 @@ data class PlayerState(
   val repeatMode: Int = Player.REPEAT_MODE_OFF,
   val hasNext: Boolean = false,
   val hasPrevious: Boolean = false,
+  /** 再生速度 (1が等速) */
+  val speed: Float = 1f,
 ) {
   val hasMedia: Boolean get() = mediaStoreId != null
 }
@@ -157,6 +159,7 @@ class PlayerConnection @Inject constructor(
     publish(it)
   }
 
+  fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed) }
   fun toggleShuffle() = withController { it.shuffleModeEnabled = !it.shuffleModeEnabled }
 
   /** オフ → 全曲 → 1曲 → オフ */
@@ -288,6 +291,7 @@ class PlayerConnection @Inject constructor(
       repeatMode = player.repeatMode,
       hasNext = player.hasNextMediaItem(),
       hasPrevious = player.hasPreviousMediaItem(),
+      speed = player.playbackParameters.speed,
     )
   }
 }
