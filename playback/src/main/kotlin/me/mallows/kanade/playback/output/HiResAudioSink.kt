@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.audio.AudioSink.AudioSinkConfig
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import me.mallows.kanade.audio.Dither
 import me.mallows.kanade.audio.DspChain
 import me.mallows.kanade.audio.EqAudioProcessor
 import me.mallows.kanade.audio.PcmCodec
@@ -73,6 +74,7 @@ class HiResAudioSink(
   private var toInt16 = false
   private var work = FloatArray(0)
   private var int16: ByteBuffer = ByteBuffer.allocateDirect(0)
+  private val dither = Dither()
 
   /** 今の速度に合わない形式で開いているか (等速と等速以外を切り替えたら、開き直す必要がある) */
   fun needsReopen(): Boolean = processing && toInt16 != (requestedSpeed != 1f)
@@ -148,11 +150,13 @@ class HiResAudioSink(
     return true
   }
 
-  /** EQ後のfloatを16bitにする (速度変更のときだけ) */
+  /** EQ後のfloatを、ディザをかけて16bitにする (速度変更のときだけ) */
   private fun toInt16(floats: ByteBuffer): ByteBuffer {
     val samples = floats.remaining() / 4
     if (work.size < samples) work = FloatArray(samples)
     PcmCodec.decode(floats, PcmCodec.PCM_FLOAT, work)
+    // 丸めの誤差がひずみにならないようディザをかける
+    dither.apply(work, samples, 16)
     if (int16.capacity() < samples * 2) int16 = ByteBuffer.allocateDirect(samples * 2).order(ByteOrder.nativeOrder())
     int16.clear()
     PcmCodec.encode(work, samples, PcmCodec.PCM_16BIT, int16)

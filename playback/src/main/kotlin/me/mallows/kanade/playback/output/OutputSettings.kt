@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import me.mallows.kanade.audio.ReplayGainMode
 import javax.inject.Inject
@@ -32,7 +33,15 @@ class OutputSettings @Inject constructor(private val dataStore: DataStore<Prefer
     dataStore.edit { it[REPLAY_GAIN] = mode.name }
   }
 
+  /** 再生速度 (アプリを開き直しても保つ) */
+  val speed: Flow<Float> = dataStore.data.map { it[SPEED] ?: 1f }.distinctUntilChanged()
+
+  suspend fun setSpeed(speed: Float) {
+    dataStore.edit { it[SPEED] = speed }
+  }
+
   private companion object {
+    val SPEED = floatPreferencesKey("playback_speed")
     val REPLAY_GAIN = stringPreferencesKey("replay_gain")
     val BIT_PERFECT = booleanPreferencesKey("usb_bit_perfect")
   }

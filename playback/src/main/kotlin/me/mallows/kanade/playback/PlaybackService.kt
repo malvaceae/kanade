@@ -42,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.guava.future
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.mallows.kanade.core.data.db.PlayStatsDao
 import me.mallows.kanade.core.data.db.PlaybackStateDao
@@ -106,10 +107,16 @@ class PlaybackService : MediaSessionService() {
     player.addListener(object : Player.Listener {
       override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
         scope.launch {
+          outputSettings.setSpeed(playbackParameters.speed)
           if (renderers.sink?.needsReopen() == true) reopen(player)
         }
       }
     })
+    // 前回の再生速度に戻す (曲を開く前に決めておけば、開き直しは要らない)
+    scope.launch {
+      val speed = outputSettings.speed.first()
+      if (speed != 1f) player.setPlaybackSpeed(speed)
+    }
 
     // ビットパーフェクトの設定。出力の形式は曲を開くときに決まるため、切り替えたら開き直す
     scope.launch {
