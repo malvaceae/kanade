@@ -11,6 +11,10 @@ data class EqSettings(
   val trebleDb: Float = 0f,
   /** 音割れを防ぐリミッター */
   val limiter: Boolean = true,
+  /** 左右のバランス。-1で左だけ、1で右だけ。EQのオン・オフに関係なく効く */
+  val balance: Float = 0f,
+  /** 左右を混ぜてモノラルにする。EQのオン・オフに関係なく効く */
+  val mono: Boolean = false,
 ) {
   init {
     require(bands.size == BAND_FREQUENCIES.size) { "バンド数が違います" }
@@ -30,7 +34,7 @@ data class EqSettings(
 
   /** 保存用の文字列 */
   fun encode(): String =
-    listOf(enabled, preampDb, bassDb, trebleDb, limiter, bands.joinToString(",")).joinToString(";")
+    listOf(enabled, preampDb, bassDb, trebleDb, limiter, bands.joinToString(","), balance, mono).joinToString(";")
 
   companion object {
     /** 各バンドの中心周波数 (Hz) */
@@ -54,6 +58,9 @@ data class EqSettings(
           trebleDb = parts[3].toFloat(),
           limiter = parts[4].toBooleanStrict(),
           bands = parts[5].split(',').map(String::toFloat),
+          // バランスとモノラルは後から足したので、古い保存データには無い
+          balance = parts.getOrNull(6)?.toFloat()?.coerceIn(-1f, 1f) ?: 0f,
+          mono = parts.getOrNull(7)?.toBooleanStrict() ?: false,
         )
       }.getOrDefault(EqSettings())
     }

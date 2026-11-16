@@ -25,6 +25,12 @@ class DspChain {
       if (settings.enabled) filters.indices.filter { !filters[it].isIdentity }.toIntArray() else IntArray(0)
     val gain: Double = if (settings.enabled) preampGain else 1.0
     val limiter: Boolean = settings.enabled && settings.limiter
+    // バランス: 片側だけを下げる (中央では両方とも1)
+    val left: Double = (1.0 - settings.balance).coerceAtMost(1.0)
+    val right: Double = (1.0 + settings.balance).coerceAtMost(1.0)
+    val mono: Boolean = settings.mono
+    /** 左右に手を加えるか */
+    val stereoStage: Boolean = mono || settings.balance != 0f
   }
 
   @Volatile private var plan: Plan = buildPlan(EqSettings(), 48_000.0)
@@ -32,6 +38,9 @@ class DspChain {
   private var applied: Plan = plan
 
   private var channels = 2
+  /** 1フレーム分の作業領域 (再生中に配列を作らないよう使い回す) */
+  private var frame = DoubleArray(2)
+  private var fadeFrame = DoubleArray(2)
   private var states: Array<Array<BiquadState>> = emptyArray()
   /** 入れ替え中の古い設定と、その状態 */
   private var fading: Plan? = null
@@ -48,6 +57,8 @@ class DspChain {
   /** 音声の形式が決まったときに呼ぶ */
   fun configure(sampleRate: Int, channelCount: Int) {
     channels = channelCount
+    frame = DoubleArray(channelCount)
+    fadeFrame = DoubleArray(channelCount)
     plan = buildPlan(plan.settings, sampleRate.toDouble())
     applied = plan
     states = newStates()
@@ -96,17 +107,25 @@ class DspChain {
       val base = f * channels
       val old = fading
       val mix = if (old != null) (fadePosition + 1).toDouble() / fadeLength else 1.0
-      var peak = 0.0
       for (c in 0 until channels) {
         val input = samples[base + c].toDouble()
         var x = input * p.gain
         for (k in p.active) x = states[k][c].process(p.filters[k], x)
+        frame[c] = x
         if (old != null) {
           var y = input * old.gain
           for (k in old.active) y = fadeStates[k][c].process(old.filters[k], y)
-          x = y + (x - y) * mix
+          fadeFrame[c] = y
         }
-        samples[base + c] = x.toFloat()
+      }
+      if (channels == 2) {
+        stereo(p, frame)
+        if (old != null) stereo(old, fadeFrame)
+      }
+      var peak = 0.0
+      for (c in 0 until channels) {
+        val x = if (old != null) fadeFrame[c] + (frame[c] - fadeFrame[c]) * mix else frame[c]
+        frame[c] = x
         peak = maxOf(peak, abs(x))
       }
       if (old != null && ++fadePosition >= fadeLength) fading = null
@@ -119,9 +138,21 @@ class DspChain {
         limiterGain = 1.0
       }
       for (c in 0 until channels) {
-        samples[base + c] = (samples[base + c] * limiterGain).coerceIn(-1.0, 1.0).toFloat()
+        samples[base + c] = (frame[c] * limiterGain).coerceIn(-1.0, 1.0).toFloat()
       }
     }
+  }
+
+  /** モノラル化とバランス (2チャンネルのときだけ) */
+  private fun stereo(p: Plan, lr: DoubleArray) {
+    if (!p.stereoStage) return
+    if (p.mono) {
+      val m = (lr[0] + lr[1]) * 0.5
+      lr[0] = m
+      lr[1] = m
+    }
+    lr[0] *= p.left
+    lr[1] *= p.right
   }
 
   companion object {

@@ -105,6 +105,49 @@ class DspTest {
     assertTrue("変更中 $change / 前 $before / 後 $steady", change <= maxOf(before, steady) * 1.05)
   }
 
+  /** 左だけに音がある信号を通して、落ち着いた後の左右の最大値を返す */
+  private fun leftOnlyThrough(settings: EqSettings): Pair<Double, Double> {
+    val chain = DspChain()
+    chain.update(settings)
+    chain.configure(48_000, 2)
+    val buf = FloatArray(48_000 * 2) { i -> if (i % 2 == 0) (0.5 * sin(2 * PI * 440.0 * (i / 2) / 48_000)).toFloat() else 0f }
+    chain.process(buf, buf.size)
+    val tail = buf.size / 2
+    var l = 0.0
+    var r = 0.0
+    for (i in tail until buf.size step 2) {
+      l = maxOf(l, abs(buf[i].toDouble()))
+      r = maxOf(r, abs(buf[i + 1].toDouble()))
+    }
+    return l to r
+  }
+
+  @Test
+  fun モノラルは左右を混ぜて同じにする() {
+    val (l, r) = leftOnlyThrough(EqSettings(mono = true))
+    assertEquals(0.25, l, 0.01)
+    assertEquals(l, r, 1e-9)
+  }
+
+  @Test
+  fun バランスは片側だけを下げる() {
+    val (l, r) = leftOnlyThrough(EqSettings(mono = true, balance = -1f))
+    assertEquals(0.25, l, 0.01)
+    assertEquals(0.0, r, 1e-9)
+    val (l2, _) = leftOnlyThrough(EqSettings(balance = 0.5f))
+    assertEquals(0.25, l2, 0.01)
+  }
+
+  @Test
+  fun バランスとモノラルを足す前の保存データも読める() {
+    val old = "true;-3.0;0.0;0.0;true;6.0,5.0,4.0,2.0,0.0,0.0,0.0,0.0,0.0,0.0"
+    val s = EqSettings.decode(old)
+    assertEquals(-3f, s.preampDb)
+    assertEquals(0f, s.balance)
+    assertEquals(false, s.mono)
+    assertEquals(s.copy(balance = 0.3f, mono = true), EqSettings.decode(s.copy(balance = 0.3f, mono = true).encode()))
+  }
+
   @Test
   fun 無効のときは素通し() {
     val chain = DspChain()

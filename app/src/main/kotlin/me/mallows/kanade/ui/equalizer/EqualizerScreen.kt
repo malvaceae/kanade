@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.pow
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import me.mallows.kanade.R
 import me.mallows.kanade.ui.player.deviceLabel
@@ -147,6 +148,35 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
           Text(stringResource(R.string.eq_limiter_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
         }
         Switch(checked = settings.limiter, onCheckedChange = viewModel::setLimiter)
+      }
+    }
+
+    // 左右 (EQがオフでも効く)
+    HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.eq_balance), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
+        Slider(
+          value = settings.balance,
+          // 中央付近では中央に吸い付ける
+          onValueChange = { v -> viewModel.setBalance(((v * 20).roundToInt() / 20f).let { if (abs(it) < 0.05f) 0f else it }) },
+          valueRange = -1f..1f,
+          modifier = Modifier.weight(1f),
+        )
+        Text(
+          balanceText(settings.balance),
+          style = MaterialTheme.typography.bodySmall,
+          color = scheme.onSurfaceVariant,
+          textAlign = TextAlign.End,
+          modifier = Modifier.width(56.dp),
+        )
+      }
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+          Text(stringResource(R.string.eq_mono), style = MaterialTheme.typography.bodyLarge)
+          Text(stringResource(R.string.eq_mono_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+        }
+        Switch(checked = settings.mono, onCheckedChange = viewModel::setMono)
       }
     }
 
@@ -305,6 +335,16 @@ private fun DbSlider(label: String, value: Float, min: Float, max: Float, onChan
       textAlign = TextAlign.End,
       modifier = Modifier.width(56.dp),
     )
+  }
+}
+
+@Composable
+private fun balanceText(balance: Float): String {
+  val percent = (abs(balance) * 100).roundToInt()
+  return when {
+    percent == 0 -> stringResource(R.string.eq_balance_center)
+    balance < 0 -> stringResource(R.string.eq_balance_left, percent)
+    else -> stringResource(R.string.eq_balance_right, percent)
   }
 }
 

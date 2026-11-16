@@ -97,6 +97,8 @@ class EqualizerViewModel @Inject constructor(
   fun setBass(db: Float) = edit { it.copy(bassDb = db) }
   fun setTreble(db: Float) = edit { it.copy(trebleDb = db) }
   fun setLimiter(on: Boolean) = edit { it.copy(limiter = on) }
+  fun setBalance(balance: Float) = edit { it.copy(balance = balance.coerceIn(-1f, 1f)) }
+  fun setMono(on: Boolean) = edit { it.copy(mono = on) }
 
   /** プリセットを選ぶと、EQがオフでもオンにする */
   fun applyPreset(preset: EqPreset) = edit { it.applyPreset(preset).copy(enabled = true) }
