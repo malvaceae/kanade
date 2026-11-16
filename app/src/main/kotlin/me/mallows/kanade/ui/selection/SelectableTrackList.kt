@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.common.initialOf
+import me.mallows.kanade.ui.common.FastScroller
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -128,6 +130,15 @@ fun SelectableTrackList(
           )
         }
       }
+    }
+    if (!selecting) {
+      val offset = if (header != null) 1 else 0
+      FastScroller(
+        state = listState,
+        label = { i -> initialOf(tracks.getOrNull(i - offset)?.title) },
+        modifier = Modifier.align(Alignment.TopEnd),
+        bottomPadding = bottomPadding,
+      )
     }
     if (selecting) {
       val n = selected.size

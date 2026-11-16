@@ -26,6 +26,9 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.rememberLazyListState
+import me.mallows.kanade.ui.common.initialOf
+import me.mallows.kanade.ui.common.FastScroller
 import me.mallows.kanade.ui.common.showMessage
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import kotlinx.coroutines.launch
@@ -259,7 +262,9 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
       else -> R.string.unknown_folder
     }
   )
-  LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
+  val listState = rememberLazyListState()
+  Box(Modifier.fillMaxSize()) {
+  LazyColumn(state = listState, contentPadding = PaddingValues(bottom = bottomPadding)) {
     item {
       ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) {
         SortButton(sort != null) { showSort = true }
@@ -274,6 +279,13 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
         onClick = { onOpen(kind, group.name, title) },
       )
     }
+  }
+  FastScroller(
+    state = listState,
+    label = { i -> initialOf(list.getOrNull(i - 1)?.let { it.displayName(kind) ?: unknown }) },
+    modifier = Modifier.align(Alignment.TopEnd),
+    bottomPadding = bottomPadding,
+  )
   }
   if (showSort) {
     SortSheet(GroupSort.entries.toTypedArray(), sort, GroupSort.NAME,

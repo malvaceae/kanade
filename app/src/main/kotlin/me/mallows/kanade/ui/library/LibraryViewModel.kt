@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -59,12 +61,12 @@ class LibraryViewModel @Inject constructor(
   val tracks: StateFlow<List<TrackEntity>?> =
     combine(library.tracks, settings.sort(SortCategory.TRACKS)) { list, sort ->
       list.sortedWith(sort, TrackSort.entries.toTypedArray(), TrackSort.TITLE)
-    }.state(null)
+    }.flowOn(Dispatchers.Default).state(null) // 日本語の並べ替えは曲数が多いと重いので、画面のスレッドでは行わない
 
   val albums: StateFlow<List<AlbumSummary>?> =
     combine(library.albums, settings.sort(SortCategory.ALBUMS)) { list, sort ->
       list.sortedWith(sort, AlbumSort.entries.toTypedArray(), AlbumSort.TITLE)
-    }.state(null)
+    }.flowOn(Dispatchers.Default).state(null)
 
   private val groupFlows = mutableMapOf<GroupKind, StateFlow<List<GroupSummary>?>>()
   private val groupSortFlows = mutableMapOf<GroupKind, StateFlow<SortSetting?>>()
@@ -72,7 +74,7 @@ class LibraryViewModel @Inject constructor(
   fun groups(kind: GroupKind): StateFlow<List<GroupSummary>?> = groupFlows.getOrPut(kind) {
     combine(library.groups(kind), settings.sort(SortCategory.group(kind))) { list, sort ->
       list.sortedWith(sort, GroupSort.entries.toTypedArray(), GroupSort.NAME)
-    }.state(null)
+    }.flowOn(Dispatchers.Default).state(null)
   }
 
   fun groupSort(kind: GroupKind): StateFlow<SortSetting?> = groupSortFlows.getOrPut(kind) {

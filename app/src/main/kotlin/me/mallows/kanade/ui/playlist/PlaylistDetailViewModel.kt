@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import me.mallows.kanade.core.data.db.PlaylistEntity
 import me.mallows.kanade.core.data.db.PlaylistItem
@@ -56,7 +58,7 @@ class PlaylistDetailViewModel @AssistedInject constructor(
       else -> list.sortedWith(compareBy<PlaylistItem, me.mallows.kanade.core.data.db.TrackEntity>(sort.sort.comparator) { it.track })
         .let { if (sort.descending) it.reversed() else it }
     }
-  }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+  }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
   fun setSort(sort: PlaylistSort) {
     _sort.value = sort
