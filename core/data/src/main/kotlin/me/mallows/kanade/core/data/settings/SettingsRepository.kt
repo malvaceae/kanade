@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.map
 /** テーマの選択 */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** 一覧のソート条件。[key]の意味は一覧ごとに決める */
+data class SortSetting(val key: String, val descending: Boolean)
+
 /** アプリの設定。DataStoreに保存する */
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -25,6 +28,26 @@ class SettingsRepository @Inject constructor(
   suspend fun setThemeMode(mode: ThemeMode) {
     dataStore.edit { it[THEME_MODE] = mode.name }
   }
+
+  /** 一覧 ([category]) ごとに覚えているソート条件。未設定ならnull */
+  fun sort(category: String): Flow<SortSetting?> = dataStore.data.map { prefs ->
+    prefs[sortKey(category)]?.split(':')?.takeIf { it.size == 2 }?.let { SortSetting(it[0], it[1] == "desc") }
+  }
+
+  suspend fun setSort(category: String, setting: SortSetting) {
+    dataStore.edit { it[sortKey(category)] = "${setting.key}:${if (setting.descending) "desc" else "asc"}" }
+  }
+
+  /** 一覧ごとの表示形式 (リスト／グリッド) */
+  fun gridView(category: String): Flow<Boolean?> = dataStore.data.map { prefs ->
+    prefs[stringPreferencesKey("grid_$category")]?.toBooleanStrictOrNull()
+  }
+
+  suspend fun setGridView(category: String, grid: Boolean) {
+    dataStore.edit { it[stringPreferencesKey("grid_$category")] = grid.toString() }
+  }
+
+  private fun sortKey(category: String) = stringPreferencesKey("sort_$category")
 
   private companion object {
     val THEME_MODE = stringPreferencesKey("theme_mode")

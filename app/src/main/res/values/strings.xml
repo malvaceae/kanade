@@ -6,18 +6,67 @@
     <string name="permission_allow">許可する</string>
     <string name="permission_open_settings">設定を開く</string>
 
+    <string name="library_title">ライブラリ</string>
     <string name="library_all_tracks">すべての曲</string>
     <string name="library_summary">%1$d曲 · %2$d分</string>
     <string name="library_empty">曲が見つかりません</string>
     <string name="library_empty_hint">端末の「Music」フォルダーなどに音楽ファイルを入れると、ここに表示されます。</string>
     <string name="library_scanning">読み込み中…</string>
+    <string name="minutes_suffix">分</string>
+
+    <string name="tab_tracks">曲</string>
+    <string name="tab_albums">アルバム</string>
+    <string name="tab_artists">アーティスト</string>
+    <string name="tab_folders">フォルダー</string>
+    <string name="tab_genres">ジャンル</string>
+    <string name="tab_playlists">プレイリスト</string>
+
+    <plurals name="track_count">
+        <item quantity="other">%d曲</item>
+    </plurals>
+    <plurals name="album_count">
+        <item quantity="other">%d枚のアルバム</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="other">%d件</item>
+    </plurals>
+
+    <string name="sort_title_sheet">並べ替え</string>
+    <string name="sort_title">タイトル</string>
+    <string name="sort_name">名前</string>
+    <string name="sort_artist">アーティスト</string>
+    <string name="sort_album">アルバム</string>
+    <string name="sort_year">年</string>
+    <string name="sort_duration">再生時間</string>
+    <string name="sort_date_added">追加日</string>
+    <string name="sort_track_count">曲数</string>
+    <string name="sort_ascending">昇順</string>
+    <string name="sort_descending">降順</string>
+
+    <string name="selection_count">%d曲を選択中</string>
+    <string name="action_select_all">すべて選択</string>
+    <string name="action_clear_selection">選択を解除</string>
+    <string name="action_play_next">次に再生</string>
+    <string name="action_add_to_queue">キューに追加</string>
+    <string name="action_add_to_playlist">プレイリスト</string>
+    <string name="message_play_next">%d曲を次に再生に追加しました</string>
+    <string name="message_added_to_queue">%d曲をキューに追加しました</string>
 
     <string name="action_play">再生</string>
+    <string name="action_shuffle_play">シャッフル再生</string>
     <string name="action_pause">一時停止</string>
     <string name="action_next">次の曲</string>
     <string name="action_previous">前の曲</string>
     <string name="action_shuffle">シャッフル</string>
     <string name="action_repeat">リピート</string>
     <string name="action_close">閉じる</string>
+    <string name="action_back">戻る</string>
+    <string name="action_search">検索</string>
+    <string name="action_sort">並べ替え</string>
+    <string name="action_toggle_view">表示を切り替え</string>
+    <string name="action_undo">元に戻す</string>
     <string name="unknown_artist">不明なアーティスト</string>
+    <string name="unknown_album">不明なアルバム</string>
+    <string name="unknown_genre">ジャンルなし</string>
+    <string name="unknown_folder">不明なフォルダー</string>
 </resources>

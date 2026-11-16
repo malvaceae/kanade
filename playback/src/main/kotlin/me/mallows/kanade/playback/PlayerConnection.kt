@@ -86,6 +86,28 @@ class PlayerConnection @Inject constructor(
     it.play()
   }
 
+  /** 今の曲の直後に入れる */
+  fun playNext(mediaStoreIds: List<Long>) = withController {
+    if (it.mediaItemCount == 0) {
+      it.setMediaItems(mediaStoreIds.map { id -> mediaItemRequest(id, queued = true) })
+      it.prepare()
+      return@withController
+    }
+    it.addMediaItems(it.currentMediaItemIndex + 1, mediaStoreIds.map { id -> mediaItemRequest(id, queued = true) })
+  }
+
+  /** 「次に再生」「キューに追加」で入れた曲の後ろに入れる */
+  fun addToQueue(mediaStoreIds: List<Long>) = withController {
+    if (it.mediaItemCount == 0) {
+      it.setMediaItems(mediaStoreIds.map { id -> mediaItemRequest(id, queued = true) })
+      it.prepare()
+      return@withController
+    }
+    var index = it.currentMediaItemIndex + 1
+    while (index < it.mediaItemCount && it.getMediaItemAt(index).isQueued) index++
+    it.addMediaItems(index, mediaStoreIds.map { id -> mediaItemRequest(id, queued = true) })
+  }
+
   fun togglePlayPause() = withController {
     if (it.isPlaying) {
       it.pause()

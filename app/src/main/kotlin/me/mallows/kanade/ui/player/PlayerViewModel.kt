@@ -21,6 +21,8 @@ class PlayerViewModel @Inject constructor(
   }
 
   fun play(tracks: List<TrackEntity>, index: Int) = connection.playTracks(tracks.map { it.mediaStoreId }, index)
+  fun playNext(tracks: List<TrackEntity>) = connection.playNext(tracks.map { it.mediaStoreId })
+  fun addToQueue(tracks: List<TrackEntity>) = connection.addToQueue(tracks.map { it.mediaStoreId })
   fun togglePlayPause() = connection.togglePlayPause()
   fun next() = connection.next()
   fun previous() = connection.previous()

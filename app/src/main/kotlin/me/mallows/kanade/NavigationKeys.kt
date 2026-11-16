@@ -3,8 +3,11 @@ package me.mallows.kanade
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
-/** 全曲一覧 */
+/** ライブラリ (タブで曲・アルバムなどを切り替える) */
 @Serializable data object Library : NavKey
+
+/** アルバム・アーティスト・フォルダー・ジャンルの中身。[kind]は GroupKind の名前 */
+@Serializable data class GroupDetail(val kind: String, val key: String?, val title: String) : NavKey
 
 /** プレイヤー画面 */
 @Serializable data object Player : NavKey

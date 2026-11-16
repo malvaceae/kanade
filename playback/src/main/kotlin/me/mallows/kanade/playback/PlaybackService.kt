@@ -81,7 +81,7 @@ class PlaybackService : MediaSessionService() {
   private suspend fun resolve(items: List<MediaItem>): List<MediaItem> {
     val ids = items.mapNotNull { it.mediaId.toLongOrNull() }
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
-    return items.map { item -> tracks[item.mediaId.toLongOrNull()]?.toMediaItem() ?: item }
+    return items.map { item -> tracks[item.mediaId.toLongOrNull()]?.toMediaItem(queued = item.isQueuedRequest) ?: item }
   }
 
   private inner class SessionCallback : MediaSession.Callback {
