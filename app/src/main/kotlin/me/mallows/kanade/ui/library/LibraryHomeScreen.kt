@@ -50,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -273,8 +274,8 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   val unknown = stringResource(R.string.unknown_album)
   val open = { a: AlbumSummary -> onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
   val menu = { a: AlbumSummary -> menuFor = GroupTarget(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
-  val header = @Composable {
-    ListHeader(pluralStringResource(R.plurals.album_count, list.size, list.size)) {
+  val header = @Composable { modifier: Modifier ->
+    ListHeader(pluralStringResource(R.plurals.album_count, list.size, list.size), modifier) {
       IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
         Icon(if (grid) KanadeIcons.ListView else KanadeIcons.Grid, contentDescription = stringResource(R.string.action_toggle_view))
       }
@@ -284,11 +285,19 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   if (grid) {
     LazyVerticalGrid(
       columns = GridCells.Adaptive(150.dp),
-      contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = bottomPadding),
+      contentPadding = PaddingValues(start = GRID_SIDE_PADDING, end = GRID_SIDE_PADDING, bottom = bottomPadding),
       horizontalArrangement = Arrangement.spacedBy(12.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-      item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
+      // 格子の左右の余白を見出しには付けず、ほかの画面と同じ位置にボタンを置く
+      item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+        header(Modifier.layout { measurable, constraints ->
+          val extra = (GRID_SIDE_PADDING * 2).roundToPx()
+          val width = constraints.maxWidth + extra
+          val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+          layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+        })
+      }
       items(list, key = { it.albumId ?: -1L }) { album ->
         Column(Modifier.combinedClickable(onClick = { open(album) }, onLongClick = { menu(album) })) {
           androidx.compose.foundation.layout.BoxWithConstraints {
@@ -302,7 +311,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
     }
   } else {
     LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
-      item { header() }
+      item { header(Modifier) }
       items(list, key = { it.albumId ?: -1L }) { album ->
         GroupRow(
           title = album.album ?: unknown,
@@ -420,3 +429,6 @@ private fun Empty(onScanFolders: () -> Unit, onRescan: () -> Unit) {
     }
   }
 }
+
+/** アルバムの格子の左右の余白 */
+private val GRID_SIDE_PADDING = 12.dp
