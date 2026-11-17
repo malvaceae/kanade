@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -19,6 +20,9 @@ fun rememberArtworkBackground(artworkData: ByteArray?, key: Any?, fallback: Colo
   val color by produceState(initialValue = fallback, key) {
     val data = artworkData
     value = if (data == null) {
+      // 曲を変えた直後は、アートワークが少し遅れて届くことがある。すぐに暗い色へ戻すと
+      // 「前の色 → 暗い色 → 新しい色」とちらつくので、少し待ってから戻す (届けばこの処理は取り消される)
+      delay(400)
       fallback
     } else {
       withContext(Dispatchers.Default) {

@@ -91,7 +91,8 @@ fun PlayerScreen(
     fallback = scheme.background,
     base = scheme.background,
   )
-  val background by animateColorAsState(target, label = "background")
+  // 既定のばねの動きでは暗い色から明るい色へ急に変わって見えるので、時間をかけて移す
+  val background by animateColorAsState(target, animationSpec = tween(700, easing = LinearOutSlowInEasing), label = "background")
 
   Column(
     modifier = Modifier

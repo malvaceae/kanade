@@ -205,8 +205,19 @@ class PlayerConnection @Inject constructor(
     }
   }
 
-  /** 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る */
-  fun previous() = withController { it.seekToPrevious() }
+  /**
+   * 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る。
+   * リピートなしで最初の曲にいるときは、最後の曲へ回る (次へで最後から最初へ回るのと対にする)
+   */
+  fun previous() = withController {
+    val atStart = it.currentPosition <= it.maxSeekToPreviousPosition
+    if (atStart && !it.hasPreviousMediaItem() && it.repeatMode == Player.REPEAT_MODE_OFF && it.mediaItemCount > 1) {
+      val last = it.currentTimeline.getLastWindowIndex(it.shuffleModeEnabled).coerceAtLeast(0)
+      it.seekTo(last, 0L)
+    } else {
+      it.seekToPrevious()
+    }
+  }
 
   fun seekTo(positionMs: Long) = withController {
     it.seekTo(positionMs)

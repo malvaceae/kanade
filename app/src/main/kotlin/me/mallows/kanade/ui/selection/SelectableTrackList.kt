@@ -81,7 +81,6 @@ fun SelectableTrackList(
   /** この一覧を再生元として記録する名前など */
   source: PlaySource,
   modifier: Modifier = Modifier,
-  numbered: Boolean = true,
   header: (@Composable () -> Unit)? = null,
 ) {
   var selected by rememberSaveable { mutableStateOf(setOf<Long>()) }
@@ -130,7 +129,7 @@ fun SelectableTrackList(
           val isSelected = track.id in selected
           TrackRow(
             track = track,
-            number = if (numbered) index + 1 else null,
+            number = index + 1,
             playing = track.mediaStoreId == playingId,
             selectionMode = selecting,
             selected = isSelected,

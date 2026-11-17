@@ -97,7 +97,6 @@ fun GroupDetailScreen(
       actions = actions,
       bottomPadding = bottomPadding,
       source = source,
-      numbered = key.kind == GroupKind.ALBUM.name,
       header = {
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
           Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

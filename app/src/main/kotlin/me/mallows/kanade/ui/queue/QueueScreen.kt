@@ -44,6 +44,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -54,6 +55,8 @@ import me.mallows.kanade.playback.QueueItem
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.common.SelectionCheck
+import me.mallows.kanade.ui.common.LocalIsPlaying
+import me.mallows.kanade.ui.common.PlayingBars
 import me.mallows.kanade.ui.common.TrackArtwork
 import me.mallows.kanade.ui.common.audioUri
 import me.mallows.kanade.ui.common.showUndo
@@ -79,7 +82,7 @@ private data class Entry(val origin: Int, val item: QueueItem, val key: Long)
  * シャッフル中は並べ替えできない。
  */
 @Composable
-fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel()) {
+fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel = hiltViewModel()) {
   val queue by viewModel.queue.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
@@ -176,7 +179,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
       }
       LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = 96.dp + navigationBarHeight()),
+        contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
         modifier = Modifier.weight(1f).dragToSelect(
           state = listState,
           keys = local.map { it.key },
@@ -188,7 +191,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
       ) {
         queue.current?.let { current ->
           item(key = "now_label") { SectionLabel(stringResource(R.string.queue_now_playing)) }
-          item(key = "now") { QueueRow(current, selectionMode = false, selected = false, onClick = {}, handle = null, highlight = true) }
+          item(key = "now") { QueueRow(current, number = null, selectionMode = false, selected = false, onClick = {}, handle = null, highlight = true) }
         }
         if (locked && local.isNotEmpty()) {
           item(key = "locked") {
@@ -218,6 +221,7 @@ fun QueueScreen(onBack: () -> Unit, viewModel: QueueViewModel = hiltViewModel())
             ) {
               QueueRow(
                 item = entry.item,
+                number = index + 1,
                 selectionMode = selecting,
                 selected = isSelected && !dragging,
                 onClick = {
@@ -290,6 +294,8 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun QueueRow(
   item: QueueItem,
+  /** 次に再生する順の番号。再生中の曲はnullで、再生中の印を出す */
+  number: Int?,
   selectionMode: Boolean,
   selected: Boolean,
   onClick: () -> Unit,
@@ -308,7 +314,14 @@ private fun QueueRow(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(12.dp),
   ) {
-    if (selectionMode) Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) { SelectionCheck(selected) }
+    // ほかの曲の一覧と同じく、番号の場所に選択の印を出す (選択しても曲名がずれない)
+    Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
+      when {
+        selectionMode -> SelectionCheck(selected)
+        number == null -> PlayingBars(color = scheme.primary, animating = LocalIsPlaying.current)
+        else -> Text(number.toString(), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+      }
+    }
     TrackArtwork(uri = audioUri(item.mediaStoreId), size = 44.dp)
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(

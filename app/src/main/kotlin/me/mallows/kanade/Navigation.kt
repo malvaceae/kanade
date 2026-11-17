@@ -99,7 +99,8 @@ fun MainNavigation(
     }
   }
   val top = backStack.lastOrNull()
-  val showMini = player.hasMedia && top != Player && top != Queue && top != Equalizer && !bottomBarActive.value
+  // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンスの画面には出さない
+  val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && !bottomBarActive.value
   // 一覧の下の余白: ミニプレイヤー (高さ64・下8) とナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
   val bottomPadding = (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
 
@@ -200,7 +201,7 @@ fun MainNavigation(
             }
             entry<Queue> {
               Page {
-                QueueScreen(onBack = { backStack.removeLastOrNull() })
+                QueueScreen(onBack = { backStack.removeLastOrNull() }, bottomPadding = bottomPadding)
               }
             }
             entry<Player> {
@@ -230,7 +231,14 @@ fun MainNavigation(
         if (showMini) {
           MiniPlayer(
             state = player,
-            onOpen = { backStack.add(Player) },
+            onOpen = {
+              // プレイヤーから開いた画面 (キューなど) では、重ねずにそのプレイヤーへ戻る
+              if (Player in backStack) {
+                while (backStack.lastOrNull() != Player) backStack.removeLastOrNull()
+              } else {
+                backStack.add(Player)
+              }
+            },
             onTogglePlay = playerViewModel::togglePlayPause,
             modifier = Modifier
               .align(Alignment.BottomCenter)
