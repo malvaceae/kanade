@@ -39,9 +39,11 @@ object AudioPermissions {
   fun audio(version: AndroidVersion = AndroidVersion.current): String =
     if (version.usesReadMediaAudio) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
-  /** 通知の権限 (Android 13以降)。拒否されても再生はできる */
-  fun notification(version: AndroidVersion = AndroidVersion.current): String? =
-    if (version.requiresNotificationPermission) Manifest.permission.POST_NOTIFICATIONS else null
+  /** 最初にまとめて要求する権限。通知の権限は拒否されても再生はできる */
+  fun request(version: AndroidVersion = AndroidVersion.current): Array<String> = buildList {
+    add(audio(version))
+    if (version.requiresNotificationPermission) add(Manifest.permission.POST_NOTIFICATIONS)
+  }.toTypedArray()
 
   fun hasAudio(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, audio()) == PackageManager.PERMISSION_GRANTED
@@ -53,17 +55,9 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
   val context = LocalContext.current
   var granted by remember { mutableStateOf(AudioPermissions.hasAudio(context)) }
   var asked by remember { mutableStateOf(false) }
-  // 通知は音楽ファイルの許可の後に別に尋ねる (まとめて要求すると、通知の確認が先に出てしまう)
-  val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-  val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-    granted = ok
+  val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    granted = AudioPermissions.hasAudio(context)
     asked = true
-    val notification = AudioPermissions.notification()
-    if (ok && notification != null &&
-      ContextCompat.checkSelfPermission(context, notification) != PackageManager.PERMISSION_GRANTED
-    ) {
-      notificationLauncher.launch(notification)
-    }
   }
   // 設定画面で許可して戻ってきた場合に反映する
   LifecycleResumeEffect(Unit) {
@@ -76,7 +70,7 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
   } else {
     PermissionScreen(
       showSettings = asked,
-      onRequest = { launcher.launch(AudioPermissions.audio()) },
+      onRequest = { launcher.launch(AudioPermissions.request()) },
       onOpenSettings = {
         context.startActivity(
           Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
@@ -99,7 +93,11 @@ private fun PermissionScreen(showSettings: Boolean, onRequest: () -> Unit, onOpe
   ) {
     Text(stringResource(R.string.permission_title), style = MaterialTheme.typography.headlineSmall)
     Text(
-      stringResource(R.string.permission_body),
+      // Android 13以降は通知の許可も一緒に尋ねる (通知の確認が先に出る)
+      stringResource(
+        if (AndroidVersion.current.requiresNotificationPermission) R.string.permission_body_with_notification
+        else R.string.permission_body,
+      ),
       style = MaterialTheme.typography.bodyLarge,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

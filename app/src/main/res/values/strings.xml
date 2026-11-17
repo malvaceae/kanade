@@ -3,6 +3,7 @@
 
     <string name="permission_title">音楽ファイルへのアクセス</string>
     <string name="permission_body">端末内の曲を一覧にして再生するために、音楽ファイルの読み取りを許可してください。</string>
+    <string name="permission_body_with_notification">端末内の曲を一覧にして再生するために、通知と音楽ファイルの読み取りを許可してください。</string>
     <string name="permission_allow">許可する</string>
     <string name="permission_open_settings">設定を開く</string>
 
