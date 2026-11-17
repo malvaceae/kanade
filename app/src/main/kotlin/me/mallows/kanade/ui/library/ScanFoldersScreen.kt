@@ -1,12 +1,12 @@
 package me.mallows.kanade.ui.library
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import android.net.Uri
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,28 +14,21 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,37 +37,37 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.mallows.kanade.R
-import me.mallows.kanade.core.domain.folder.FolderNode
 import me.mallows.kanade.core.domain.folder.ScanFolder
+import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.icons.KanadeIcons
 
 /**
- * スキャン対象のフォルダーの選択。ストレージごとにフォルダーの木を出し、チェックしたフォルダーの配下を読み込む。
- * 閉じるときに、変わっていれば保存して読み直す
+ * スキャン対象のフォルダー。選んだフォルダーの一覧に、Androidの標準のフォルダー選択の画面でフォルダーを足す。
+ * 「保存」で保存して読み直す。戻る・「キャンセル」では保存しない
  */
 @Composable
 fun ScanFoldersScreen(onBack: () -> Unit, viewModel: ScanFoldersViewModel = hiltViewModel()) {
-  val tree by viewModel.tree.collectAsStateWithLifecycle()
-  // 選択と開閉が変わったら描き直す (行の状態はViewModelの関数で調べる)
   val selected by viewModel.selected.collectAsStateWithLifecycle()
-  val expanded by viewModel.expanded.collectAsStateWithLifecycle()
-  val scanning by viewModel.scanning.collectAsStateWithLifecycle()
-  var confirmEmpty by remember { mutableStateOf(false) }
+  val counts by viewModel.counts.collectAsStateWithLifecycle()
+  val showMessage = LocalShowMessage.current
+  val res = LocalResources.current
 
-  fun close() {
-    // 画面の状態は1コマ遅れることがあるので、ViewModelの今の値で判断する
-    if (viewModel.changed && viewModel.selected.value.isEmpty()) {
-      confirmEmpty = true
-    } else {
-      viewModel.save()
-      onBack()
+  // 標準のフォルダー選択。選んだフォルダーの場所だけを受け取り、開く許可は保存しない (曲はMediaStoreから読む)
+  val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+    if (uri == null) return@rememberLauncherForActivityResult
+    val folder = ScanFolder.fromTree(uri.authority, DocumentsContract.getTreeDocumentId(uri))
+    when {
+      folder == null -> showMessage(res.getString(R.string.message_folder_not_supported))
+      viewModel.add(folder) == ScanFoldersViewModel.AddResult.ALREADY_INCLUDED ->
+        showMessage(res.getString(R.string.message_folder_already_included))
     }
   }
-  BackHandler { close() }
+  // 最初は内部ストレージの「Music」を開く
+  val musicUri = DocumentsContract.buildDocumentUri(ScanFolder.EXTERNAL_STORAGE_AUTHORITY, "primary:Music")
 
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = ::close) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
+      IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
       Text(
         stringResource(R.string.scan_folders_title),
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -83,130 +76,74 @@ fun ScanFoldersScreen(onBack: () -> Unit, viewModel: ScanFoldersViewModel = hilt
         modifier = Modifier.weight(1f).padding(start = 4.dp),
       )
     }
-    // 読み込み中・スキャン中は細い進み具合を出す (高さは常に取って、表示がずれないようにする)
-    Box(Modifier.fillMaxWidth().height(2.dp)) {
-      if (tree == null || scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
-    }
     Text(
       stringResource(R.string.scan_folders_hint),
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
     )
-    val current = tree
     LazyColumn(Modifier.weight(1f)) {
-      if (current != null && current.isEmpty()) {
+      val list = selected
+      if (list != null && list.isEmpty()) {
         item {
           Text(
-            stringResource(R.string.scan_folders_none_found),
+            stringResource(R.string.scan_folders_none),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
           )
         }
       }
-      current?.forEach { (volume, nodes) ->
-        item(key = "volume:$volume") {
-          Text(
-            viewModel.volumeLabels[volume] ?: stringResource(R.string.storage_unknown),
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
-          )
+      items(list.orEmpty(), key = { it.encode() }) { folder ->
+        FolderRow(
+          name = folderName(folder),
+          storage = viewModel.volumeLabels[folder.volume] ?: stringResource(R.string.storage_unknown),
+          tracks = counts[folder],
+          onRemove = { viewModel.remove(folder) },
+        )
+      }
+      item {
+        OutlinedButton(
+          onClick = { picker.launch(musicUri) },
+          modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+          Icon(KanadeIcons.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
+          Text(stringResource(R.string.scan_folders_add), modifier = Modifier.padding(start = 8.dp))
         }
-        folderRows(nodes, depth = 0, viewModel = viewModel, expanded = expanded, selected = selected)
       }
     }
     HorizontalDivider()
     Row(
-      Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
-      horizontalArrangement = Arrangement.End,
+      Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
     ) {
-      Button(onClick = viewModel::rescan, enabled = !scanning) { Text(stringResource(R.string.action_rescan)) }
+      TextButton(onClick = onBack) { Text(stringResource(R.string.action_cancel)) }
+      Button(onClick = { viewModel.save(); onBack() }, enabled = viewModel.canSave(selected)) {
+        Text(stringResource(R.string.action_save))
+      }
     }
-  }
-
-  if (confirmEmpty) {
-    AlertDialog(
-      onDismissRequest = { confirmEmpty = false },
-      title = { Text(stringResource(R.string.scan_folders_empty_confirm_title)) },
-      text = { Text(stringResource(R.string.scan_folders_empty_confirm)) },
-      confirmButton = {
-        TextButton(onClick = { confirmEmpty = false; viewModel.save(); onBack() }) { Text(stringResource(R.string.action_ok)) }
-      },
-      dismissButton = { TextButton(onClick = { confirmEmpty = false }) { Text(stringResource(R.string.action_cancel)) } },
-    )
   }
 }
 
-/** フォルダーの行を、開いているものは子を親の直後に並べる */
-@Suppress("UNUSED_PARAMETER") // selectedは、選択が変わったときに描き直させるために受け取る
-private fun LazyListScope.folderRows(
-  nodes: List<FolderNode>,
-  depth: Int,
-  viewModel: ScanFoldersViewModel,
-  expanded: Set<ScanFolder>,
-  selected: List<ScanFolder>,
-) {
-  val visible = mutableListOf<Pair<FolderNode, Int>>()
-  fun add(list: List<FolderNode>, d: Int) {
-    for (node in list) {
-      visible += node to d
-      if (ScanFolder(node.volume, node.relativePath) in expanded) add(node.children, d + 1)
-    }
-  }
-  add(nodes, depth)
-  items(visible, key = { (node, _) -> "${node.volume}:${node.relativePath}" }) { (node, d) ->
-    val folder = ScanFolder(node.volume, node.relativePath)
-    FolderRow(
-      node = node,
-      depth = d,
-      checked = viewModel.isChecked(folder),
-      enabled = !viewModel.coveredByParent(folder),
-      open = folder in expanded,
-      onToggle = { viewModel.toggle(folder) },
-      onExpand = { viewModel.toggleExpanded(folder) },
-    )
-  }
-}
+/** 「Music › Artist」の形。ストレージ全体なら「ストレージ全体」 */
+@Composable
+private fun folderName(folder: ScanFolder): String =
+  folder.relativePath.trimEnd('/').replace("/", " › ").ifEmpty { stringResource(R.string.scan_folders_whole_storage) }
 
 @Composable
-private fun FolderRow(
-  node: FolderNode,
-  depth: Int,
-  checked: Boolean,
-  enabled: Boolean,
-  open: Boolean,
-  onToggle: () -> Unit,
-  onExpand: () -> Unit,
-) {
+private fun FolderRow(name: String, storage: String, tracks: Int?, onRemove: () -> Unit) {
   Row(
-    Modifier
-      .fillMaxWidth()
-      .height(56.dp)
-      .clickable(enabled = enabled, onClick = onToggle)
-      .padding(start = 8.dp + 24.dp * depth, end = 8.dp),
+    Modifier.fillMaxWidth().height(64.dp).padding(start = 20.dp, end = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Checkbox(checked = checked, onCheckedChange = null, enabled = enabled, modifier = Modifier.padding(horizontal = 4.dp))
-    Column(Modifier.weight(1f).padding(start = 8.dp)) {
-      Text(node.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-      Text(
-        pluralStringResource(R.plurals.track_count, node.totalTracks, node.totalTracks),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+    Icon(KanadeIcons.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    Column(Modifier.weight(1f).padding(start = 16.dp)) {
+      Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      val sub = listOfNotNull(storage, tracks?.let { pluralStringResource(R.plurals.track_count, it, it) }).joinToString(" · ")
+      Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
-    if (node.children.isNotEmpty()) {
-      IconButton(onClick = onExpand) {
-        Icon(
-          KanadeIcons.ChevronDown,
-          contentDescription = null,
-          modifier = Modifier.size(22.dp).rotate(if (open) 180f else 0f),
-        )
-      }
-    } else {
-      Spacer(Modifier.width(48.dp))
+    IconButton(onClick = onRemove) {
+      Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.scan_folders_remove))
     }
   }
 }

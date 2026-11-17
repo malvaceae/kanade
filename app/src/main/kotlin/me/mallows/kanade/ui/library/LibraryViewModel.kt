@@ -116,6 +116,4 @@ class LibraryViewModel @Inject constructor(
     library.launchInBackground { library.rescan() }
   }
 
-  /** 対象フォルダーが1つも選ばれていないか (空の表示の文言を分けるのに使う) */
-  val noScanFolders: StateFlow<Boolean> = settings.scanFolders.map { it != null && it.isEmpty() }.state(false)
 }

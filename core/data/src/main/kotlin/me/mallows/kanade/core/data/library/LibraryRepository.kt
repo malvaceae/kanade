@@ -28,9 +28,7 @@ import me.mallows.kanade.core.data.db.KanadeDatabase
 import me.mallows.kanade.core.data.db.SyncResult
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.core.data.settings.SettingsRepository
-import me.mallows.kanade.core.domain.folder.FolderNode
 import me.mallows.kanade.core.domain.folder.ScanFolder
-import me.mallows.kanade.core.domain.folder.buildFolderTree
 import timber.log.Timber
 
 /** 曲をまとめる単位 */
@@ -141,11 +139,12 @@ class LibraryRepository @Inject constructor(
     if (before != settings.scanFolders.first()) rescan()
   }
 
-  /** フォルダーの選択画面に出す木 (ストレージ → フォルダー)。配下の合計の曲数つき。[selected]は曲がなくても出す */
-  suspend fun folderTree(selected: List<ScanFolder>): Map<String, List<FolderNode>> = withContext(Dispatchers.IO) {
-    // 選んでいるフォルダーは、曲がなくても出す (外せるように)
-    buildFolderTree(scanner.folderCounts(), keep = selected)
+  /** [folders]それぞれの配下の曲数 (端末にある音楽ファイルの数)。フォルダーの選択画面に出す */
+  suspend fun trackCounts(folders: List<ScanFolder>): Map<ScanFolder, Int> = withContext(Dispatchers.IO) {
+    val counts = scanner.folderCounts()
+    folders.associateWith { f -> counts.filter { (volume, path, _) -> f.contains(volume, path) }.sumOf { it.third } }
   }
+
 
   /** ボリューム名 → 画面に出す名前 */
   fun volumeLabels(): Map<String, String> = scanner.volumeLabels()

@@ -20,6 +20,10 @@ import androidx.compose.ui.platform.LocalResources
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -194,6 +198,7 @@ fun MainNavigation(
                     PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, actions = actions, bottomPadding = padding)
                   },
                   bottomPadding = bottomPadding,
+                  onScanFolders = { backStack.add(ScanFolders) },
                 )
               }
             }
@@ -288,6 +293,11 @@ fun MainNavigation(
             onDismiss = { pendingAdd = null },
             onMessage = { message -> appScope.launch { snackbar.showMessage(message) } },
           )
+        }
+        // スキャン中は、どの画面でも上端に進み具合を出す
+        val scanning by libraryViewModel.scanning.collectAsStateWithLifecycle()
+        if (scanning) {
+          LinearProgressIndicator(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().height(4.dp))
         }
         SnackbarHost(
           hostState = snackbar,

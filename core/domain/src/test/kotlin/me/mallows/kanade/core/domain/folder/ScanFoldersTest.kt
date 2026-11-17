@@ -84,34 +84,13 @@ class ScanFoldersTest {
   }
 
   @Test
-  fun 途中のフォルダーも配下の合計の曲数で木に出す() {
-    val tree = buildFolderTree(
-      listOf(
-        Triple(ScanFolder.PRIMARY, "Music/Artist/Album/", 12),
-        Triple(ScanFolder.PRIMARY, "Music/Bulk/", 3),
-        Triple(ScanFolder.PRIMARY, "Download/", 2),
-        Triple(ScanFolder.PRIMARY, "Empty/", 0),
-        Triple("1234-abcd", "Music/", 5),
-      ),
-    )
-    val primary = tree.getValue(ScanFolder.PRIMARY)
-    assertEquals(listOf("Download", "Music"), primary.map { it.name })
-    val musicNode = primary[1]
-    assertEquals(15, musicNode.totalTracks)
-    assertEquals(listOf("Artist", "Bulk"), musicNode.children.map { it.name })
-    assertEquals(12, musicNode.children[0].totalTracks)
-    assertEquals("Music/Artist/Album/", musicNode.children[0].children.single().relativePath)
-    assertEquals(5, tree.getValue("1234-abcd").single().totalTracks)
-  }
-
-  @Test
-  fun 選んでいるフォルダーは曲がなくても木に出す() {
-    val tree = buildFolderTree(
-      listOf(Triple(ScanFolder.PRIMARY, "Music/", 3)),
-      keep = listOf(ScanFolder(ScanFolder.PRIMARY, "Download/"), ScanFolder(ScanFolder.PRIMARY, "music/"), ScanFolder("1234-abcd", "Music/")),
-    )
-    val primary = tree.getValue(ScanFolder.PRIMARY)
-    assertEquals(listOf("Download" to 0, "Music" to 3), primary.map { it.name to it.totalTracks })
-    assertEquals(0, tree.getValue("1234-abcd").single().totalTracks)
+  fun 標準のフォルダー選択の文書IDからフォルダーを作る() {
+    val ext = ScanFolder.EXTERNAL_STORAGE_AUTHORITY
+    assertEquals(ScanFolder(ScanFolder.PRIMARY, "Music/Artist/"), ScanFolder.fromTree(ext, "primary:Music/Artist"))
+    assertEquals(ScanFolder("78e7-171e", "Music/"), ScanFolder.fromTree(ext, "78E7-171E:Music"))
+    assertEquals(ScanFolder(ScanFolder.PRIMARY, ""), ScanFolder.fromTree(ext, "primary:"))
+    // 外部ストレージ以外の提供元 (「ダウンロード」の一覧など) は扱わない
+    assertNull(ScanFolder.fromTree("com.android.providers.downloads.documents", "msf:123"))
+    assertNull(ScanFolder.fromTree(ext, "downloads"))
   }
 }

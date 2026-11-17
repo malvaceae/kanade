@@ -7,11 +7,11 @@ package me.mallows.kanade.core.domain.folder
 data class ScanFolder(
   /** MediaStoreのボリューム名。内部ストレージは"external_primary"、SDカードは"1234-abcd"のような名前 */
   val volume: String,
-  /** ストレージの中のフォルダー。必ず"/"で終わる ("Music/"、"Music/Artist/") */
+  /** ストレージの中のフォルダー。"/"で終わる ("Music/"、"Music/Artist/")。空ならストレージ全体 */
   val relativePath: String,
 ) {
   init {
-    require(relativePath.endsWith("/")) { "relativePathは/で終わる: $relativePath" }
+    require(relativePath.isEmpty() || relativePath.endsWith("/")) { "relativePathは空 (ストレージ全体) か、/で終わる: $relativePath" }
   }
 
   /** [volume]の[path] (曲のフォルダー) がこのフォルダーの配下 (このフォルダー自身を含む) にあるか */
@@ -23,6 +23,8 @@ data class ScanFolder(
 
   companion object {
     const val PRIMARY = "external_primary"
+    /** 端末のストレージを標準のフォルダー選択の画面に出す提供元 */
+    const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
     private const val SEPARATOR = '\u0000'
 
     fun decode(text: String): ScanFolder? {
@@ -36,6 +38,21 @@ data class ScanFolder(
     fun dir(path: String): String {
       val trimmed = path.trim('/')
       return if (trimmed.isEmpty()) "" else "$trimmed/"
+    }
+
+    /**
+     * 標準のフォルダー選択の画面 (SAF) で選んだフォルダーの文書ID (DocumentsContract.getTreeDocumentId) と提供元から作る。
+     * 外部ストレージの文書IDは「primary:Music/Artist」(内部ストレージ) や「1234-ABCD:Music」(SDカード) の形。
+     * 外部ストレージ以外の提供元 (「ダウンロード」の一覧、クラウドなど) で選んだときはnull。
+     * @param authority 選んだフォルダーのURIの提供元
+     */
+    fun fromTree(authority: String?, documentId: String): ScanFolder? {
+      if (authority != EXTERNAL_STORAGE_AUTHORITY) return null
+      val i = documentId.indexOf(':')
+      if (i <= 0) return null
+      val root = documentId.substring(0, i)
+      val volume = if (root.equals("primary", ignoreCase = true)) PRIMARY else root.lowercase()
+      return ScanFolder(volume, dir(documentId.substring(i + 1)))
     }
 
     /** 初期値: 各ストレージの「Music/」 */
@@ -117,63 +134,4 @@ data class SyncPlan(
 fun classify(stored: Set<Long>, included: Set<Long>, existing: Set<Long>): SyncPlan {
   val outside = stored - included
   return SyncPlan(excluded = outside intersect existing, deleted = outside - existing)
-}
-
-/** フォルダーの選択画面の1行。曲数は配下 (子のフォルダーを含む) の合計 */
-data class FolderNode(
-  val volume: String,
-  /** "Music/Artist/"。ストレージの最上位は"" */
-  val relativePath: String,
-  /** 行に出す名前 ("Artist") */
-  val name: String,
-  val totalTracks: Int,
-  val children: List<FolderNode>,
-)
-
-/**
- * フォルダーごとの曲数 (直接入っている数) から、ストレージごとの木を作る。
- * 曲が直接入っていない途中のフォルダーも、配下に曲があれば行として出す。配下にも曲がないフォルダーは出ない。
- * ただし[keep] (選んでいるフォルダー) は、曲がなくても出す (選んだまま見えなくなり、外せなくなるのを防ぐ)。
- * @return ストレージ (volume) ごとの最上位の行
- */
-fun buildFolderTree(counts: List<Triple<String, String, Int>>, keep: List<ScanFolder> = emptyList()): Map<String, List<FolderNode>> {
-  // ストレージごとに、フォルダー → 直接の曲数。途中のフォルダーも0曲で足す
-  val byVolume = linkedMapOf<String, MutableMap<String, Int>>()
-  val entries = counts.filter { it.third > 0 } + keep.map { Triple(it.volume, it.relativePath, 0) }
-  for ((volume, path, count) in entries) {
-    // 同じストレージ・同じフォルダーは英字の大小を区別せずに1つにまとめる
-    val key = byVolume.keys.firstOrNull { it.equals(volume, ignoreCase = true) } ?: volume
-    val dirs = byVolume.getOrPut(key) { mutableMapOf() }
-    val dir = ScanFolder.dir(path).let { d -> dirs.keys.firstOrNull { it.equals(d, ignoreCase = true) } ?: d }
-    dirs[dir] = (dirs[dir] ?: 0) + count
-    var parent = parentOf(dir)
-    while (parent != null) {
-      dirs.putIfAbsent(parent, 0)
-      parent = parentOf(parent)
-    }
-  }
-  return byVolume.mapValues { (volume, dirs) ->
-    fun node(dir: String): FolderNode {
-      val children = dirs.keys.filter { it != dir && parentOf(it) == dir }
-        .sortedWith(String.CASE_INSENSITIVE_ORDER)
-        .map(::node)
-      return FolderNode(
-        volume = volume,
-        relativePath = dir,
-        name = dir.trimEnd('/').substringAfterLast('/'),
-        totalTracks = (dirs[dir] ?: 0) + children.sumOf { it.totalTracks },
-        children = children,
-      )
-    }
-    // 最上位 ("") に直接ある曲は選べる行にしない (ストレージの見出しで扱う)。その下のフォルダーを並べる
-    dirs.keys.filter { it.isNotEmpty() && parentOf(it) == "" }.sortedWith(String.CASE_INSENSITIVE_ORDER).map(::node)
-  }
-}
-
-/** "Music/Artist/" → "Music/"、"Music/" → ""、"" → null */
-private fun parentOf(dir: String): String? {
-  if (dir.isEmpty()) return null
-  val trimmed = dir.trimEnd('/')
-  val i = trimmed.lastIndexOf('/')
-  return if (i < 0) "" else trimmed.substring(0, i + 1)
 }
