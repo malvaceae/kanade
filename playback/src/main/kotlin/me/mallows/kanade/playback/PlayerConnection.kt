@@ -1,5 +1,6 @@
 package me.mallows.kanade.playback
 
+import android.os.SystemClock
 import android.content.ComponentName
 import android.content.Context
 import kotlinx.coroutines.flow.first
@@ -37,6 +38,8 @@ data class PlayerState(
   val artworkData: ByteArray? = null,
   val isPlaying: Boolean = false,
   val positionMs: Long = 0,
+  /** [positionMs]を読んだ時刻 (SystemClock.elapsedRealtime)。画面ではここから再生位置を進めて表示する */
+  val positionAt: Long = 0,
   val durationMs: Long = 0,
   val shuffle: Boolean = false,
   val repeatMode: Int = Player.REPEAT_MODE_OFF,
@@ -347,6 +350,7 @@ class PlayerConnection @Inject constructor(
       artworkData = metadata.artworkData,
       isPlaying = player.isPlaying,
       positionMs = player.currentPosition,
+      positionAt = SystemClock.elapsedRealtime(),
       durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
       shuffle = player.shuffleModeEnabled,
       repeatMode = player.repeatMode,

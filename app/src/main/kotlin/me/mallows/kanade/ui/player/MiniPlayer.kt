@@ -42,7 +42,9 @@ fun MiniPlayer(
   modifier: Modifier = Modifier,
 ) {
   val id = state.mediaStoreId ?: return
-  val progress = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
+  // 毎フレーム変わるので、読むのは進み具合のバーの中だけにする (全体を描き直さない)
+  val position = rememberPlaybackPosition(state)
+  val duration = state.durationMs
   Column(
     modifier = modifier
       .fillMaxWidth()
@@ -90,7 +92,7 @@ fun MiniPlayer(
     }
     Box(Modifier.padding(horizontal = 12.dp)) {
       LinearProgressIndicator(
-        progress = { progress },
+        progress = { if (duration > 0) position.value.toFloat() / duration else 0f },
         modifier = Modifier.fillMaxWidth().height(2.dp),
         color = MaterialTheme.colorScheme.primary,
         trackColor = Color.Transparent,

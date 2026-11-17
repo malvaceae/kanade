@@ -371,7 +371,8 @@ private fun SwipeableArtwork(
 private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
   var dragging by remember { mutableStateOf<Float?>(null) }
   val duration = state.durationMs.coerceAtLeast(1)
-  val fraction = dragging ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f)
+  val position by rememberPlaybackPosition(state)
+  val fraction = dragging ?: (position.toFloat() / duration).coerceIn(0f, 1f)
   Column(modifier = modifier) {
     Slider(
       value = fraction,
@@ -387,7 +388,7 @@ private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifi
       ),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-      val shown = dragging?.let { (it * duration).toLong() } ?: state.positionMs
+      val shown = dragging?.let { (it * duration).toLong() } ?: position
       Text(formatDuration(shown), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       Text(formatDuration(state.durationMs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
