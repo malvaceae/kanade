@@ -82,7 +82,7 @@ class LibraryRepository @Inject constructor(
     GroupKind.FOLDER -> {
       // nameは「ボリューム名:フォルダー」(observeFoldersで作る)
       val key = name.orEmpty()
-      trackDao.observeFolderTracks(key.substringBefore(':', ""), key.substringAfter(':', key))
+      trackDao.observeFolderTracks(key.substringBefore(':'), key.substringAfter(':'))
     }
     GroupKind.GENRE -> trackDao.observeGenreTracks(name)
     GroupKind.ALBUM -> trackDao.observeAlbumTracks(name?.toLongOrNull())

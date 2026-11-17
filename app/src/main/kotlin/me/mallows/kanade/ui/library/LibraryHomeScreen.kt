@@ -382,8 +382,8 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
 private fun GroupSummary.displayName(kind: GroupKind, volumeLabels: Map<String, String>): String? {
   if (kind != GroupKind.FOLDER) return name
   val key = name ?: return null
-  val volume = key.substringBefore(':', "")
-  val path = key.substringAfter(':', key).trimEnd('/').replace("/", " › ")
+  val volume = key.substringBefore(':')
+  val path = key.substringAfter(':').trimEnd('/').replace("/", " › ")
   val storage = volume.takeIf { it.isNotEmpty() && it != ScanFolder.PRIMARY }?.let { volumeLabels[it] ?: it }
   return listOfNotNull(storage, path.ifEmpty { null }).joinToString(" › ").ifEmpty { null }
 }
