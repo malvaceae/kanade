@@ -43,7 +43,7 @@ class ScanFoldersViewModel @Inject constructor(
       _selected.value = initial
       // 選んでいるフォルダーが見えるよう、その親を開いておく
       _expanded.value = initial.flatMap { ancestors(it) }.toSet()
-      _tree.value = library.folderTree()
+      _tree.value = library.folderTree(initial)
     }
   }
 

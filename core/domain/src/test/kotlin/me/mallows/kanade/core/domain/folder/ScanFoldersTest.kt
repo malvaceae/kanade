@@ -103,4 +103,15 @@ class ScanFoldersTest {
     assertEquals("Music/Artist/Album/", musicNode.children[0].children.single().relativePath)
     assertEquals(5, tree.getValue("1234-abcd").single().totalTracks)
   }
+
+  @Test
+  fun 選んでいるフォルダーは曲がなくても木に出す() {
+    val tree = buildFolderTree(
+      listOf(Triple(ScanFolder.PRIMARY, "Music/", 3)),
+      keep = listOf(ScanFolder(ScanFolder.PRIMARY, "Download/"), ScanFolder(ScanFolder.PRIMARY, "music/"), ScanFolder("1234-abcd", "Music/")),
+    )
+    val primary = tree.getValue(ScanFolder.PRIMARY)
+    assertEquals(listOf("Download" to 0, "Music" to 3), primary.map { it.name to it.totalTracks })
+    assertEquals(0, tree.getValue("1234-abcd").single().totalTracks)
+  }
 }

@@ -47,6 +47,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import me.mallows.kanade.core.data.db.PlayStatsDao
 import me.mallows.kanade.core.data.db.PlaybackStateDao
@@ -117,6 +118,8 @@ class PlaybackService : MediaSessionService() {
     PlayCounter(playStatsDao, scope).attach(player)
     // シャッフルは今の曲を先頭にした順にする (途中の曲からオンにしても全曲が流れるように)
     player.keepShuffleFromCurrent()
+    // スキャン対象外の曲は、キューに残したまま再生の順番が来たら飛ばす
+    ExcludedSkipper(player, trackDao.observeExcludedIds().map { it.toSet() }, scope)
     // ReplayGainの設定。切り替えたら今の曲にもすぐ反映する
     scope.launch {
       outputSettings.replayGain.collect { mode ->

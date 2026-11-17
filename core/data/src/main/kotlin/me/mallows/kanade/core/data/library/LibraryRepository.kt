@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -140,22 +141,18 @@ class LibraryRepository @Inject constructor(
     if (before != settings.scanFolders.first()) rescan()
   }
 
-  /** フォルダーの選択画面に出す木 (ストレージ → フォルダー)。配下の合計の曲数つき */
-  suspend fun folderTree(): Map<String, List<FolderNode>> = withContext(Dispatchers.IO) {
-    buildFolderTree(scanner.folderCounts())
+  /** フォルダーの選択画面に出す木 (ストレージ → フォルダー)。配下の合計の曲数つき。[selected]は曲がなくても出す */
+  suspend fun folderTree(selected: List<ScanFolder>): Map<String, List<FolderNode>> = withContext(Dispatchers.IO) {
+    // 選んでいるフォルダーは、曲がなくても出す (外せるように)
+    buildFolderTree(scanner.folderCounts(), keep = selected)
   }
 
   /** ボリューム名 → 画面に出す名前 */
   fun volumeLabels(): Map<String, String> = scanner.volumeLabels()
 
-  /** [mediaStoreIds]のうち、再生できない曲 (端末から消えた曲・スキャン対象外の曲)。再生キューから外すのに使う */
-  suspend fun unplayable(mediaStoreIds: List<Long>): Set<Long> {
-    val playable = mediaStoreIds.distinct().chunked(500)
-      .flatMap { trackDao.getByMediaStoreIds(it) }
-      .filterNot { it.excluded }
-      .mapTo(HashSet()) { it.mediaStoreId }
-    return mediaStoreIds.toSet() - playable
-  }
+  /** スキャン対象外の曲のMediaStoreのID。再生キューで薄く出し、再生では飛ばすのに使う */
+  val excludedIds: Flow<Set<Long>> = trackDao.observeExcludedIds().map { it.toSet() }
+
 }
 
 /** 自動のリストに出す最大の曲数 */

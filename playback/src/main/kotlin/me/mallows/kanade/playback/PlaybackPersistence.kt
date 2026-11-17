@@ -53,9 +53,9 @@ class PlaybackPersistence(
     val saved = stateDao.state() ?: return null
     if (ids.isEmpty()) return null
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
-    // 端末から消えた曲とスキャン対象外の曲は除き、今の曲の位置を合わせ直す
+    // 端末から消えた曲は除き、今の曲の位置を合わせ直す (スキャン対象外の曲は残し、再生のときに飛ばす)
     val currentId = ids.getOrNull(saved.currentIndex)
-    val items = ids.mapNotNull { id -> tracks[id]?.takeUnless { it.excluded }?.toMediaItem() }
+    val items = ids.mapNotNull { tracks[it]?.toMediaItem() }
     if (items.isEmpty()) return null
     val index = items.indexOfFirst { it.mediaId == currentId?.toString() }
     return Saved(

@@ -62,7 +62,8 @@ fun ScanFoldersScreen(onBack: () -> Unit, viewModel: ScanFoldersViewModel = hilt
   var confirmEmpty by remember { mutableStateOf(false) }
 
   fun close() {
-    if (viewModel.changed && selected.isEmpty()) {
+    // 画面の状態は1コマ遅れることがあるので、ViewModelの今の値で判断する
+    if (viewModel.changed && viewModel.selected.value.isEmpty()) {
       confirmEmpty = true
     } else {
       viewModel.save()

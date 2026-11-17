@@ -1,6 +1,10 @@
 package me.mallows.kanade.ui.queue
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import me.mallows.kanade.core.data.library.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +17,11 @@ import me.mallows.kanade.ui.playlist.Undo
 @HiltViewModel
 class QueueViewModel @Inject constructor(
   private val connection: PlayerConnection,
+  library: LibraryRepository,
 ) : ViewModel() {
+
+  /** スキャン対象外の曲 (薄く出す) */
+  val excluded: StateFlow<Set<Long>> = library.excludedIds.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
   val queue: StateFlow<QueueState> = connection.queue
 

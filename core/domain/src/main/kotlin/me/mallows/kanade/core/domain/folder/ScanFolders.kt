@@ -133,15 +133,18 @@ data class FolderNode(
 /**
  * フォルダーごとの曲数 (直接入っている数) から、ストレージごとの木を作る。
  * 曲が直接入っていない途中のフォルダーも、配下に曲があれば行として出す。配下にも曲がないフォルダーは出ない。
+ * ただし[keep] (選んでいるフォルダー) は、曲がなくても出す (選んだまま見えなくなり、外せなくなるのを防ぐ)。
  * @return ストレージ (volume) ごとの最上位の行
  */
-fun buildFolderTree(counts: List<Triple<String, String, Int>>): Map<String, List<FolderNode>> {
+fun buildFolderTree(counts: List<Triple<String, String, Int>>, keep: List<ScanFolder> = emptyList()): Map<String, List<FolderNode>> {
   // ストレージごとに、フォルダー → 直接の曲数。途中のフォルダーも0曲で足す
   val byVolume = linkedMapOf<String, MutableMap<String, Int>>()
-  for ((volume, path, count) in counts) {
-    if (count <= 0) continue
-    val dirs = byVolume.getOrPut(volume) { mutableMapOf() }
-    val dir = ScanFolder.dir(path)
+  val entries = counts.filter { it.third > 0 } + keep.map { Triple(it.volume, it.relativePath, 0) }
+  for ((volume, path, count) in entries) {
+    // 同じストレージ・同じフォルダーは英字の大小を区別せずに1つにまとめる
+    val key = byVolume.keys.firstOrNull { it.equals(volume, ignoreCase = true) } ?: volume
+    val dirs = byVolume.getOrPut(key) { mutableMapOf() }
+    val dir = ScanFolder.dir(path).let { d -> dirs.keys.firstOrNull { it.equals(d, ignoreCase = true) } ?: d }
     dirs[dir] = (dirs[dir] ?: 0) + count
     var parent = parentOf(dir)
     while (parent != null) {

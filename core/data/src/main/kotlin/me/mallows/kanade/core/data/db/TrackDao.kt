@@ -44,7 +44,7 @@ interface TrackDao {
   suspend fun deleteByMediaStoreIds(mediaStoreIds: List<Long>)
 
   @Query("SELECT media_store_id FROM track WHERE excluded = 1")
-  suspend fun excludedMediaStoreIds(): List<Long>
+  fun observeExcludedIds(): Flow<List<Long>>
 
   /**
    * スキャンの結果をデータベースに反映する。

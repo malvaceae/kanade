@@ -36,6 +36,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import me.mallows.kanade.ui.common.LocalShowMessage
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalResources
@@ -87,6 +89,8 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
+  val showMessage = LocalShowMessage.current
+  val excluded by viewModel.excluded.collectAsStateWithLifecycle()
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
   val undoLabel = stringResource(R.string.action_undo)
@@ -191,7 +195,7 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
       ) {
         queue.current?.let { current ->
           item(key = "now_label") { SectionLabel(stringResource(R.string.queue_now_playing)) }
-          item(key = "now") { QueueRow(current, number = null, selectionMode = false, selected = false, onClick = {}, handle = null, highlight = true) }
+          item(key = "now") { QueueRow(current, number = null, selectionMode = false, selected = false, onClick = {}, handle = null, highlight = true, excluded = current.mediaStoreId in excluded) }
         }
         if (locked && local.isNotEmpty()) {
           item(key = "locked") {
@@ -221,6 +225,7 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
             ) {
               QueueRow(
                 item = entry.item,
+                excluded = entry.item.mediaStoreId in excluded,
                 number = index + 1,
                 selectionMode = selecting,
                 selected = isSelected && !dragging,
@@ -229,7 +234,12 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
                     val k = entry.key
                     selected = if (isSelected) selected - k else selected + k
                   } else {
-                    viewModel.playAt(entry.origin)
+                    if (entry.item.mediaStoreId in excluded) {
+                      // スキャン対象外の曲は再生しない (キューには残す)
+                      showMessage(res.getString(R.string.message_track_excluded))
+                    } else {
+                      viewModel.playAt(entry.origin)
+                    }
                   }
                 },
                 badge = if (dragging && moving.size > 1) moving.size else null,
@@ -301,6 +311,8 @@ private fun QueueRow(
   onClick: () -> Unit,
   handle: (@Composable () -> Unit)?,
   highlight: Boolean = false,
+  /** スキャン対象外の曲。薄く出す (再生の順番が来たら飛ばす) */
+  excluded: Boolean = false,
   badge: Int? = null,
 ) {
   val scheme = MaterialTheme.colorScheme
@@ -322,8 +334,9 @@ private fun QueueRow(
         else -> Text(number.toString(), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
       }
     }
-    TrackArtwork(uri = audioUri(item.mediaStoreId), size = 44.dp)
-    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val dim = if (excluded) Modifier.alpha(0.45f) else Modifier
+    TrackArtwork(uri = audioUri(item.mediaStoreId), size = 44.dp, modifier = dim)
+    Column(Modifier.weight(1f).then(dim), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(
         item.title,
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Medium),
@@ -332,7 +345,10 @@ private fun QueueRow(
         overflow = TextOverflow.Ellipsis,
       )
       Text(
-        item.artist ?: stringResource(R.string.unknown_artist),
+        listOfNotNull(
+          stringResource(R.string.excluded_label).takeIf { excluded },
+          item.artist ?: stringResource(R.string.unknown_artist),
+        ).joinToString(" · "),
         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
         color = scheme.onSurfaceVariant,
         maxLines = 1,
