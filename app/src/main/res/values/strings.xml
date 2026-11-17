@@ -170,7 +170,7 @@
     <string name="eq_bass">低音</string>
     <string name="eq_treble">高音</string>
     <string name="eq_limiter">リミッター</string>
-    <string name="eq_limiter_desc">持ち上げた音が割れないよう、大きすぎる音を抑えます</string>
+    <string name="eq_limiter_desc">音割れを防ぐ</string>
     <string name="eq_curve_description">周波数特性</string>
     <string name="eq_bands_description">10バンドのイコライザー。横になぞると続けて設定できます</string>
     <string name="action_open_eq">イコライザー</string>
@@ -203,16 +203,18 @@
     <string name="eq_balance_left">左%1$d%%</string>
     <string name="eq_balance_right">右%1$d%%</string>
     <string name="eq_mono">モノラル</string>
-    <string name="eq_mono_desc">左右の音を混ぜます。片耳だけで聴くときに</string>
     <string name="replay_gain">音量をそろえる</string>
-    <string name="replay_gain_desc">曲のReplayGainのタグを使い、曲ごとの音量の差を小さくします</string>
     <string name="replay_gain_off">オフ</string>
     <string name="replay_gain_track">曲ごと</string>
     <string name="replay_gain_album">アルバムごと</string>
-    <string name="eq_per_device">出力先ごとに設定を分ける</string>
-    <string name="eq_per_device_desc">イヤホンやスピーカーをつなぎ替えると、その出力先の設定に切り替わります</string>
-    <string name="eq_per_device_current">「%1$s」の設定を編集中</string>
-    <string name="eq_per_device_unknown">再生を始めると、今の出力先の設定になります</string>
+    <string name="eq_device_shared">すべての出力先で共通の設定</string>
+    <string name="eq_device_current">「%1$s」の設定</string>
+    <string name="eq_device_unknown">出力先ごとの設定 (再生を始めると決まります)</string>
+    <string name="eq_device_shared_option">すべての出力先で共通</string>
+    <string name="eq_device_split_option">出力先ごとに分ける</string>
+    <string name="eq_section_tone">トーン</string>
+    <string name="eq_section_volume">音量と左右</string>
+    <string name="eq_section_volume_note">EQがオフでも効く</string>
     <string name="eq_bit_perfect_note">ビットパーフェクトで出力中のため、EQは使われていません</string>
 
     <string name="action_move">移動</string>

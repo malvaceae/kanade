@@ -1,6 +1,15 @@
 package me.mallows.kanade.ui.equalizer
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -75,7 +84,7 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   val device by viewModel.device.collectAsStateWithLifecycle()
   val perDevice by viewModel.perDevice.collectAsStateWithLifecycle()
   val replayGain by viewModel.replayGain.collectAsStateWithLifecycle()
-  var replayGainMenu by remember { mutableStateOf(false) }
+  var deviceMenu by remember { mutableStateOf(false) }
   val presetName = settings.matchingPresetName(userPresets) ?: stringResource(R.string.eq_custom)
 
   Column(
@@ -131,6 +140,29 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
       TextButton(onClick = viewModel::reset, enabled = matched != EqPreset.BUILT_IN.first().name) { Text(stringResource(R.string.eq_reset)) }
     }
 
+    // どの出力先の設定を編集しているか (EQがオフでも切り替えられる)
+    Box(Modifier.padding(start = 16.dp, top = 4.dp)) {
+      val current = device
+      val label = when {
+        !perDevice -> stringResource(R.string.eq_device_shared)
+        current == null -> stringResource(R.string.eq_device_unknown)
+        else -> stringResource(R.string.eq_device_current, deviceLabel(current))
+      }
+      OutlinedButton(onClick = { deviceMenu = true }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Icon(KanadeIcons.ChevronDown, contentDescription = null, modifier = Modifier.padding(start = 4.dp).size(18.dp))
+      }
+      DropdownMenu(expanded = deviceMenu, onDismissRequest = { deviceMenu = false }) {
+        listOf(false to R.string.eq_device_shared_option, true to R.string.eq_device_split_option).forEach { (split, text) ->
+          DropdownMenuItem(
+            text = { Text(stringResource(text)) },
+            onClick = { deviceMenu = false; viewModel.setPerDevice(split) },
+            trailingIcon = { if (perDevice == split) Icon(KanadeIcons.Check, contentDescription = null) },
+          )
+        }
+      }
+    }
+
     val dim = Modifier.alpha(if (settings.enabled) 1f else 0.45f)
 
     // 周波数特性
@@ -143,77 +175,48 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
       modifier = Modifier.fillMaxWidth().height(240.dp).padding(horizontal = 8.dp).then(dim),
     )
 
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).then(dim), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      DbSlider(stringResource(R.string.eq_preamp), settings.preampDb, -EqSettings.MAX_DB, 6f, viewModel::setPreamp)
-      DbSlider(stringResource(R.string.eq_bass), settings.bassDb, -12f, 12f, viewModel::setBass)
-      DbSlider(stringResource(R.string.eq_treble), settings.trebleDb, -12f, 12f, viewModel::setTreble)
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-          Text(stringResource(R.string.eq_limiter), style = MaterialTheme.typography.bodyLarge)
-          Text(stringResource(R.string.eq_limiter_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-        }
-        Switch(checked = settings.limiter, onCheckedChange = viewModel::setLimiter)
-      }
+    // トーン (EQのオン・オフに従う)
+    SectionTitle(stringResource(R.string.eq_section_tone), null)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).then(dim), horizontalArrangement = Arrangement.SpaceEvenly) {
+      DbKnob(stringResource(R.string.eq_preamp), "dB", settings.preampDb, -EqSettings.MAX_DB, 6f, viewModel::setPreamp)
+      DbKnob(stringResource(R.string.eq_bass), "100Hz", settings.bassDb, -12f, 12f, viewModel::setBass)
+      DbKnob(stringResource(R.string.eq_treble), "10kHz", settings.trebleDb, -12f, 12f, viewModel::setTreble)
     }
+    SwitchRow(stringResource(R.string.eq_limiter), stringResource(R.string.eq_limiter_desc), settings.limiter, viewModel::setLimiter, dim)
 
-    // 左右 (EQがオフでも効く)
-    HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.eq_balance), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
-        Slider(
-          value = settings.balance,
-          // 中央付近では中央に吸い付ける
-          onValueChange = { v -> viewModel.setBalance(((v * 20).roundToInt() / 20f).let { if (abs(it) < 0.05f) 0f else it }) },
-          valueRange = -1f..1f,
-          modifier = Modifier.weight(1f),
-        )
-        Text(
-          balanceText(settings.balance),
-          style = MaterialTheme.typography.bodySmall,
-          color = scheme.onSurfaceVariant,
-          textAlign = TextAlign.End,
-          modifier = Modifier.width(56.dp),
-        )
-      }
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-          Text(stringResource(R.string.eq_mono), style = MaterialTheme.typography.bodyLarge)
-          Text(stringResource(R.string.eq_mono_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-        }
-        Switch(checked = settings.mono, onCheckedChange = viewModel::setMono)
-      }
+    // 音量と左右 (EQがオフでも効く)
+    SectionTitle(stringResource(R.string.eq_section_volume), stringResource(R.string.eq_section_volume_note))
+    Row(Modifier.padding(horizontal = 16.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+      Text(stringResource(R.string.eq_balance), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
+      Slider(
+        value = settings.balance,
+        // 中央付近では中央に吸い付ける
+        onValueChange = { v -> viewModel.setBalance(((v * 20).roundToInt() / 20f).let { if (abs(it) < 0.05f) 0f else it }) },
+        valueRange = -1f..1f,
+        modifier = Modifier.weight(1f),
+      )
+      Text(
+        balanceText(settings.balance),
+        style = MaterialTheme.typography.bodySmall,
+        color = scheme.onSurfaceVariant,
+        textAlign = TextAlign.End,
+        modifier = Modifier.width(56.dp),
+      )
     }
-
-    // ReplayGain (EQがオフでも効く)
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-      Column(Modifier.weight(1f)) {
-        Text(stringResource(R.string.replay_gain), style = MaterialTheme.typography.bodyLarge)
-        Text(stringResource(R.string.replay_gain_desc), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-      }
-      Box {
-        OutlinedButton(onClick = { replayGainMenu = true }) { Text(replayGainLabel(replayGain)) }
-        DropdownMenu(expanded = replayGainMenu, onDismissRequest = { replayGainMenu = false }) {
-          ReplayGainMode.entries.forEach { m ->
-            DropdownMenuItem(text = { Text(replayGainLabel(m)) }, onClick = { replayGainMenu = false; viewModel.setReplayGain(m) })
-          }
+    SwitchRow(stringResource(R.string.eq_mono), null, settings.mono, viewModel::setMono, Modifier)
+    // 3択のボタンは横幅が要るので、名前の下に並べる
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)) {
+      Text(stringResource(R.string.replay_gain), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 8.dp))
+      SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        ReplayGainMode.entries.forEachIndexed { i, m ->
+          SegmentedButton(
+            selected = replayGain == m,
+            onClick = { viewModel.setReplayGain(m) },
+            shape = SegmentedButtonDefaults.itemShape(i, ReplayGainMode.entries.size),
+            icon = {},
+          ) { Text(replayGainLabel(m), maxLines = 1) }
         }
       }
-    }
-
-    // 出力先ごとの設定 (EQがオフでも切り替えられる)
-    Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Column(Modifier.weight(1f)) {
-        Text(stringResource(R.string.eq_per_device), style = MaterialTheme.typography.bodyLarge)
-        val current = device
-        val desc = when {
-          !perDevice -> stringResource(R.string.eq_per_device_desc)
-          current == null -> stringResource(R.string.eq_per_device_unknown)
-          else -> stringResource(R.string.eq_per_device_current, deviceLabel(current))
-        }
-        Text(desc, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-      }
-      Switch(checked = perDevice, onCheckedChange = viewModel::setPerDevice)
     }
   }
 
@@ -339,23 +342,30 @@ private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, mo
   }
 }
 
+/** 見出し。[note]は見出しの横に小さく出す補足 */
 @Composable
-private fun DbSlider(label: String, value: Float, min: Float, max: Float, onChange: (Float) -> Unit) {
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
-    Slider(
-      value = value,
-      onValueChange = { onChange((it * 2).roundToInt() / 2f) },
-      valueRange = min..max,
-      modifier = Modifier.weight(1f),
-    )
-    Text(
-      formatDb(value),
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      textAlign = TextAlign.End,
-      modifier = Modifier.width(56.dp),
-    )
+private fun SectionTitle(title: String, note: String?) {
+  Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
+    Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
+    if (note != null) {
+      Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp))
+    }
+  }
+}
+
+/** 名前と短い説明、スイッチの1行 */
+@Composable
+private fun SwitchRow(title: String, desc: String?, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier) {
+  Row(
+    modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(checked, onValueChange = onChange, role = Role.Switch).padding(horizontal = 16.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(title, style = MaterialTheme.typography.bodyLarge)
+    if (desc != null) {
+      Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp))
+    }
+    Spacer(Modifier.weight(1f))
+    Switch(checked = checked, onCheckedChange = null)
   }
 }
 
@@ -378,7 +388,7 @@ private fun balanceText(balance: Float): String {
   }
 }
 
-private fun formatDb(db: Float): String = when {
+internal fun formatDb(db: Float): String = when {
   db == 0f -> "0dB"
   db % 1f == 0f -> "%+ddB".format(db.toInt())
   else -> "%+.1fdB".format(db)
