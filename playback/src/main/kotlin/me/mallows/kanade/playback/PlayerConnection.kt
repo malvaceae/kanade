@@ -194,30 +194,14 @@ class PlayerConnection @Inject constructor(
     }
   }
 
-  /** 次の曲へ。リピートなしで最後の曲なら、先頭の曲に戻して一時停止する (何も起きないと壊れて見えるため) */
-  fun next() = withController {
-    if (!it.hasNextMediaItem() && it.repeatMode == Player.REPEAT_MODE_OFF && it.mediaItemCount > 0) {
-      val first = it.currentTimeline.getFirstWindowIndex(it.shuffleModeEnabled).coerceAtLeast(0)
-      it.seekTo(first, 0L)
-      it.pause()
-    } else {
-      it.seekToNext()
-    }
-  }
-
   /**
-   * 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る。
-   * リピートなしで最初の曲にいるときは、最後の曲へ回る (次へで最後から最初へ回るのと対にする)
+   * 次の曲へ。通知・ロック画面・イヤホンのボタンと同じく、Media3の既定の動きにそろえる
+   * (リピートなしで最後の曲なら何もしない。そのときプレイヤー画面の「次へ」は押せない見た目にする)
    */
-  fun previous() = withController {
-    val atStart = it.currentPosition <= it.maxSeekToPreviousPosition
-    if (atStart && !it.hasPreviousMediaItem() && it.repeatMode == Player.REPEAT_MODE_OFF && it.mediaItemCount > 1) {
-      val last = it.currentTimeline.getLastWindowIndex(it.shuffleModeEnabled).coerceAtLeast(0)
-      it.seekTo(last, 0L)
-    } else {
-      it.seekToPrevious()
-    }
-  }
+  fun next() = withController { it.seekToNext() }
+
+  /** 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る (最初の曲なら曲の頭に戻る) */
+  fun previous() = withController { it.seekToPrevious() }
 
   fun seekTo(positionMs: Long) = withController {
     it.seekTo(positionMs)

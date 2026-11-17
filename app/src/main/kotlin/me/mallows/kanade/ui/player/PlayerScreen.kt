@@ -133,6 +133,8 @@ fun PlayerScreen(
       val size = minOf(maxWidth, maxHeight)
       SwipeableArtwork(
         mediaStoreId = state.mediaStoreId,
+        hasNext = state.hasNext,
+        hasPrevious = state.hasPrevious,
         onNext = onNext,
         onPrevious = onPrevious,
       ) {
@@ -193,7 +195,8 @@ fun PlayerScreen(
           modifier = Modifier.size(32.dp),
         )
       }
-      IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
+      // リピートなしで最後の曲なら押せない (通知などのボタンと同じ)
+      IconButton(onClick = onNext, enabled = state.hasNext, modifier = Modifier.size(56.dp)) {
         Icon(KanadeIcons.Next, contentDescription = stringResource(R.string.action_next), modifier = Modifier.size(30.dp))
       }
       IconButton(onClick = onCycleRepeat) {
@@ -288,6 +291,8 @@ private fun sleepLabel(sleep: PlayerConnection.Sleep): String {
 @Composable
 private fun SwipeableArtwork(
   mediaStoreId: Long?,
+  hasNext: Boolean,
+  hasPrevious: Boolean,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
   content: @Composable () -> Unit,
@@ -295,6 +300,8 @@ private fun SwipeableArtwork(
   val scope = rememberCoroutineScope()
   val offset = remember { Animatable(0f) }
   val currentId by rememberUpdatedState(mediaStoreId)
+  val canNext by rememberUpdatedState(hasNext)
+  val canPrevious by rememberUpdatedState(hasPrevious)
   Box(
     modifier = Modifier
       .aspectRatio(1f)
@@ -320,9 +327,13 @@ private fun SwipeableArtwork(
             val value = offset.value
             scope.launch {
               when {
-                value < -threshold -> slide(-1f, onNext)
-                value > threshold -> slide(1f, onPrevious)
-                else -> offset.animateTo(0f, spring())
+                value < -threshold && canNext -> slide(-1f, onNext)
+                value > threshold && canPrevious -> slide(1f, onPrevious)
+                else -> {
+                  // 前の曲がないときに右へ払うと、ボタンと同じく曲の頭に戻す (アートワークは動かさない)
+                  if (value > threshold) onPrevious()
+                  offset.animateTo(0f, spring())
+                }
               }
             }
           },
