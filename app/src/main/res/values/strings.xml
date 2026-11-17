@@ -172,7 +172,7 @@
     <string name="eq_limiter">リミッター</string>
     <string name="eq_limiter_desc">音割れを防ぐ</string>
     <string name="eq_curve_description">周波数特性</string>
-    <string name="eq_bands_description">10バンドのイコライザー。横になぞると続けて設定できます</string>
+    <string name="eq_bands_description">10バンドのイコライザー。つまみを掴んで上下に動かし、横になぞると続けて設定できます</string>
     <string name="action_open_eq">イコライザー</string>
 
     <string name="output_section">出力</string>

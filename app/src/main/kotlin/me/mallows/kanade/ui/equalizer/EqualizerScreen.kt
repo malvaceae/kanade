@@ -257,7 +257,7 @@ private fun ResponseCurve(settings: EqSettings, modifier: Modifier) {
   }
 }
 
-/** 10本の縦スライダー。指を横に動かすと、通ったバンドを続けて設定できる */
+/** 10本の縦スライダー。つまみを掴んで動かし、そのまま横に動かすと、通ったバンドを続けて設定できる */
 @Composable
 private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, modifier: Modifier) {
   val scheme = MaterialTheme.colorScheme
@@ -285,19 +285,24 @@ private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, mo
           val max = EqSettings.MAX_DB
           fun bandAt(x: Float) = ((x / size.width) * 10).toInt().coerceIn(0, 9)
           fun dbAt(y: Float): Float {
-            val v = max - (y / size.height) * 2 * max
+            val v = (max - (y / size.height) * 2 * max).coerceIn(-max, max)
             return (v * 2).roundToInt() / 2f // 0.5dB刻み
           }
+          fun yOf(db: Float) = size.height / 2 - (db / max) * (size.height / 2)
+          val grabRange = 24.dp.toPx()
           awaitEachGesture {
             val down = awaitFirstDown()
-            onChange(bandAt(down.position.x), dbAt(down.position.y))
+            // つまみの近くを触ったときだけ動かす。ほかの場所は画面のスクロールに回す
+            val grab = down.position.y - yOf(current.bands[bandAt(down.position.x)])
+            if (kotlin.math.abs(grab) > grabRange) return@awaitEachGesture
             down.consume()
             while (true) {
               val event = awaitPointerEvent()
               val change = event.changes.firstOrNull { it.id == down.id } ?: break
               if (!change.pressed) break
+              // 掴んだ位置のずれを保ったまま動かす (触っただけでは値が飛ばない)
               val band = bandAt(change.position.x)
-              val db = dbAt(change.position.y)
+              val db = dbAt(change.position.y - grab)
               if (current.bands[band] != db) onChange(band, db)
               change.consume()
             }
