@@ -214,7 +214,7 @@
     <string name="eq_device_split_option">出力先ごとに分ける</string>
     <string name="eq_section_tone">トーン</string>
     <string name="eq_section_volume">音量と左右</string>
-    <string name="eq_section_volume_note">EQがオフでも効く</string>
+    <string name="eq_section_volume_note">EQがオフでも有効</string>
     <string name="eq_bit_perfect_note">ビットパーフェクトで出力中のため、EQは使われていません</string>
 
     <string name="action_move">移動</string>
