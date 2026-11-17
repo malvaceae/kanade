@@ -31,6 +31,7 @@ interface PlayStatsDao {
   @Query(
     """
     SELECT track.* FROM track JOIN play_stats ON play_stats.media_store_id = track.media_store_id
+    WHERE track.excluded = 0
     ORDER BY play_stats.last_played_at DESC LIMIT :limit
     """
   )
@@ -39,6 +40,7 @@ interface PlayStatsDao {
   @Query(
     """
     SELECT track.* FROM track JOIN play_stats ON play_stats.media_store_id = track.media_store_id
+    WHERE track.excluded = 0
     ORDER BY play_stats.play_count DESC, play_stats.last_played_at DESC LIMIT :limit
     """
   )

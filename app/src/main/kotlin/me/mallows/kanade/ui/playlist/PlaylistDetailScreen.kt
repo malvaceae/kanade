@@ -71,6 +71,7 @@ import kotlinx.coroutines.launch
 import me.mallows.kanade.R
 import me.mallows.kanade.core.data.db.PlaylistItem
 import me.mallows.kanade.ui.common.LocalBottomBarActive
+import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.common.TrackRow
 import me.mallows.kanade.ui.common.showMessage
@@ -114,6 +115,7 @@ fun PlaylistDetailScreen(
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
+  val showMessage = LocalShowMessage.current
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
   val undoLabel = stringResource(R.string.action_undo)
@@ -273,7 +275,11 @@ fun PlaylistDetailScreen(
               name = playlist?.name.orEmpty(),
               items = all,
               sortLabel = sort.sort?.let { stringResource(it.label) },
-              onPlay = { actions.play(all.map { it.track }, 0, source) },
+              // スキャン対象外の曲は飛ばすので、最初の再生できる曲から始める
+              onPlay = {
+                val tracks = all.map { it.track }
+                tracks.indexOfFirst { !it.excluded }.takeIf { it >= 0 }?.let { actions.play(tracks, it, source) }
+              },
               onShuffle = { actions.shufflePlay(all.map { it.track }, source) },
             )
           }
@@ -306,8 +312,13 @@ fun PlaylistDetailScreen(
                   if (selecting) {
                     selected = if (isSelected) selected - item.entryId else selected + item.entryId
                   } else {
-                    if (item.track.mediaStoreId != playingId) actions.play(local.map { it.track }, index, source)
-                    actions.openPlayer()
+                    if (item.track.excluded) {
+                      // スキャン対象外のフォルダーの曲は再生しない (プレイリストの登録は残す)
+                      showMessage(res.getString(R.string.message_track_excluded))
+                    } else {
+                      if (item.track.mediaStoreId != playingId) actions.play(local.map { it.track }, index, source)
+                      actions.openPlayer()
+                    }
                   }
                 },
                 onLongClick = null,

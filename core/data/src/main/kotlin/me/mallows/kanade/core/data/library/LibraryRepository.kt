@@ -2,15 +2,34 @@ package me.mallows.kanade.core.data.library
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
 import me.mallows.kanade.core.data.db.PlayStatsDao
 import me.mallows.kanade.core.data.db.PlaylistDao
 import me.mallows.kanade.core.data.db.TrackDao
+import me.mallows.kanade.core.data.db.KanadeDatabase
+import me.mallows.kanade.core.data.db.SyncResult
 import me.mallows.kanade.core.data.db.TrackEntity
+import me.mallows.kanade.core.data.settings.SettingsRepository
+import me.mallows.kanade.core.domain.folder.FolderNode
+import me.mallows.kanade.core.domain.folder.ScanFolder
+import me.mallows.kanade.core.domain.folder.buildFolderTree
 import timber.log.Timber
 
 /** 曲をまとめる単位 */
@@ -23,11 +42,27 @@ enum class GroupKind {
 /** 端末内の曲の一覧 */
 @Singleton
 class LibraryRepository @Inject constructor(
+  private val db: KanadeDatabase,
   private val trackDao: TrackDao,
   private val playlistDao: PlaylistDao,
   private val playStatsDao: PlayStatsDao,
   private val scanner: MediaStoreScanner,
+  private val settings: SettingsRepository,
 ) {
+  private val scanLock = Mutex()
+  /** 画面を閉じても続ける処理 (スキャンなど) のスコープ */
+  private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+  /** 画面を閉じても止めずに続ける (スキャンの途中で画面を離れても、読み直しを最後まで行う) */
+  fun launchInBackground(block: suspend () -> Unit) {
+    appScope.launch { block() }
+  }
+  private val _scanning = MutableStateFlow(false)
+  /** スキャン中か (どの画面から始めたスキャンでも) */
+  val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
+  private val _scanResults = MutableSharedFlow<SyncResult>(extraBufferCapacity = 1)
+  /** スキャンが終わるたびに結果を流す */
+  val scanResults: SharedFlow<SyncResult> = _scanResults.asSharedFlow()
 
   val tracks: Flow<List<TrackEntity>> = trackDao.observeAll()
   val albums: Flow<List<AlbumSummary>> = trackDao.observeAlbums()
@@ -44,7 +79,11 @@ class LibraryRepository @Inject constructor(
 
   fun groupTracks(kind: GroupKind, name: String?): Flow<List<TrackEntity>> = when (kind) {
     GroupKind.ARTIST -> trackDao.observeArtistTracks(name)
-    GroupKind.FOLDER -> trackDao.observeFolderTracks(name)
+    GroupKind.FOLDER -> {
+      // nameは「ボリューム名:フォルダー」(observeFoldersで作る)
+      val key = name.orEmpty()
+      trackDao.observeFolderTracks(key.substringBefore(':', ""), key.substringAfter(':', key))
+    }
     GroupKind.GENRE -> trackDao.observeGenreTracks(name)
     GroupKind.ALBUM -> trackDao.observeAlbumTracks(name?.toLongOrNull())
     GroupKind.RECENTLY_ADDED -> trackDao.observeRecentlyAdded(SMART_LIMIT)
@@ -59,12 +98,63 @@ class LibraryRepository @Inject constructor(
     return ids.mapNotNull(byId::get)
   }
 
-  /** MediaStoreを読み直してデータベースに反映する。音楽ファイルの読み取り権限が必要 */
-  suspend fun rescan() = withContext(Dispatchers.IO) {
-    val found = scanner.scan()
-    trackDao.sync(found)
-    playlistDao.deleteOrphans()
-    Timber.d("ライブラリを更新: %d曲", found.size)
+  /** 今の対象フォルダー。まだ選んでいなければ、今あるストレージそれぞれの「Music/」 */
+  suspend fun scanFolders(): List<ScanFolder> =
+    settings.scanFolders.first() ?: ScanFolder.defaults(withContext(Dispatchers.IO) { scanner.volumes() })
+
+  /**
+   * MediaStoreを読み直してデータベースに反映する。音楽ファイルの読み取り権限が必要。
+   * 対象フォルダーの外になった曲は消さずに印を付け、端末から消えた曲だけを消す。
+   * 同時に2つ走らないよう、前のスキャンが終わるのを待つ。
+   */
+  suspend fun rescan(): SyncResult = scanLock.withLock {
+    _scanning.value = true
+    try {
+      val folders = scanFolders()
+      val result = withContext(Dispatchers.IO) {
+        // MediaStoreの問い合わせはトランザクションの外で行い、DBへの書き込みだけをまとめる
+        val included = scanner.scan(folders)
+        val existing = scanner.existingIds()
+        db.withTransaction {
+          trackDao.sync(included, existing).also { playlistDao.deleteOrphans() }
+        }
+      }
+      settings.setInitialScanDone()
+      Timber.d("ライブラリを更新: 対象 %d曲、対象外 %d曲、削除 %d曲", result.included, result.excluded, result.deleted)
+      _scanResults.tryEmit(result)
+      result
+    } finally {
+      _scanning.value = false
+    }
+  }
+
+  /** 本当の初回 (まだ1度もスキャンしていない) ときだけスキャンする。アプリを起動しただけでは読み直さない */
+  suspend fun rescanIfFirstTime() {
+    if (!settings.initialScanDone.first()) rescan()
+  }
+
+  /** 対象フォルダーを保存し、変わっていれば読み直す */
+  suspend fun setScanFolders(folders: List<ScanFolder>) {
+    val before = settings.scanFolders.first()
+    settings.setScanFolders(folders)
+    if (before != settings.scanFolders.first()) rescan()
+  }
+
+  /** フォルダーの選択画面に出す木 (ストレージ → フォルダー)。配下の合計の曲数つき */
+  suspend fun folderTree(): Map<String, List<FolderNode>> = withContext(Dispatchers.IO) {
+    buildFolderTree(scanner.folderCounts())
+  }
+
+  /** ボリューム名 → 画面に出す名前 */
+  fun volumeLabels(): Map<String, String> = scanner.volumeLabels()
+
+  /** [mediaStoreIds]のうち、再生できない曲 (端末から消えた曲・スキャン対象外の曲)。再生キューから外すのに使う */
+  suspend fun unplayable(mediaStoreIds: List<Long>): Set<Long> {
+    val playable = mediaStoreIds.distinct().chunked(500)
+      .flatMap { trackDao.getByMediaStoreIds(it) }
+      .filterNot { it.excluded }
+      .mapTo(HashSet()) { it.mediaStoreId }
+    return mediaStoreIds.toSet() - playable
   }
 }
 

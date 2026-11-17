@@ -3,11 +3,15 @@ package me.mallows.kanade.core.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import me.mallows.kanade.core.domain.folder.ScanFolder
+import me.mallows.kanade.core.domain.folder.normalize
 
 /** テーマの選択 */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -54,10 +58,31 @@ class SettingsRepository @Inject constructor(
     dataStore.edit { it[stringPreferencesKey("grid_$category")] = grid.toString() }
   }
 
+  /**
+   * スキャン対象のフォルダー。まだ保存していなければnull (初期値の「各ストレージのMusic/」を使う)。
+   * 空のリストは「1つも選んでいない」で、nullとは区別する
+   */
+  val scanFolders: Flow<List<ScanFolder>?> = dataStore.data.map { prefs ->
+    prefs[SCAN_FOLDERS]?.mapNotNull(ScanFolder::decode)?.let(::normalize)
+  }
+
+  suspend fun setScanFolders(folders: List<ScanFolder>) {
+    dataStore.edit { it[SCAN_FOLDERS] = normalize(folders).map(ScanFolder::encode).toSet() }
+  }
+
+  /** 初回のスキャンを済ませたか。済ませた後は、アプリを起動しただけではスキャンしない */
+  val initialScanDone: Flow<Boolean> = dataStore.data.map { it[INITIAL_SCAN_DONE] == true }
+
+  suspend fun setInitialScanDone() {
+    dataStore.edit { it[INITIAL_SCAN_DONE] = true }
+  }
+
   private fun sortKey(category: String) = stringPreferencesKey("sort_$category")
 
   private companion object {
     val THEME_MODE = stringPreferencesKey("theme_mode")
     val LIBRARY_TABS = stringPreferencesKey("library_tabs")
+    val SCAN_FOLDERS = stringSetPreferencesKey("scan_folders")
+    val INITIAL_SCAN_DONE = booleanPreferencesKey("initial_scan_done")
   }
 }

@@ -18,6 +18,9 @@ import kotlinx.serialization.Serializable
 /** オープンソースのライセンス */
 @Serializable data object Licenses : NavKey
 
+/** スキャン対象のフォルダーの選択 */
+@Serializable data object ScanFolders : NavKey
+
 /** 検索 */
 @Serializable data object Search : NavKey
 

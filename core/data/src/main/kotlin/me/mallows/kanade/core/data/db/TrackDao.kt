@@ -5,6 +5,13 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import me.mallows.kanade.core.domain.folder.classify
+
+/** スキャンの結果。取り込んだ曲・対象外にした曲・消した曲の数 */
+data class SyncResult(val included: Int, val excluded: Int, val deleted: Int)
+
+/** 1回の問い合わせに渡すIDの数の上限 (SQLiteの変数の上限より小さく) */
+private const val CHUNK = 500
 
 /** 曲のIDとMediaStoreのIDの組 */
 data class TrackIdPair(val id: Long, val mediaStoreId: Long)
@@ -12,10 +19,10 @@ data class TrackIdPair(val id: Long, val mediaStoreId: Long)
 @Dao
 interface TrackDao {
 
-  @Query("SELECT * FROM track ORDER BY title COLLATE NOCASE")
+  @Query("SELECT * FROM track WHERE excluded = 0 ORDER BY title COLLATE NOCASE")
   fun observeAll(): Flow<List<TrackEntity>>
 
-  @Query("SELECT * FROM track ORDER BY date_added DESC, title COLLATE NOCASE LIMIT :limit")
+  @Query("SELECT * FROM track WHERE excluded = 0 ORDER BY date_added DESC, title COLLATE NOCASE LIMIT :limit")
   fun observeRecentlyAdded(limit: Int): Flow<List<TrackEntity>>
 
   @Query("SELECT * FROM track WHERE media_store_id IN (:mediaStoreIds)")
@@ -30,18 +37,28 @@ interface TrackDao {
   @Upsert
   suspend fun upsert(tracks: List<TrackEntity>)
 
-  @Query("DELETE FROM track WHERE media_store_id NOT IN (:mediaStoreIds)")
-  suspend fun deleteMissing(mediaStoreIds: List<Long>)
+  @Query("UPDATE track SET excluded = 1 WHERE media_store_id IN (:mediaStoreIds)")
+  suspend fun markExcluded(mediaStoreIds: List<Long>)
+
+  @Query("DELETE FROM track WHERE media_store_id IN (:mediaStoreIds)")
+  suspend fun deleteByMediaStoreIds(mediaStoreIds: List<Long>)
+
+  @Query("SELECT media_store_id FROM track WHERE excluded = 1")
+  suspend fun excludedMediaStoreIds(): List<Long>
 
   /**
-   * MediaStoreから読み込んだ曲の一覧でデータベースを置き換える。
-   * 登録済みの曲はIDを引き継ぐ (プレイリストなどからの参照を保つため)。
+   * スキャンの結果をデータベースに反映する。
+   * 対象フォルダーの曲 ([included]) は登録・更新し、対象外の印を外す。登録済みの曲はIDを引き継ぐ (プレイリストなどからの参照を保つため)。
+   * 登録済みで[included]にない曲は、端末にあれば ([existing]) 対象外の印を付けて残し、なければ消す (プレイリストからも消える)。
    */
   @Transaction
-  suspend fun sync(incoming: List<TrackEntity>) {
+  suspend fun sync(included: List<TrackEntity>, existing: Set<Long>): SyncResult {
     val ids = idPairs().associate { it.mediaStoreId to it.id }
-    upsert(incoming.map { it.copy(id = ids[it.mediaStoreId] ?: 0) })
-    deleteMissing(incoming.map { it.mediaStoreId })
+    upsert(included.map { it.copy(id = ids[it.mediaStoreId] ?: 0, excluded = false) })
+    val plan = classify(stored = ids.keys, included = included.mapTo(HashSet()) { it.mediaStoreId }, existing = existing)
+    plan.excluded.chunked(CHUNK).forEach { markExcluded(it) }
+    plan.deleted.chunked(CHUNK).forEach { deleteByMediaStoreIds(it) }
+    return SyncResult(included = included.size, excluded = plan.excluded.size, deleted = plan.deleted.size)
   }
 
   // --- アルバム ---
@@ -52,12 +69,12 @@ interface TrackDao {
       COALESCE(MAX(album_artist), MAX(artist)) AS artist,
       COUNT(*) AS trackCount, SUM(duration_ms) AS durationMs, MAX(year) AS year,
       MIN(uri) AS artUri, MAX(date_added) AS dateAdded
-    FROM track GROUP BY album_id
+    FROM track WHERE excluded = 0 GROUP BY album_id
     """
   )
   fun observeAlbums(): Flow<List<AlbumSummary>>
 
-  @Query("SELECT * FROM track WHERE album_id IS :albumId ORDER BY disc_no, track_no, title COLLATE NOCASE")
+  @Query("SELECT * FROM track WHERE excluded = 0 AND album_id IS :albumId ORDER BY disc_no, track_no, title COLLATE NOCASE")
   fun observeAlbumTracks(albumId: Long?): Flow<List<TrackEntity>>
 
   // --- アーティスト (アルバムアーティストを優先) ---
@@ -66,14 +83,14 @@ interface TrackDao {
     """
     SELECT COALESCE(album_artist, artist) AS name, COUNT(*) AS trackCount,
       COUNT(DISTINCT album_id) AS albumCount, SUM(duration_ms) AS durationMs, MIN(uri) AS artUri
-    FROM track GROUP BY name
+    FROM track WHERE excluded = 0 GROUP BY name
     """
   )
   fun observeArtists(): Flow<List<GroupSummary>>
 
   @Query(
     """
-    SELECT * FROM track WHERE COALESCE(album_artist, artist) IS :name
+    SELECT * FROM track WHERE excluded = 0 AND COALESCE(album_artist, artist) IS :name
     ORDER BY album COLLATE NOCASE, disc_no, track_no, title COLLATE NOCASE
     """
   )
@@ -83,15 +100,20 @@ interface TrackDao {
 
   @Query(
     """
-    SELECT relative_path AS name, COUNT(*) AS trackCount,
+    SELECT COALESCE(volume, '') || ':' || COALESCE(relative_path, '') AS name, COUNT(*) AS trackCount,
       COUNT(DISTINCT album_id) AS albumCount, SUM(duration_ms) AS durationMs, MIN(uri) AS artUri
-    FROM track GROUP BY relative_path
+    FROM track WHERE excluded = 0 GROUP BY volume, relative_path
     """
   )
   fun observeFolders(): Flow<List<GroupSummary>>
 
-  @Query("SELECT * FROM track WHERE relative_path IS :path ORDER BY disc_no, track_no, title COLLATE NOCASE")
-  fun observeFolderTracks(path: String?): Flow<List<TrackEntity>>
+  @Query(
+    """
+    SELECT * FROM track WHERE excluded = 0 AND COALESCE(volume, '') = :volume AND COALESCE(relative_path, '') = :path
+    ORDER BY disc_no, track_no, title COLLATE NOCASE
+    """
+  )
+  fun observeFolderTracks(volume: String, path: String): Flow<List<TrackEntity>>
 
   // --- ジャンル ---
 
@@ -99,12 +121,12 @@ interface TrackDao {
     """
     SELECT genre AS name, COUNT(*) AS trackCount,
       COUNT(DISTINCT album_id) AS albumCount, SUM(duration_ms) AS durationMs, MIN(uri) AS artUri
-    FROM track GROUP BY genre
+    FROM track WHERE excluded = 0 GROUP BY genre
     """
   )
   fun observeGenres(): Flow<List<GroupSummary>>
 
-  @Query("SELECT * FROM track WHERE genre IS :genre ORDER BY title COLLATE NOCASE")
+  @Query("SELECT * FROM track WHERE excluded = 0 AND genre IS :genre ORDER BY title COLLATE NOCASE")
   fun observeGenreTracks(genre: String?): Flow<List<TrackEntity>>
 
   // --- 検索 ---
@@ -112,8 +134,8 @@ interface TrackDao {
   @Query(
     """
     SELECT * FROM track
-    WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'
-      OR album_artist LIKE '%' || :query || '%' OR album LIKE '%' || :query || '%'
+    WHERE excluded = 0 AND (title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'
+      OR album_artist LIKE '%' || :query || '%' OR album LIKE '%' || :query || '%')
     ORDER BY title COLLATE NOCASE LIMIT 500
     """
   )

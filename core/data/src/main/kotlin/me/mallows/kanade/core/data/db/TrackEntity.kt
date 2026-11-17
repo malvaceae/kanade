@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 /** 端末内の1曲。MediaStoreから取り込んだ情報を保存する */
 @Entity(
   tableName = "track",
-  indices = [Index(value = ["media_store_id"], unique = true), Index("album"), Index("artist")],
+  indices = [Index(value = ["media_store_id"], unique = true), Index("album"), Index("artist"), Index("excluded")],
 )
 data class TrackEntity(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -29,4 +29,11 @@ data class TrackEntity(
   /** 「Music/Album/」のようなストレージ内のフォルダー */
   @ColumnInfo(name = "relative_path") val relativePath: String? = null,
   val genre: String? = null,
+  /** MediaStoreのボリューム名 ("external_primary"、SDカードは"1234-abcd"など) */
+  val volume: String? = null,
+  /**
+   * 端末にはあるが、スキャン対象のフォルダーの外にある曲。消さずに残し (プレイリストの登録と再生回数を守るため)、
+   * ライブラリの一覧には出さない
+   */
+  @ColumnInfo(defaultValue = "0") val excluded: Boolean = false,
 )

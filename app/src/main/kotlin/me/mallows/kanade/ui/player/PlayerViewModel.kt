@@ -3,10 +3,13 @@ package me.mallows.kanade.ui.player
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.playback.CurrentLyrics
 import me.mallows.kanade.playback.LyricsMonitor
+import me.mallows.kanade.playback.PlaybackEvent
+import me.mallows.kanade.playback.PlaybackEvents
 import me.mallows.kanade.playback.PlayerConnection
 import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.playback.QueueState
@@ -17,6 +20,7 @@ import me.mallows.kanade.playback.PlayerState
 class PlayerViewModel @Inject constructor(
   private val connection: PlayerConnection,
   lyricsMonitor: LyricsMonitor,
+  playbackEvents: PlaybackEvents,
 ) : ViewModel() {
 
   /** 再生中の曲の歌詞 */
@@ -35,14 +39,29 @@ class PlayerViewModel @Inject constructor(
 
   val source: StateFlow<PlaySource?> = connection.source
 
-  fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource?) =
-    connection.playTracks(tracks.map { it.mediaStoreId }, index, source = source)
-  fun shufflePlay(tracks: List<TrackEntity>, source: PlaySource?) {
-    if (tracks.isEmpty()) return
-    connection.playTracks(tracks.map { it.mediaStoreId }, tracks.indices.random(), shuffle = true, source = source)
+  /** 読めない曲を飛ばした、などの知らせ */
+  val events: SharedFlow<PlaybackEvent> = playbackEvents.flow
+
+  /**
+   * [tracks]の[index]番目から再生する。スキャン対象外の曲 (プレイリストに残っている曲) は飛ばす。
+   * 押した曲が対象外なら再生しない (画面が知らせる)
+   */
+  fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource?) {
+    val target = tracks.getOrNull(index) ?: return
+    if (target.excluded) return
+    val playable = tracks.filterNot { it.excluded }
+    val start = index - tracks.take(index).count { it.excluded }
+    connection.playTracks(playable.map { it.mediaStoreId }, start, source = source)
   }
-  fun playNext(tracks: List<TrackEntity>) = connection.playNext(tracks.map { it.mediaStoreId })
-  fun addToQueue(tracks: List<TrackEntity>) = connection.addToQueue(tracks.map { it.mediaStoreId })
+
+  fun shufflePlay(tracks: List<TrackEntity>, source: PlaySource?) {
+    val playable = tracks.filterNot { it.excluded }
+    if (playable.isEmpty()) return
+    connection.playTracks(playable.map { it.mediaStoreId }, playable.indices.random(), shuffle = true, source = source)
+  }
+
+  fun playNext(tracks: List<TrackEntity>) = connection.playNext(tracks.filterNot { it.excluded }.map { it.mediaStoreId })
+  fun addToQueue(tracks: List<TrackEntity>) = connection.addToQueue(tracks.filterNot { it.excluded }.map { it.mediaStoreId })
   fun togglePlayPause() = connection.togglePlayPause()
   fun next() = connection.next()
   fun previous() = connection.previous()

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
+import me.mallows.kanade.core.data.db.SyncResult
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.core.data.library.GroupKind
 import me.mallows.kanade.core.data.library.LibraryRepository
@@ -44,7 +46,9 @@ class LibraryViewModel @Inject constructor(
   suspend fun groupTracks(kind: GroupKind, key: String?): List<TrackEntity> = library.groupTracks(kind, key).first()
 
   suspend fun exportBackup(uri: android.net.Uri) = backup.export(uri)
-  suspend fun restoreBackup(uri: android.net.Uri): RestoreResult = backup.restore(uri)
+  /** バックアップから戻す。スキャン対象のフォルダーも戻るので、読み直す */
+  suspend fun restoreBackup(uri: android.net.Uri): RestoreResult =
+    backup.restore(uri).also { library.launchInBackground { library.rescan() } }
 
 
   private fun <T> Flow<T>.state(initial: T): StateFlow<T> =
@@ -93,21 +97,25 @@ class LibraryViewModel @Inject constructor(
     viewModelScope.launch { settings.setGridView(SortCategory.ALBUMS, grid) }
   }
 
-  private val _scanning = MutableStateFlow(false)
-  val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
-  private var scanned = false
+  /** スキャン中か (どの画面から始めたスキャンでも) */
+  val scanning: StateFlow<Boolean> = library.scanning
 
-  /** 画面を開いたときに1回だけMediaStoreを読み直す */
-  fun scanOnce() {
-    if (scanned) return
-    scanned = true
-    viewModelScope.launch {
-      _scanning.value = true
-      try {
-        library.rescan()
-      } finally {
-        _scanning.value = false
-      }
-    }
+  /** ボリューム名 → 画面に出す名前 (フォルダーの一覧で、内部ストレージ以外に付ける) */
+  val volumeLabels: Map<String, String> by lazy { library.volumeLabels() }
+
+  /** 本当の初回だけスキャンする。アプリを起動しただけでは読み直さない */
+  fun scanIfFirstTime() {
+    library.launchInBackground { library.rescanIfFirstTime() }
   }
+
+  /** スキャンが終わるたびの結果 */
+  val scanResults: SharedFlow<SyncResult> = library.scanResults
+
+  /** 右上の︙メニューの「再スキャン」 */
+  fun rescan() {
+    library.launchInBackground { library.rescan() }
+  }
+
+  /** 対象フォルダーが1つも選ばれていないか (空の表示の文言を分けるのに使う) */
+  val noScanFolders: StateFlow<Boolean> = settings.scanFolders.map { it != null && it.isEmpty() }.state(false)
 }

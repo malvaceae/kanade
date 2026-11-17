@@ -15,6 +15,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import me.mallows.kanade.ui.common.showMessage
+import me.mallows.kanade.playback.PlaybackEvent
+import androidx.compose.ui.platform.LocalResources
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +50,8 @@ import me.mallows.kanade.core.data.library.GroupKind
 import me.mallows.kanade.ui.library.LibraryTab
 import me.mallows.kanade.ui.library.CategoryScreen
 import me.mallows.kanade.ui.about.LicensesScreen
+import me.mallows.kanade.ui.library.LibraryViewModel
+import me.mallows.kanade.ui.library.ScanFoldersScreen
 import me.mallows.kanade.ui.permission.AudioPermissionGate
 import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.playlist.AddToPlaylistSheet
@@ -64,6 +68,7 @@ import me.mallows.kanade.ui.selection.navigationBarHeight
 fun MainNavigation(
   openPlayerRequest: MutableState<Boolean> = remember { mutableStateOf(false) },
   playerViewModel: PlayerViewModel = hiltViewModel(),
+  libraryViewModel: LibraryViewModel = hiltViewModel(),
 ) {
   val backStack = rememberNavBackStack(Library)
   // 通知などから開かれたら、プレイヤー画面を出す
@@ -80,6 +85,23 @@ fun MainNavigation(
   val snackbar = remember { SnackbarHostState() }
   /** 画面をまたいで続く処理 (シートを閉じた後のメッセージなど) */
   val appScope = rememberCoroutineScope()
+  val resources = LocalResources.current
+  // スキャンが終わったら、読み込んだ曲の数を知らせる (どの画面から始めたスキャンでも)
+  LaunchedEffect(Unit) {
+    libraryViewModel.scanResults.collect { r ->
+      snackbar.showMessage(resources.getQuantityString(R.plurals.scan_result, r.included, r.included))
+    }
+  }
+  // 再生サービスからの知らせ (読めない曲を飛ばした、など)
+  LaunchedEffect(Unit) {
+    playerViewModel.events.collect { event ->
+      val text = when (event) {
+        PlaybackEvent.FILE_NOT_FOUND -> R.string.message_file_not_found
+        PlaybackEvent.UNPLAYABLE -> R.string.message_unplayable
+      }
+      snackbar.showMessage(resources.getString(text))
+    }
+  }
   val bottomBarActive = remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
   var pendingAdd by remember { mutableStateOf<List<TrackEntity>?>(null) }
@@ -99,8 +121,16 @@ fun MainNavigation(
     }
   }
   val top = backStack.lastOrNull()
+  // 再生キューが空になったら (読めない曲を飛ばして最後の曲もなくなった、など)、プレイヤーの画面を閉じる。
+  // プレイヤーから開いたキューの画面も一緒に閉じる (ライブラリから開いたキューは、空でも見られるよう残す)
+  LaunchedEffect(player.connected, player.hasMedia) {
+    if (player.connected && !player.hasMedia && Player in backStack) {
+      while (backStack.isNotEmpty() && backStack.last() != Player) backStack.removeLastOrNull()
+      backStack.removeLastOrNull()
+    }
+  }
   // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンスの画面には出さない
-  val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && !bottomBarActive.value
+  val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
   // 一覧の下の余白: ミニプレイヤー (高さ64・下8) とナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
   val bottomPadding = (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
 
@@ -139,9 +169,13 @@ fun MainNavigation(
                   },
                   onSearch = { backStack.add(Search) },
                   onLicenses = { backStack.add(Licenses) },
+                  onScanFolders = { backStack.add(ScanFolders) },
                   bottomPadding = bottomPadding,
                 )
               }
+            }
+            entry<ScanFolders> {
+              Page { ScanFoldersScreen(onBack = { backStack.removeLastOrNull() }) }
             }
             entry<Licenses> {
               Page { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }

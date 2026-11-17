@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -80,8 +81,10 @@ fun TrackRow(
         number != null -> Text(number.toString(), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
       }
     }
-    TrackArtwork(uri = track.uri, size = 44.dp)
-    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    // スキャン対象外の曲 (プレイリストに残っている曲) は薄く出す
+    val dim = if (track.excluded) Modifier.alpha(0.45f) else Modifier
+    TrackArtwork(uri = track.uri, size = 44.dp, modifier = dim)
+    Column(modifier = Modifier.weight(1f).then(dim), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(
         text = track.title,
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Medium),
@@ -90,7 +93,11 @@ fun TrackRow(
         overflow = TextOverflow.Ellipsis,
       )
       Text(
-        text = "${track.artist ?: stringResource(R.string.unknown_artist)} · ${formatDuration(track.durationMs)}",
+        text = listOfNotNull(
+          stringResource(R.string.excluded_label).takeIf { track.excluded },
+          track.artist ?: stringResource(R.string.unknown_artist),
+          formatDuration(track.durationMs),
+        ).joinToString(" · "),
         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
         color = scheme.onSurfaceVariant,
         maxLines = 1,

@@ -13,6 +13,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import me.mallows.kanade.core.data.library.LibraryRepository
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.MainScope
@@ -78,6 +79,7 @@ data class PlaySource(val key: String, val title: String?)
 class PlayerConnection @Inject constructor(
   @ApplicationContext private val context: Context,
   private val dataStore: DataStore<Preferences>,
+  private val library: LibraryRepository,
 ) {
   private val scope = MainScope()
   private val _state = MutableStateFlow(PlayerState())
@@ -87,7 +89,12 @@ class PlayerConnection @Inject constructor(
   /** 今の再生キューを、どの一覧から再生したか。保存しておき、アプリを開き直しても戻す。分からなければnull */
   val source: StateFlow<PlaySource?> = _source.asStateFlow()
 
+  /** 再生中の曲がスキャン対象外になったとき、その曲が終わって次へ移ったら外すためのID */
+  private var removeWhenLeft: String? = null
+
   init {
+    // 再スキャンが終わったら、再生キューから端末から消えた曲とスキャン対象外の曲を外す
+    scope.launch { library.scanResults.collect { pruneQueue() } }
     // 前回の再生元を読む (再生キューも前回のものが戻るため、組み合わせが合う)
     scope.launch {
       val prefs = dataStore.data.first()
@@ -126,6 +133,7 @@ class PlayerConnection @Inject constructor(
         val c = MediaController.Builder(context, token).buildAsync().await()
         c.addListener(object : Player.Listener {
           override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) removeLeftItem(player)
             publish(player)
             if (events.containsAny(
                 Player.EVENT_TIMELINE_CHANGED,
@@ -322,6 +330,30 @@ class PlayerConnection @Inject constructor(
       upcoming = upcomingIndices.map(::itemAt),
       shuffle = player.shuffleModeEnabled,
     )
+  }
+
+  /** 再生キューから再生できない曲を外す。再生中の曲は止めず、終わって次へ移ったときに外す */
+  private fun pruneQueue() = withController { c ->
+    scope.launch {
+      val ids = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).mediaId.toLongOrNull() ?: -1L }
+      if (ids.isEmpty()) return@launch
+      val unplayable = library.unplayable(ids)
+      if (unplayable.isEmpty()) return@launch
+      val current = c.currentMediaItemIndex
+      for (i in ids.indices.reversed()) {
+        if (i != current && ids[i] in unplayable) c.removeMediaItem(i)
+      }
+      val currentId = c.currentMediaItem?.mediaId
+      removeWhenLeft = currentId?.takeIf { it.toLongOrNull() in unplayable }
+    }
+  }
+
+  private fun removeLeftItem(player: Player) {
+    val id = removeWhenLeft ?: return
+    if (player.currentMediaItem?.mediaId == id) return
+    removeWhenLeft = null
+    val index = (0 until player.mediaItemCount).firstOrNull { player.getMediaItemAt(it).mediaId == id } ?: return
+    player.removeMediaItem(index)
   }
 
   private fun withController(block: (MediaController) -> Unit) {

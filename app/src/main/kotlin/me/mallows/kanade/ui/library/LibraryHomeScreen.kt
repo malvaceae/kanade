@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +49,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -62,6 +70,7 @@ import me.mallows.kanade.R
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
 import me.mallows.kanade.core.data.library.GroupKind
+import me.mallows.kanade.core.domain.folder.ScanFolder
 import me.mallows.kanade.ui.common.GroupRow
 import me.mallows.kanade.ui.common.ListHeader
 import me.mallows.kanade.ui.common.TrackArtwork
@@ -89,10 +98,11 @@ fun LibraryHomeScreen(
   onOpen: (tab: LibraryTab, title: String) -> Unit,
   onSearch: () -> Unit,
   onLicenses: () -> Unit,
+  onScanFolders: () -> Unit,
   bottomPadding: Dp,
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
-  LaunchedEffect(Unit) { viewModel.scanOnce() }
+  LaunchedEffect(Unit) { viewModel.scanIfFirstTime() }
   val tabSettings by viewModel.tabs.collectAsStateWithLifecycle()
   val visibleTabs = tabSettings.filter { it.visible }.map { it.tab }
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
@@ -102,6 +112,7 @@ fun LibraryHomeScreen(
   val genres by viewModel.groups(GroupKind.GENRE).collectAsStateWithLifecycle()
   var editingTabs by rememberSaveable { mutableStateOf(false) }
   var menuOpen by remember { mutableStateOf(false) }
+  val scanning by viewModel.scanning.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
@@ -133,6 +144,8 @@ fun LibraryHomeScreen(
       Box {
         IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+          DropdownMenuItem(text = { Text(stringResource(R.string.action_rescan)) }, onClick = { menuOpen = false; viewModel.rescan() }, enabled = !scanning)
+          DropdownMenuItem(text = { Text(stringResource(R.string.scan_folders_title)) }, onClick = { menuOpen = false; onScanFolders() })
           DropdownMenuItem(text = { Text(stringResource(R.string.tabs_title)) }, onClick = { menuOpen = false; editingTabs = true })
           DropdownMenuItem(
             text = { Text(stringResource(R.string.backup_export)) },
@@ -146,7 +159,11 @@ fun LibraryHomeScreen(
         }
       }
     }
-    LazyColumn(contentPadding = PaddingValues(top = 4.dp, bottom = bottomPadding)) {
+    // スキャン中は細い進み具合を出す (高さは常に取って、表示がずれないようにする)
+    Box(Modifier.fillMaxWidth().height(2.dp)) {
+      if (scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
+    }
+    LazyColumn(contentPadding = PaddingValues(top = 2.dp, bottom = bottomPadding)) {
       items(visibleTabs, key = { it.name }) { t ->
         val count = when (t) {
           LibraryTab.TRACKS -> tracks?.size?.let { pluralStringResource(R.plurals.track_count, it, it) }
@@ -232,7 +249,7 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
   val list = tracks
   when {
     list == null || (list.isEmpty() && scanning) -> Loading()
-    list.isEmpty() -> Empty()
+    list.isEmpty() -> Empty(noFolders = viewModel.noScanFolders.collectAsStateWithLifecycle().value)
     else -> SelectableTrackList(
       tracks = list,
       playingMediaStoreId = playingId,
@@ -335,7 +352,7 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
       }
     }
     items(list, key = { it.name ?: "" }) { group ->
-      val title = group.displayName(kind) ?: unknown
+      val title = group.displayName(kind, viewModel.volumeLabels) ?: unknown
       GroupRow(
         title = title,
         subtitle = groupSubtitle(kind, group),
@@ -347,7 +364,7 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
   }
   FastScroller(
     state = listState,
-    label = { i -> initialOf(list.getOrNull(i - 1)?.let { it.displayName(kind) ?: unknown }) },
+    label = { i -> initialOf(list.getOrNull(i - 1)?.let { it.displayName(kind, viewModel.volumeLabels) ?: unknown }) },
     modifier = Modifier.align(Alignment.TopEnd),
     bottomPadding = bottomPadding,
   )
@@ -358,9 +375,18 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
   }
 }
 
-/** フォルダーは「Music/Album/」を「Music › Album」のように見せる */
-private fun GroupSummary.displayName(kind: GroupKind): String? =
-  if (kind == GroupKind.FOLDER) name?.trimEnd('/')?.replace("/", " › ") else name
+/**
+ * フォルダーは「Music/Album/」を「Music › Album」のように見せる。nameは「ボリューム名:フォルダー」。
+ * 内部ストレージ以外 (SDカードなど) は、先頭にストレージの名前を付ける
+ */
+private fun GroupSummary.displayName(kind: GroupKind, volumeLabels: Map<String, String>): String? {
+  if (kind != GroupKind.FOLDER) return name
+  val key = name ?: return null
+  val volume = key.substringBefore(':', "")
+  val path = key.substringAfter(':', key).trimEnd('/').replace("/", " › ")
+  val storage = volume.takeIf { it.isNotEmpty() && it != ScanFolder.PRIMARY }?.let { volumeLabels[it] ?: it }
+  return listOfNotNull(storage, path.ifEmpty { null }).joinToString(" › ").ifEmpty { null }
+}
 
 @Composable
 private fun groupSubtitle(kind: GroupKind, group: GroupSummary): String {
@@ -389,10 +415,32 @@ fun Loading() {
 }
 
 @Composable
-private fun Empty() {
+private fun Empty(noFolders: Boolean) {
+  val text = stringResource(if (noFolders) R.string.library_empty_no_folders else R.string.library_empty_hint)
+  // 日本語を文節で折り返す (単語の途中で行が分かれないように)。文節の区切りは言語で決まるので、端末の言語に関係なく日本語として扱う
+  val style = MaterialTheme.typography.bodyMedium.copy(
+    lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
+    localeList = LocaleList("ja"),
+  )
+  // 文中の「︙」は、記号だと読み取りにくいので、右上のメニューと同じアイコンに置き換える
+  val annotated = buildAnnotatedString {
+    val parts = text.split(MENU_MARK)
+    parts.forEachIndexed { i, part ->
+      append(part)
+      if (i < parts.lastIndex) appendInlineContent(MENU_ICON, MENU_MARK)
+    }
+  }
+  val inline = mapOf(
+    MENU_ICON to InlineTextContent(Placeholder(style.fontSize * 1.2f, style.fontSize * 1.2f, PlaceholderVerticalAlign.TextCenter)) {
+      Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more), tint = MaterialTheme.colorScheme.onSurface)
+    },
+  )
   Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {
     Text(stringResource(R.string.library_empty), style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
-    Text(stringResource(R.string.library_empty_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(annotated, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant, inlineContent = inline)
   }
 }
+
+private const val MENU_MARK = "︙"
+private const val MENU_ICON = "menu"

@@ -31,6 +31,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
@@ -39,6 +40,7 @@ import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import timber.log.Timber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -67,6 +69,7 @@ class PlaybackService : MediaSessionService() {
   @Inject lateinit var outputMonitor: OutputMonitor
   @Inject lateinit var outputSettings: OutputSettings
   @Inject lateinit var lyricsMonitor: LyricsMonitor
+  @Inject lateinit var playbackEvents: PlaybackEvents
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var session: MediaSession? = null
@@ -127,6 +130,23 @@ class PlaybackService : MediaSessionService() {
         lyricsMonitor.set(player.currentMediaItem?.mediaId, lyricsOf(format))
       }
     })
+    // 読めない曲 (再スキャンの前に端末から消えたファイル・壊れたファイル) は、止まったままにせずキューから外して次へ進む
+    player.addListener(object : Player.Listener {
+      override fun onPlayerError(error: PlaybackException) {
+        val notFound = error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ||
+          error.errorCode == PlaybackException.ERROR_CODE_IO_NO_PERMISSION
+        val unreadable = notFound || error.errorCode in UNREADABLE_ERRORS
+        Timber.w(error, "再生できない曲: %s", player.currentMediaItem?.mediaId)
+        if (!unreadable || player.mediaItemCount == 0) return
+        playbackEvents.emit(if (notFound) PlaybackEvent.FILE_NOT_FOUND else PlaybackEvent.UNPLAYABLE)
+        val wasLast = player.currentMediaItemIndex == player.mediaItemCount - 1
+        player.removeMediaItem(player.currentMediaItemIndex)
+        if (player.mediaItemCount > 0 && !wasLast) {
+          player.prepare()
+          player.play()
+        }
+      }
+    })
     // 等速と等速以外を切り替えたら、出力の形式 (float / 16bit) を合わせるため開き直す
     player.addListener(object : Player.Listener {
       override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
@@ -165,6 +185,18 @@ class PlaybackService : MediaSessionService() {
   }
 
   companion object {
+    /** ファイルを読めなかったときのエラー (飛ばして次の曲へ進む) */
+    private val UNREADABLE_ERRORS = setOf(
+      PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+      PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+      PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+      PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+      PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+      PlaybackException.ERROR_CODE_DECODING_FAILED,
+      PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+      PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+    )
+
     /** 起動の意図に付ける印。付いていればプレイヤー画面を開く */
     const val EXTRA_OPEN_PLAYER = "me.mallows.kanade.OPEN_PLAYER"
   }
