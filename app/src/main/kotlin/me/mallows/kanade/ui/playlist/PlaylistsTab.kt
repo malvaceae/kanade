@@ -153,8 +153,8 @@ fun PlaylistsTab(
   deleting?.let { p ->
     AlertDialog(
       onDismissRequest = { deleting = null },
-      title = { Text(stringResource(R.string.playlist_delete)) },
-      text = { Text(stringResource(R.string.playlist_delete_confirm, p.name)) },
+      title = { Text(stringResource(R.string.playlist_delete_confirm_title, p.name)) },
+      text = { Text(stringResource(R.string.playlist_delete_confirm)) },
       confirmButton = {
         TextButton(onClick = { deleting = null; scope.launch { viewModel.delete(p.id) } }) { Text(stringResource(R.string.action_delete)) }
       },

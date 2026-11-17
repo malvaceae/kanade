@@ -417,8 +417,8 @@ fun PlaylistDetailScreen(
     )
     "delete" -> AlertDialog(
       onDismissRequest = { sheet = null },
-      title = { Text(stringResource(R.string.playlist_delete)) },
-      text = { Text(stringResource(R.string.playlist_delete_confirm, playlist?.name.orEmpty())) },
+      title = { Text(stringResource(R.string.playlist_delete_confirm_title, playlist?.name.orEmpty())) },
+      text = { Text(stringResource(R.string.playlist_delete_confirm)) },
       confirmButton = {
         TextButton(onClick = {
           sheet = null

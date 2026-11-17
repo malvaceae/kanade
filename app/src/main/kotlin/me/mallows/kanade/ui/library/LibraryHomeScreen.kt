@@ -52,8 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.intl.LocaleList
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -417,11 +415,7 @@ fun Loading() {
 @Composable
 private fun Empty(noFolders: Boolean) {
   val text = stringResource(if (noFolders) R.string.library_empty_no_folders else R.string.library_empty_hint)
-  // 日本語を文節で折り返す (単語の途中で行が分かれないように)。文節の区切りは言語で決まるので、端末の言語に関係なく日本語として扱う
-  val style = MaterialTheme.typography.bodyMedium.copy(
-    lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
-    localeList = LocaleList("ja"),
-  )
+  val style = MaterialTheme.typography.bodyMedium
   // 文中の「︙」は、記号だと読み取りにくいので、右上のメニューと同じアイコンに置き換える
   val annotated = buildAnnotatedString {
     val parts = text.split(MENU_MARK)
