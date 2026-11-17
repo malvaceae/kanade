@@ -47,12 +47,13 @@ class M3uFiles @Inject constructor(
   /** プレイリストを [uri] にM3U8 (UTF-8・絶対パス) で書き出す。戻り値は書いた曲数 */
   suspend fun export(playlistId: Long, uri: Uri): Int = withContext(Dispatchers.IO) {
     val items = playlistDao.observeItems(playlistId).first().sortedBy { it.position }
-    val paths = files.list(items.map { it.track.mediaStoreId }).toMap()
+    // 曲のあるストレージ (内部ストレージ・SDカード) の根から始まる絶対パスで書く
+    val paths = files.absolutePaths(items.map { it.track.mediaStoreId })
     val entries = items.mapNotNull { item ->
       val t = item.track
       val path = paths[t.mediaStoreId] ?: return@mapNotNull null
       val title = listOfNotNull(t.artist, t.title).joinToString(" - ")
-      M3uEntry("${LibraryFiles.STORAGE_ROOT}/$path", t.durationMs / 1000, title)
+      M3uEntry(path, t.durationMs / 1000, title)
     }
     resolver.openOutputStream(uri, "wt")?.use { it.write(M3u.format(entries).toByteArray(Charsets.UTF_8)) }
       ?: error("ファイルに書けない: $uri")
