@@ -83,40 +83,6 @@ fun escapeLike(text: String): String = buildString {
 /** フォルダーの配下に当たるLIKEの値。末尾の"/"があるので"Music/"は"MusicBackup/"に当たらない */
 fun likePrefix(relativePath: String): String = escapeLike(ScanFolder.dir(relativePath)) + "%"
 
-/**
- * ストレージの根。API 28以下では、MediaStoreの絶対パス (DATA) からボリュームと相対パスを作るのに使う。
- * @param path 根の絶対パス ("/storage/emulated/0"、"/storage/1234-ABCD")
- */
-data class StorageRoot(val volume: String, val path: String) {
-  companion object {
-    /**
-     * アプリの外部ファイル置き場 (Context.getExternalFilesDirs) から根を作る。根の場所は決め打ちしない。
-     * @param appDir "…/Android/data/<パッケージ>/files"
-     * @param primary 主ストレージ (内部ストレージ) なら"external_primary"にする
-     */
-    fun fromAppDir(appDir: String, primary: Boolean): StorageRoot? {
-      val i = appDir.indexOf("/Android/data/")
-      if (i <= 0) return null
-      val root = appDir.substring(0, i)
-      val volume = if (primary) ScanFolder.PRIMARY else root.substringAfterLast('/').lowercase()
-      return StorageRoot(volume, root)
-    }
-  }
-}
-
-/**
- * 絶対パスのファイルが、どのストレージのどのフォルダーにあるか。どの根にも当たらなければnull。
- * 例: "/storage/1234-ABCD/Music/Artist/a.flac" → ("1234-abcd", "Music/Artist/")
- */
-fun locate(absolutePath: String, roots: List<StorageRoot>): Pair<String, String>? {
-  // 長い根から試す (根が別の根の中にある場合に備える)
-  val root = roots.sortedByDescending { it.path.length }
-    .firstOrNull { absolutePath.startsWith(it.path.trimEnd('/') + "/") } ?: return null
-  val inside = absolutePath.substring(root.path.trimEnd('/').length + 1)
-  val folder = inside.substringBeforeLast('/', missingDelimiterValue = "")
-  return root.volume to ScanFolder.dir(folder)
-}
-
 /** スキャンの結果、DBの曲をどう扱うか */
 data class SyncPlan(
   /** 端末にはあるが、対象フォルダーの外になった曲 (消さずに印を付ける) */

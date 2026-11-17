@@ -58,21 +58,6 @@ class ScanFoldersTest {
   }
 
   @Test
-  fun 根の場所を決め打ちせずに絶対パスからフォルダーを求める() {
-    val roots = listOfNotNull(
-      StorageRoot.fromAppDir("/storage/emulated/0/Android/data/me.mallows.kanade/files", primary = true),
-      StorageRoot.fromAppDir("/storage/1234-ABCD/Android/data/me.mallows.kanade/files", primary = false),
-      StorageRoot.fromAppDir("/mnt/media_rw/ABCD-0000/Android/data/me.mallows.kanade/files", primary = false),
-    )
-    assertEquals(ScanFolder.PRIMARY to "Music/Artist/", locate("/storage/emulated/0/Music/Artist/a.flac", roots))
-    assertEquals("1234-abcd" to "Music/", locate("/storage/1234-ABCD/Music/b.mp3", roots))
-    assertEquals("abcd-0000" to "", locate("/mnt/media_rw/ABCD-0000/c.mp3", roots))
-    // 根の名前の途中で切れる別の場所は当てない
-    assertNull(locate("/storage/emulated/01/Music/a.flac", roots))
-    assertNull(StorageRoot.fromAppDir("/data/user/0/me.mallows.kanade/files", primary = true))
-  }
-
-  @Test
   fun 対象外と消えた曲を分ける() {
     val plan = classify(stored = setOf(1, 2, 3, 4), included = setOf(1, 5), existing = setOf(1, 2, 3, 5))
     assertEquals(setOf(2L, 3L), plan.excluded)

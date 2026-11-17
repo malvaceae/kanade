@@ -36,13 +36,16 @@ class MediaStoreScanner @Inject constructor(
     }.toMap()
   }
 
-  /** 対象フォルダー ([folders]) の配下の音楽ファイル。フォルダーが空なら何も読まない */
+  /**
+   * 対象フォルダー ([folders]) の配下の音声ファイル。フォルダーが空なら何も読まない。
+   * 「音楽」の印 (IS_MUSIC) では絞らない。選んだフォルダーの音声は全部読む (Recordings/ など、印の付かない場所の曲も読めるように)
+   */
   fun scan(folders: List<ScanFolder>): List<TrackEntity> {
     val tracks = mutableListOf<TrackEntity>()
     // 古いSQLiteの変数の上限 (999) を超えないよう、1回の問い合わせのフォルダー数を抑える
     for (chunk in normalize(folders).chunked(FOLDERS_PER_QUERY)) {
       val selection = buildString {
-        append(MediaStore.Audio.Media.IS_MUSIC).append(" != 0 AND (")
+        append("(")
         chunk.indices.forEach { i ->
           if (i > 0) append(" OR ")
           append("(").append(MediaStore.Audio.Media.VOLUME_NAME).append(" = ? AND ")
@@ -63,7 +66,7 @@ class MediaStoreScanner @Inject constructor(
   fun existingIds(): Set<Long> {
     val ids = HashSet<Long>()
     context.contentResolver.query(
-      collection, arrayOf(MediaStore.Audio.Media._ID), "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null,
+      collection, arrayOf(MediaStore.Audio.Media._ID), null, null, null,
     )?.use { c ->
       val i = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
       while (c.moveToNext()) ids += c.getLong(i)
@@ -77,7 +80,7 @@ class MediaStoreScanner @Inject constructor(
     context.contentResolver.query(
       collection,
       arrayOf(MediaStore.Audio.Media.VOLUME_NAME, MediaStore.Audio.Media.RELATIVE_PATH),
-      "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null,
+      null, null, null,
     )?.use { c ->
       while (c.moveToNext()) {
         val volume = c.string(MediaStore.Audio.Media.VOLUME_NAME) ?: continue
