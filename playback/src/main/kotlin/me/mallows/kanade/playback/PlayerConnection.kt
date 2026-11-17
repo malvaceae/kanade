@@ -203,6 +203,9 @@ class PlayerConnection @Inject constructor(
   /** 再生位置が3秒を過ぎていれば曲の頭に、そうでなければ前の曲に戻る (最初の曲なら曲の頭に戻る) */
   fun previous() = withController { it.seekToPrevious() }
 
+  /** 前の曲そのものへ移る (アートワークのスワイプ用。再生位置に関係なく前の曲にする) */
+  fun previousTrack() = withController { it.seekToPreviousMediaItem() }
+
   fun seekTo(positionMs: Long) = withController {
     it.seekTo(positionMs)
     publish(it)

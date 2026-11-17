@@ -72,6 +72,8 @@ fun PlayerScreen(
   onTogglePlay: () -> Unit,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
+  /** アートワークを右へ払ったとき。「前へ」ボタンと違い、再生位置に関係なく前の曲へ移る */
+  onSwipePrevious: () -> Unit,
   onSeek: (Long) -> Unit,
   onToggleShuffle: () -> Unit,
   onCycleRepeat: () -> Unit,
@@ -136,7 +138,8 @@ fun PlayerScreen(
         hasNext = state.hasNext,
         hasPrevious = state.hasPrevious,
         onNext = onNext,
-        onPrevious = onPrevious,
+        onPrevious = onSwipePrevious,
+        onRestart = onPrevious,
       ) {
         val id = state.mediaStoreId
         if (id != null) {
@@ -295,6 +298,8 @@ private fun SwipeableArtwork(
   hasPrevious: Boolean,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
+  /** 前の曲がないときに右へ払ったら、曲の頭に戻す */
+  onRestart: () -> Unit,
   content: @Composable () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
@@ -331,7 +336,7 @@ private fun SwipeableArtwork(
                 value > threshold && canPrevious -> slide(1f, onPrevious)
                 else -> {
                   // 前の曲がないときに右へ払うと、ボタンと同じく曲の頭に戻す (アートワークは動かさない)
-                  if (value > threshold) onPrevious()
+                  if (value > threshold) onRestart()
                   offset.animateTo(0f, spring())
                 }
               }

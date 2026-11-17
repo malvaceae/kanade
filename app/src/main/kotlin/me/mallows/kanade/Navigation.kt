@@ -215,6 +215,7 @@ fun MainNavigation(
                   onTogglePlay = playerViewModel::togglePlayPause,
                   onNext = playerViewModel::next,
                   onPrevious = playerViewModel::previous,
+                  onSwipePrevious = playerViewModel::previousTrack,
                   onSeek = playerViewModel::seekTo,
                   onToggleShuffle = playerViewModel::toggleShuffle,
                   onCycleRepeat = playerViewModel::cycleRepeat,

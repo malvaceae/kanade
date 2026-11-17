@@ -46,6 +46,7 @@ class PlayerViewModel @Inject constructor(
   fun togglePlayPause() = connection.togglePlayPause()
   fun next() = connection.next()
   fun previous() = connection.previous()
+  fun previousTrack() = connection.previousTrack()
   fun seekTo(positionMs: Long) = connection.seekTo(positionMs)
   fun setSpeed(speed: Float) = connection.setSpeed(speed)
   fun toggleShuffle() = connection.toggleShuffle()
