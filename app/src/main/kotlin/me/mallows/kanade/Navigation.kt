@@ -100,8 +100,8 @@ fun MainNavigation(
   }
   val top = backStack.lastOrNull()
   val showMini = player.hasMedia && top != Player && top != Queue && top != Equalizer && !bottomBarActive.value
-  // 一覧の下の余白: ミニプレイヤーの高さと、画面下のナビゲーションバーの高さの分を空ける
-  val bottomPadding = (if (player.hasMedia) 112.dp else 24.dp) + navigationBarHeight()
+  // 一覧の下の余白: ミニプレイヤー (高さ64・下8) とナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
+  val bottomPadding = (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
 
   CompositionLocalProvider(
     LocalSnackbarHost provides snackbar,
