@@ -84,6 +84,8 @@ data class EqPreset(
       EqPreset("ボーカル", listOf(-2f, -2f, -1f, 0f, 2f, 4f, 4f, 2f, 0f, -1f), preampDb = -2f),
       EqPreset("クラシック", listOf(3f, 2f, 1f, 0f, 0f, 0f, -1f, -1f, 1f, 2f), preampDb = -1f),
       EqPreset("ロック", listOf(4f, 3f, 1f, -1f, -2f, -1f, 1f, 3f, 4f, 4f), preampDb = -2f),
+      EqPreset("ポップス", listOf(-1f, 2f, 3f, 4f, 3f, 0f, -1f, -1f, -1f, -1f), preampDb = -3f),
+      EqPreset("ライブ", listOf(-2f, 0f, 2f, 3f, 3f, 3f, 2f, 1f, 1f, 1f), preampDb = -2f),
       EqPreset("ラウドネス", listOf(5f, 4f, 2f, 0f, -1f, -1f, 0f, 2f, 4f, 5f), preampDb = -3f),
     )
   }
