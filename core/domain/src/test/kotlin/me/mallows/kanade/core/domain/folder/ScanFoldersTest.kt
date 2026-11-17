@@ -18,7 +18,7 @@ class ScanFoldersTest {
   }
 
   @Test
-  fun 末尾の区切りで似た名前のフォルダーを取り違えない() {
+  fun 末尾の区切りで似た名前のフォルダを取り違えない() {
     assertTrue(music.contains(ScanFolder.PRIMARY, "Music/"))
     assertTrue(music.contains(ScanFolder.PRIMARY, "Music/Artist/Album/"))
     assertFalse(music.contains(ScanFolder.PRIMARY, "MusicBackup/"))
@@ -69,7 +69,7 @@ class ScanFoldersTest {
   }
 
   @Test
-  fun 標準のフォルダー選択の文書IDからフォルダーを作る() {
+  fun 標準のフォルダ選択の文書IDからフォルダを作る() {
     val ext = ScanFolder.EXTERNAL_STORAGE_AUTHORITY
     assertEquals(ScanFolder(ScanFolder.PRIMARY, "Music/Artist/"), ScanFolder.fromTree(ext, "primary:Music/Artist"))
     assertEquals(ScanFolder("78e7-171e", "Music/"), ScanFolder.fromTree(ext, "78E7-171E:Music"))

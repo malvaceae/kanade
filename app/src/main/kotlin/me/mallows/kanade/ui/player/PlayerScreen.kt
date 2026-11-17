@@ -49,6 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import kotlinx.coroutines.launch
@@ -316,7 +318,13 @@ private fun SwipeableArtwork(
       }
       .pointerInput(Unit) {
         val width = size.width.toFloat()
-        val threshold = width * 0.25f
+        // ゆっくり動かしたときは幅の20%で切り替える。素早く払ったときは短い距離でも切り替える (一般的なスワイプと同じ)
+        val threshold = width * 0.2f
+        val flingVelocity = 600.dp.toPx()
+        val flingDistance = 24.dp.toPx()
+        val tracker = VelocityTracker()
+        // アートワークは指と一緒に動くので、中での位置ではなく動かした量の合計で速さを測る
+        var dragged = 0f
         /** 今のアートワークを [direction] の側へ抜き、曲を切り替えて、反対側から新しいアートワークを入れる */
         suspend fun slide(direction: Float, change: () -> Unit) {
           val before = currentId
@@ -328,15 +336,19 @@ private fun SwipeableArtwork(
           offset.animateTo(0f, tween(240, easing = LinearOutSlowInEasing))
         }
         detectHorizontalDragGestures(
+          onDragStart = { tracker.resetTracking(); dragged = 0f },
           onDragEnd = {
             val value = offset.value
+            val velocity = tracker.calculateVelocity().x
+            val toNext = value < -threshold || (value < -flingDistance && velocity < -flingVelocity)
+            val toPrevious = value > threshold || (value > flingDistance && velocity > flingVelocity)
             scope.launch {
               when {
-                value < -threshold && canNext -> slide(-1f, onNext)
-                value > threshold && canPrevious -> slide(1f, onPrevious)
+                toNext && canNext -> slide(-1f, onNext)
+                toPrevious && canPrevious -> slide(1f, onPrevious)
                 else -> {
                   // 前の曲がないときに右へ払うと、ボタンと同じく曲の頭に戻す (アートワークは動かさない)
-                  if (value > threshold) onRestart()
+                  if (toPrevious) onRestart()
                   offset.animateTo(0f, spring())
                 }
               }
@@ -345,6 +357,8 @@ private fun SwipeableArtwork(
           onDragCancel = { scope.launch { offset.animateTo(0f, spring()) } },
         ) { change, dragAmount ->
           change.consume()
+          dragged += dragAmount
+          tracker.addPosition(change.uptimeMillis, Offset(dragged, 0f))
           scope.launch { offset.snapTo(offset.value + dragAmount) }
         }
       },

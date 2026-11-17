@@ -42,7 +42,7 @@ import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.icons.KanadeIcons
 
 /**
- * スキャン対象のフォルダー。選んだフォルダーの一覧に、Androidの標準のフォルダー選択の画面でフォルダーを足す。
+ * スキャン対象のフォルダ。選んだフォルダの一覧に、Androidの標準のフォルダ選択の画面でフォルダを足す。
  * 「保存」で保存して読み直す。戻る・「キャンセル」では保存しない
  */
 @Composable
@@ -52,7 +52,7 @@ fun ScanFoldersScreen(onBack: () -> Unit, viewModel: ScanFoldersViewModel = hilt
   val showMessage = LocalShowMessage.current
   val res = LocalResources.current
 
-  // 標準のフォルダー選択。選んだフォルダーの場所だけを受け取り、開く許可は保存しない (曲はMediaStoreから読む)
+  // 標準のフォルダ選択。選んだフォルダの場所だけを受け取り、開く許可は保存しない (曲はMediaStoreから読む)
   val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
     if (uri == null) return@rememberLauncherForActivityResult
     val folder = ScanFolder.fromTree(uri.authority, DocumentsContract.getTreeDocumentId(uri))
@@ -118,7 +118,7 @@ fun ScanFoldersScreen(onBack: () -> Unit, viewModel: ScanFoldersViewModel = hilt
       horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
     ) {
       TextButton(onClick = onBack) { Text(stringResource(R.string.action_cancel)) }
-      Button(onClick = { viewModel.save(); onBack() }, enabled = viewModel.canSave(selected)) {
+      Button(onClick = { viewModel.save(); onBack() }) {
         Text(stringResource(R.string.action_save))
       }
     }

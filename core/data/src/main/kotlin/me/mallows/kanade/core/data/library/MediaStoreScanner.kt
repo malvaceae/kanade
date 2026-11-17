@@ -37,12 +37,12 @@ class MediaStoreScanner @Inject constructor(
   }
 
   /**
-   * 対象フォルダー ([folders]) の配下の音声ファイル。フォルダーが空なら何も読まない。
-   * 「音楽」の印 (IS_MUSIC) では絞らない。選んだフォルダーの音声は全部読む (Recordings/ など、印の付かない場所の曲も読めるように)
+   * 対象フォルダ ([folders]) の配下の音声ファイル。フォルダが空なら何も読まない。
+   * 「音楽」の印 (IS_MUSIC) では絞らない。選んだフォルダの音声は全部読む (Recordings/ など、印の付かない場所の曲も読めるように)
    */
   fun scan(folders: List<ScanFolder>): List<TrackEntity> {
     val tracks = mutableListOf<TrackEntity>()
-    // 古いSQLiteの変数の上限 (999) を超えないよう、1回の問い合わせのフォルダー数を抑える
+    // 古いSQLiteの変数の上限 (999) を超えないよう、1回の問い合わせのフォルダ数を抑える
     for (chunk in normalize(folders).chunked(FOLDERS_PER_QUERY)) {
       val selection = buildString {
         append("(")
@@ -58,7 +58,7 @@ class MediaStoreScanner @Inject constructor(
         while (c.moveToNext()) c.toTrack()?.let(tracks::add)
       }
     }
-    // フォルダーは親子を除いてあるので重ならないが、念のためIDで1つにする
+    // フォルダは親子を除いてあるので重ならないが、念のためIDで1つにする
     return tracks.distinctBy { it.mediaStoreId }
   }
 
@@ -74,7 +74,7 @@ class MediaStoreScanner @Inject constructor(
     return ids
   }
 
-  /** フォルダーごとの曲数 (直接入っている数)。フォルダーの選択画面を開いたときだけ使う */
+  /** フォルダごとの曲数 (直接入っている数)。フォルダの選択画面を開いたときだけ使う */
   fun folderCounts(): List<Triple<String, String, Int>> {
     val counts = HashMap<Pair<String, String>, Int>()
     context.contentResolver.query(

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 /** ライブラリ (タブで曲・アルバムなどを切り替える) */
 @Serializable data object Library : NavKey
 
-/** アルバム・アーティスト・フォルダー・ジャンルの中身。[kind]は GroupKind の名前 */
+/** アルバム・アーティスト・フォルダ・ジャンルの中身。[kind]は GroupKind の名前 */
 @Serializable data class GroupDetail(val kind: String, val key: String?, val title: String) : NavKey
 
 /** プレイリストの中身 */
@@ -18,7 +18,7 @@ import kotlinx.serialization.Serializable
 /** オープンソースのライセンス */
 @Serializable data object Licenses : NavKey
 
-/** スキャン対象のフォルダーの選択 */
+/** スキャン対象のフォルダの選択 */
 @Serializable data object ScanFolders : NavKey
 
 /** 検索 */

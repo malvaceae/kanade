@@ -192,7 +192,7 @@ private fun MenuRow(icon: ImageVector, title: String, count: String?, onClick: (
   }
 }
 
-/** ホームの項目 (すべての曲・アルバム・アーティスト・フォルダー・ジャンル・プレイリスト) の一覧 */
+/** ホームの項目 (すべての曲・アルバム・アーティスト・フォルダ・ジャンル・プレイリスト) の一覧 */
 @Composable
 fun CategoryScreen(
   category: LibraryTab,
@@ -203,7 +203,7 @@ fun CategoryScreen(
   onSearch: () -> Unit,
   playlists: @Composable (bottomPadding: Dp) -> Unit,
   bottomPadding: Dp,
-  /** 曲がないときの「フォルダーを選ぶ」 */
+  /** 曲がないときの「フォルダを選ぶ」 */
   onScanFolders: () -> Unit,
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -368,7 +368,7 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
 }
 
 /**
- * フォルダーは「Music/Album/」を「Music › Album」のように見せる。nameは「ボリューム名:フォルダー」。
+ * フォルダは「Music/Album/」を「Music › Album」のように見せる。nameは「ボリューム名:フォルダ」。
  * 内部ストレージ以外 (SDカードなど) は、先頭にストレージの名前を付ける
  */
 private fun GroupSummary.displayName(kind: GroupKind, volumeLabels: Map<String, String>): String? {
@@ -406,7 +406,7 @@ fun Loading() {
   Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 }
 
-/** ライブラリが空のとき。理由と、次にすること (フォルダーを選ぶ・再スキャン) をボタンで出す */
+/** ライブラリが空のとき。理由と、次にすること (フォルダを選ぶ・再スキャン) をボタンで出す */
 @Composable
 private fun Empty(onScanFolders: () -> Unit, onRescan: () -> Unit) {
   Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {

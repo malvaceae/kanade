@@ -46,7 +46,7 @@ class LibraryViewModel @Inject constructor(
   suspend fun groupTracks(kind: GroupKind, key: String?): List<TrackEntity> = library.groupTracks(kind, key).first()
 
   suspend fun exportBackup(uri: android.net.Uri) = backup.export(uri)
-  /** バックアップから戻す。スキャン対象のフォルダーも戻るので、読み直す */
+  /** バックアップから戻す。スキャン対象のフォルダも戻るので、読み直す */
   suspend fun restoreBackup(uri: android.net.Uri): RestoreResult =
     backup.restore(uri).also { library.launchInBackground { library.rescan() } }
 
@@ -100,7 +100,7 @@ class LibraryViewModel @Inject constructor(
   /** スキャン中か (どの画面から始めたスキャンでも) */
   val scanning: StateFlow<Boolean> = library.scanning
 
-  /** ボリューム名 → 画面に出す名前 (フォルダーの一覧で、内部ストレージ以外に付ける) */
+  /** ボリューム名 → 画面に出す名前 (フォルダの一覧で、内部ストレージ以外に付ける) */
   val volumeLabels: Map<String, String> by lazy { library.volumeLabels() }
 
   /** 本当の初回だけスキャンする。アプリを起動しただけでは読み直さない */

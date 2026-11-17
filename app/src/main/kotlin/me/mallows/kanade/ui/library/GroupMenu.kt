@@ -30,7 +30,7 @@ import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.selection.TrackActions
 
-/** 長押しで操作するアルバム・アーティスト・フォルダー・ジャンル */
+/** 長押しで操作するアルバム・アーティスト・フォルダ・ジャンル */
 data class GroupTarget(val kind: GroupKind, val key: String?, val title: String)
 
 /** アルバムなどを長押ししたときのメニュー。中の全曲をまとめて再生・追加する */

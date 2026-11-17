@@ -13,7 +13,7 @@ data class AlbumSummary(
   val dateAdded: Long,
 )
 
-/** アーティスト・フォルダー・ジャンルなど、名前でまとめた一覧の1行 */
+/** アーティスト・フォルダ・ジャンルなど、名前でまとめた一覧の1行 */
 data class GroupSummary(
   val name: String?,
   val trackCount: Int,

@@ -313,7 +313,7 @@ fun PlaylistDetailScreen(
                     selected = if (isSelected) selected - item.entryId else selected + item.entryId
                   } else {
                     if (item.track.excluded) {
-                      // スキャン対象外のフォルダーの曲は再生しない (プレイリストの登録は残す)
+                      // スキャン対象外のフォルダの曲は再生しない (プレイリストの登録は残す)
                       showMessage(res.getString(R.string.message_track_excluded))
                     } else {
                       if (item.track.mediaStoreId != playingId) actions.play(local.map { it.track }, index, source)

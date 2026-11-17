@@ -48,7 +48,7 @@ interface TrackDao {
 
   /**
    * スキャンの結果をデータベースに反映する。
-   * 対象フォルダーの曲 ([included]) は登録・更新し、対象外の印を外す。登録済みの曲はIDを引き継ぐ (プレイリストなどからの参照を保つため)。
+   * 対象フォルダの曲 ([included]) は登録・更新し、対象外の印を外す。登録済みの曲はIDを引き継ぐ (プレイリストなどからの参照を保つため)。
    * 登録済みで[included]にない曲は、端末にあれば ([existing]) 対象外の印を付けて残し、なければ消す (プレイリストからも消える)。
    */
   @Transaction
@@ -96,7 +96,7 @@ interface TrackDao {
   )
   fun observeArtistTracks(name: String?): Flow<List<TrackEntity>>
 
-  // --- フォルダー ---
+  // --- フォルダ ---
 
   @Query(
     """

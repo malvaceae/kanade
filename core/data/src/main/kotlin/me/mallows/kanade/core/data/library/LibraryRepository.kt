@@ -79,7 +79,7 @@ class LibraryRepository @Inject constructor(
   fun groupTracks(kind: GroupKind, name: String?): Flow<List<TrackEntity>> = when (kind) {
     GroupKind.ARTIST -> trackDao.observeArtistTracks(name)
     GroupKind.FOLDER -> {
-      // nameは「ボリューム名:フォルダー」(observeFoldersで作る)
+      // nameは「ボリューム名:フォルダ」(observeFoldersで作る)
       val key = name.orEmpty()
       trackDao.observeFolderTracks(key.substringBefore(':'), key.substringAfter(':'))
     }
@@ -97,13 +97,13 @@ class LibraryRepository @Inject constructor(
     return ids.mapNotNull(byId::get)
   }
 
-  /** 今の対象フォルダー。まだ選んでいなければ、今あるストレージそれぞれの「Music/」 */
+  /** 今の対象フォルダ。まだ選んでいなければ、今あるストレージそれぞれの「Music/」 */
   suspend fun scanFolders(): List<ScanFolder> =
     settings.scanFolders.first() ?: ScanFolder.defaults(withContext(Dispatchers.IO) { scanner.volumes() })
 
   /**
    * MediaStoreを読み直してデータベースに反映する。音楽ファイルの読み取り権限が必要。
-   * 対象フォルダーの外になった曲は消さずに印を付け、端末から消えた曲だけを消す。
+   * 対象フォルダの外になった曲は消さずに印を付け、端末から消えた曲だけを消す。
    * 同時に2つ走らないよう、前のスキャンが終わるのを待つ。
    */
   suspend fun rescan(): SyncResult = scanLock.withLock {
@@ -132,14 +132,14 @@ class LibraryRepository @Inject constructor(
     if (!settings.initialScanDone.first()) rescan()
   }
 
-  /** 対象フォルダーを保存し、変わっていれば読み直す */
+  /** 対象フォルダを保存して読み直す (0件でも保存する。そのときライブラリは空になる) */
   suspend fun setScanFolders(folders: List<ScanFolder>) {
-    val before = settings.scanFolders.first()
     settings.setScanFolders(folders)
-    if (before != settings.scanFolders.first()) rescan()
+    rescan()
   }
 
-  /** [folders]それぞれの配下の曲数 (端末にある音楽ファイルの数)。フォルダーの選択画面に出す */
+
+  /** [folders]それぞれの配下の曲数 (端末にある音楽ファイルの数)。フォルダの選択画面に出す */
   suspend fun trackCounts(folders: List<ScanFolder>): Map<ScanFolder, Int> = withContext(Dispatchers.IO) {
     val counts = scanner.folderCounts()
     folders.associateWith { f -> counts.filter { (volume, path, _) -> f.contains(volume, path) }.sumOf { it.third } }

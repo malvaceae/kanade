@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -185,7 +186,8 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
     SwitchRow(stringResource(R.string.eq_limiter), stringResource(R.string.eq_limiter_desc), settings.limiter, viewModel::setLimiter, dim)
 
     // 音量と左右 (EQがオフでも効く)
-    SectionTitle(stringResource(R.string.eq_section_volume), stringResource(R.string.eq_section_volume_note))
+    // 上のスイッチの行は下に余白を持つので、そのぶん詰めて「トーン」の上と同じ間隔にする
+    SectionTitle(stringResource(R.string.eq_section_volume), stringResource(R.string.eq_section_volume_note), top = 4.dp)
     Row(Modifier.padding(horizontal = 16.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
       Text(stringResource(R.string.eq_balance), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
       Slider(
@@ -349,8 +351,8 @@ private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, mo
 
 /** 見出し。[note]は見出しの横に小さく出す補足 */
 @Composable
-private fun SectionTitle(title: String, note: String?) {
-  Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
+private fun SectionTitle(title: String, note: String?, top: Dp = 20.dp) {
+  Row(Modifier.padding(start = 16.dp, end = 16.dp, top = top, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
     Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
     if (note != null) {
       Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp))

@@ -59,7 +59,7 @@ class SettingsRepository @Inject constructor(
   }
 
   /**
-   * スキャン対象のフォルダー。まだ保存していなければnull (初期値の「各ストレージのMusic/」を使う)。
+   * スキャン対象のフォルダ。まだ保存していなければnull (初期値の「各ストレージのMusic/」を使う)。
    * 空のリストは「1つも選んでいない」で、nullとは区別する
    */
   val scanFolders: Flow<List<ScanFolder>?> = dataStore.data.map { prefs ->

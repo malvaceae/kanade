@@ -63,7 +63,7 @@ class GroupDetailViewModel @AssistedInject constructor(
   }
 }
 
-/** アルバム・アーティスト・フォルダー・ジャンルの中の曲 */
+/** アルバム・アーティスト・フォルダ・ジャンルの中の曲 */
 @Composable
 fun GroupDetailScreen(
   key: GroupDetail,

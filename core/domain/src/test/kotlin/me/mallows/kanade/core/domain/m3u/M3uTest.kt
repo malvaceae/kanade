@@ -25,7 +25,7 @@ class M3uTest {
   }
 
   @Test
-  fun ファイル名で照合し同名はフォルダーで区別する() {
+  fun ファイル名で照合し同名はフォルダで区別する() {
     val m = PathMatcher(
       listOf(
         1L to "Music/AlbumA/01 Intro.flac",

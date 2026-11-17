@@ -26,13 +26,13 @@ data class TrackEntity(
   val mime: String?,
   @ColumnInfo(name = "date_added") val dateAdded: Long,
   @ColumnInfo(name = "date_modified") val dateModified: Long,
-  /** 「Music/Album/」のようなストレージ内のフォルダー */
+  /** 「Music/Album/」のようなストレージ内のフォルダ */
   @ColumnInfo(name = "relative_path") val relativePath: String? = null,
   val genre: String? = null,
   /** MediaStoreのボリューム名 ("external_primary"、SDカードは"1234-abcd"など) */
   val volume: String? = null,
   /**
-   * 端末にはあるが、スキャン対象のフォルダーの外にある曲。消さずに残し (プレイリストの登録と再生回数を守るため)、
+   * 端末にはあるが、スキャン対象のフォルダの外にある曲。消さずに残し (プレイリストの登録と再生回数を守るため)、
    * ライブラリの一覧には出さない
    */
   @ColumnInfo(defaultValue = "0") val excluded: Boolean = false,
