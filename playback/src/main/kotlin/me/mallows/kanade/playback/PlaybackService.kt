@@ -112,6 +112,8 @@ class PlaybackService : MediaSessionService() {
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
     PlayCounter(playStatsDao, scope).attach(player)
+    // シャッフルは今の曲を先頭にした順にする (途中の曲からオンにしても全曲が流れるように)
+    player.keepShuffleFromCurrent()
     // ReplayGainの設定。切り替えたら今の曲にもすぐ反映する
     scope.launch {
       outputSettings.replayGain.collect { mode ->
