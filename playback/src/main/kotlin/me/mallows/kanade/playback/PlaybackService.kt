@@ -137,7 +137,12 @@ class PlaybackService : MediaSessionService() {
           error.errorCode == PlaybackException.ERROR_CODE_IO_NO_PERMISSION
         val unreadable = notFound || error.errorCode in UNREADABLE_ERRORS
         Timber.w(error, "再生できない曲: %s", player.currentMediaItem?.mediaId)
-        if (!unreadable || player.mediaItemCount == 0) return
+        if (!unreadable) {
+          // 音声の出力の失敗など、どの曲でも同じように失敗するエラーは、飛ばし続けないよう止めたままにし、理由だけ知らせる
+          playbackEvents.emit(PlaybackEvent.ERROR)
+          return
+        }
+        if (player.mediaItemCount == 0) return
         playbackEvents.emit(if (notFound) PlaybackEvent.FILE_NOT_FOUND else PlaybackEvent.UNPLAYABLE)
         val wasLast = player.currentMediaItemIndex == player.mediaItemCount - 1
         player.removeMediaItem(player.currentMediaItemIndex)

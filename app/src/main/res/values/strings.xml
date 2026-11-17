@@ -14,6 +14,7 @@
     <string name="library_empty_no_folders">スキャン対象のフォルダーが選ばれていません。右上の︙から「スキャン対象のフォルダー」で選んでください。</string>
     <string name="message_file_not_found">ファイルが見つからないため、スキップしました。再スキャンしてください。</string>
     <string name="message_unplayable">再生できないファイルのため、スキップしました</string>
+    <string name="message_playback_error">再生できませんでした</string>
     <string name="action_rescan">再スキャン</string>
     <string name="scan_folders_title">スキャン対象のフォルダー</string>
     <string name="scan_folders_hint">選んだフォルダーの中の曲 (中のフォルダーも含む) だけを読み込みます。</string>

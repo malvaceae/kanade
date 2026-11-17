@@ -98,6 +98,7 @@ fun MainNavigation(
       val text = when (event) {
         PlaybackEvent.FILE_NOT_FOUND -> R.string.message_file_not_found
         PlaybackEvent.UNPLAYABLE -> R.string.message_unplayable
+        PlaybackEvent.ERROR -> R.string.message_playback_error
       }
       snackbar.showMessage(resources.getString(text))
     }
