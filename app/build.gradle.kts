@@ -14,11 +14,27 @@ android {
     minSdk = 31
     targetSdk = 37
     versionCode = 1
-    versionName = "1.0"
+    versionName = "1.0.0"
+  }
+
+  // リリース用の鍵。場所とパスワードはリポジトリの外 (~/.gradle/gradle.properties) に書く。
+  // 書かれていなければ署名しない (CIなど)
+  val releaseStoreFile = providers.gradleProperty("kanade.release.storeFile").orNull
+  signingConfigs {
+    if (releaseStoreFile != null) {
+      create("release") {
+        storeFile = file(releaseStoreFile)
+        storePassword = providers.gradleProperty("kanade.release.storePassword").get()
+        keyAlias = providers.gradleProperty("kanade.release.keyAlias").get()
+        // PKCS12の鍵は、鍵のパスワードがキーストアのパスワードと同じ
+        keyPassword = providers.gradleProperty("kanade.release.keyPassword").orElse(providers.gradleProperty("kanade.release.storePassword")).get()
+      }
+    }
   }
 
   buildTypes {
     release {
+      signingConfig = signingConfigs.findByName("release")
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
