@@ -294,7 +294,8 @@ fun MainNavigation(
           modifier = Modifier
             .align(Alignment.BottomCenter)
             .navigationBarsPadding()
-            .padding(bottom = if (showMini || bottomBarActive.value) 84.dp else 8.dp),
+            // 簡易プレイヤーのある画面とない画面で知らせの位置が動かないよう、再生中の曲があれば常に簡易プレイヤーの上に出す
+            .padding(bottom = if (player.hasMedia || bottomBarActive.value) 84.dp else 8.dp),
         )
       }
     }
