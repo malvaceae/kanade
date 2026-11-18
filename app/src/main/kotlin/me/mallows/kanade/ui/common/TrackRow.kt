@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -130,9 +131,17 @@ fun GroupRow(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(14.dp),
   ) {
-    // 選択中は曲の一覧と同じ丸い印を左に出す
-    if (selected != null) SelectionCheck(selected)
-    if (artUri != null) TrackArtwork(uri = artUri, size = 52.dp, cornerRadius = 8.dp)
+    // 選択中は、アルバムの格子と同じくアートワークの右上に丸い印を重ねる (行の中身を横にずらさない)
+    Box {
+      if (artUri != null) TrackArtwork(uri = artUri, size = 52.dp, cornerRadius = 8.dp)
+      if (selected != null) {
+        SelectionCheck(
+          selected,
+          Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp)
+            .background(MaterialTheme.colorScheme.surface, CircleShape),
+        )
+      }
+    }
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)

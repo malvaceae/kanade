@@ -14,6 +14,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.asPaddingValues
@@ -90,6 +93,9 @@ fun SelectableTrackList(
   val snackbar = LocalSnackbarHost.current
   val scope = rememberCoroutineScope()
   val barActive = LocalBottomBarActive.current
+  /** 見出しの行の高さ (px)。選択中の上のバーをこの高さにして、見出しにぴったり重ねる */
+  var headerHeight by remember { mutableIntStateOf(0) }
+  val density = LocalDensity.current
 
   // 一覧が変わって消えた曲は選択から外す
   val ids = remember(tracks) { tracks.map { it.id }.toSet() }
@@ -124,7 +130,7 @@ fun SelectableTrackList(
           ),
       ) {
         // 見出しは選択中も残す (消すと一覧がずれる)。選択中のバーは上に重ねて出す
-        if (header != null) item(key = "header") { header() }
+        if (header != null) item(key = "header") { Box(Modifier.onSizeChanged { headerHeight = it.height }) { header() } }
         itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
           val isSelected = track.id in selected
           TrackRow(
@@ -162,6 +168,7 @@ fun SelectableTrackList(
         allSelected = selected.size == tracks.size,
         onSelectAll = { selected = if (selected.size == tracks.size) emptySet() else ids },
         onClose = clear,
+        height = with(density) { headerHeight.toDp() }.coerceAtLeast(48.dp),
         modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
       )
     }

@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.mallows.kanade.R
@@ -40,9 +41,11 @@ fun SelectionTopBar(
   onClose: () -> Unit,
   modifier: Modifier = Modifier,
   text: String = stringResource(R.string.selection_count, count),
+  /** 重ねる見出しの行と同じ高さにする (最初の行を隠さず、見出しも覗かせない) */
+  height: Dp = 48.dp,
 ) {
   Row(
-    modifier = modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+    modifier = modifier.fillMaxWidth().height(height).padding(horizontal = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IconButton(onClick = onClose) { Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_clear_selection)) }

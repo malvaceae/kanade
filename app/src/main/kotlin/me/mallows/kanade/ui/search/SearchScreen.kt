@@ -13,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import me.mallows.kanade.playback.PlaySource
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,7 +122,8 @@ fun SearchScreen(
         tracks = results,
         playingMediaStoreId = playingMediaStoreId,
         actions = actions,
-        bottomPadding = bottomPadding,
+        // キーボードが出ている間は、最後の曲までキーボードの上にスクロールできるようにする
+        bottomPadding = maxOf(bottomPadding, WindowInsets.ime.asPaddingValues().calculateBottomPadding() + 16.dp),
         source = PlaySource("search:$query", stringResource(R.string.action_search)),
         header = { ListHeader(stringResource(R.string.library_summary, results.size, (results.sumOf { it.durationMs } / 60_000).toInt())) },
       )
