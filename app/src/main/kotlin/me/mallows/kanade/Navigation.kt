@@ -14,10 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.animation.core.animateFloatAsState
@@ -152,7 +153,7 @@ fun MainNavigation(
   // 選択中は選択の操作バーがその場所を使う
   val showNavBar = top != ScanFolders && !bottomBarActive.value
   val navBar = if (showNavBar) AppNavBarHeight else 0.dp
-  // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンスの画面には出さない
+  // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンス・フォルダの選択の画面には出さない
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
   // 一覧の下の余白: 固定のメニュー、簡易プレイヤー (高さ64・下8)、ナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
   val bottomPadding = AppNavBarHeight + (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
@@ -319,28 +320,23 @@ fun MainNavigation(
             }
           },
         )
-        // キーボードが出始めたら、簡易プレイヤーと下のメニューをすぐ薄くして消す
-        // (下からせり上がるキーボードに途中まで隠れる見え方を避ける)。
-        // 閉じ始めたらすぐ元に戻し、下がっていくキーボードの後ろから現れるようにする (後から浮かび上がらせない)
-        val imeOpening = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
-        val barsAlpha by animateFloatAsState(if (imeOpening) 0f else 1f, if (imeOpening) tween(100) else snap(), label = "bars")
-        // 検索の画面では、キーボードが1度出始めるまで簡易プレイヤーを出さない (開くとすぐキーボードが出るため)。
-        // 簡易プレイヤーのない画面 (EQなど) から開いたときに、一瞬だけ現れてからキーボードに隠れるのを避ける。
-        // 時間で待たず、検索の画面にいる間に実際にキーボードが出始めたかで決める
+        // 簡易プレイヤーと下のメニューは、キーボードが出たらその下に隠れるだけにする (Androidの普通の動き)。
+        // 検索を開くとすぐキーボードが出るので、直前の画面に簡易プレイヤーがなかったとき (EQ・ライセンス・プレイヤー) は、
+        // キーボードが1度出終わるまで簡易プレイヤーを出さない (一瞬だけ現れてから隠れるのを避ける)。
+        // 出始めではキーボードがまだ簡易プレイヤーの位置まで届いていないので、出終わるのを待つ。
+        // 直前の画面に出ていたときは、そのまま残してキーボードの下に隠す
+        val density = LocalDensity.current
+        val imeTarget = WindowInsets.imeAnimationTarget.getBottom(density)
+        val imeNow = WindowInsets.ime.getBottom(density)
+        val imeShownFully = imeTarget > 0 && imeNow >= imeTarget
         var searchImeShown by remember { mutableStateOf(false) }
-        LaunchedEffect(top, imeOpening) {
-          searchImeShown = top == Search && (searchImeShown || imeOpening)
+        LaunchedEffect(top, imeShownFully) {
+          searchImeShown = top == Search && (searchImeShown || imeShownFully)
         }
-        val searchOpening = top == Search && !searchImeShown
-        val miniAlpha by animateFloatAsState(
-          if (imeOpening || searchOpening) 0f else 1f,
-          when {
-            searchOpening -> snap()
-            imeOpening -> tween(100)
-            else -> snap()
-          },
-          label = "mini",
-        )
+        /** 検索以外の直前の画面で、簡易プレイヤーを出していたか */
+        var miniShownBefore by remember { mutableStateOf(false) }
+        SideEffect { if (top != Search) miniShownBefore = showMini }
+        val searchOpening = top == Search && !miniShownBefore && !searchImeShown
         if (showMini) {
           MiniPlayer(
             state = player,
@@ -350,8 +346,7 @@ fun MainNavigation(
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
               .padding(bottom = navBar + 8.dp)
-              // 検索を開いた瞬間は、アニメーションを待たずにその場で消す (1コマだけ出るのを避ける)
-              .graphicsLayer { alpha = if (searchOpening) 0f else miniAlpha },
+              .graphicsLayer { alpha = if (searchOpening) 0f else 1f },
           )
         }
         if (showNavBar) {
@@ -365,7 +360,7 @@ fun MainNavigation(
               else -> NavItem.LIBRARY
             },
             onSelect = ::navigate,
-            modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = barsAlpha },
+            modifier = Modifier.align(Alignment.BottomCenter),
           )
         }
         pendingAdd?.let { tracks ->
