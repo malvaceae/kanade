@@ -47,6 +47,9 @@ enum class AlbumSort(override val key: String, override val label: Int, override
   DATE_ADDED("date_added", R.string.sort_date_added, compareBy { it.dateAdded }),
 }
 
+/** アーティストの画面のアルバムの並べ方 (アーティストはどれも同じなので除く) */
+val ARTIST_ALBUM_SORTS: Array<AlbumSort> by lazy { arrayOf(AlbumSort.YEAR, AlbumSort.TITLE, AlbumSort.DATE_ADDED) }
+
 enum class GroupSort(override val key: String, override val label: Int, override val comparator: Comparator<GroupSummary>) : SortOption<GroupSummary> {
   NAME("name", R.string.sort_name, nullsLastBy { it.name }),
   TRACK_COUNT("track_count", R.string.sort_track_count, compareBy<GroupSummary> { it.trackCount }.then(nullsLastBy { it.name })),

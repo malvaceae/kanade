@@ -100,6 +100,8 @@ fun ArtistDetailScreen(
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
   // 格子か一覧かは、ライブラリのアルバムと同じ設定を使う
   val grid by library.albumGrid.collectAsStateWithLifecycle()
+  val sort by library.artistAlbumSort.collectAsStateWithLifecycle()
+  var showSort by rememberSaveable { mutableStateOf(false) }
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
@@ -110,8 +112,11 @@ fun ArtistDetailScreen(
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.weight(1f).padding(start = 4.dp, end = 12.dp),
       )
+      // プレイリストの画面と同じく、見せ方の操作は題名の行に置く
+      AlbumViewToggle(grid) { library.setAlbumGrid(!grid) }
+      SortButton(sort != null) { showSort = true }
     }
-    val list = albums ?: return@Column Loading()
+    val list = albums?.sortedWith(sort, ARTIST_ALBUM_SORTS, AlbumSort.YEAR) ?: return@Column Loading()
     val all = tracks.orEmpty()
     val source = PlaySource("group:${GroupKind.ARTIST.name}:${key.name}", key.title)
     Box(Modifier.weight(1f)) {
@@ -129,7 +134,6 @@ fun ArtistDetailScreen(
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               modifier = Modifier.weight(1f),
             )
-            AlbumViewToggle(grid) { library.setAlbumGrid(!grid) }
             FilledTonalIconButton(onClick = { actions.shufflePlay(all, source) }, enabled = all.isNotEmpty(), shape = CircleShape) {
               Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
             }
@@ -146,5 +150,9 @@ fun ArtistDetailScreen(
         bottomPadding = bottomPadding,
       )
     }
+  }
+  if (showSort) {
+    SortSheet(ARTIST_ALBUM_SORTS, sort, AlbumSort.YEAR,
+      onSelect = { library.setSort(SortCategory.ARTIST_ALBUMS, it) }, onDismiss = { showSort = false })
   }
 }

@@ -32,6 +32,8 @@ import me.mallows.kanade.core.data.settings.SortSetting
 object SortCategory {
   const val TRACKS = "tracks"
   const val ALBUMS = "albums"
+  /** アーティストの画面のアルバム (ライブラリのアルバムとは別に覚える) */
+  const val ARTIST_ALBUMS = "artist_albums"
   fun group(kind: GroupKind) = kind.name.lowercase()
 }
 
@@ -63,6 +65,7 @@ class LibraryViewModel @Inject constructor(
 
   val trackSort: StateFlow<SortSetting?> = settings.sort(SortCategory.TRACKS).state(null)
   val albumSort: StateFlow<SortSetting?> = settings.sort(SortCategory.ALBUMS).state(null)
+  val artistAlbumSort: StateFlow<SortSetting?> = settings.sort(SortCategory.ARTIST_ALBUMS).state(null)
   val albumGrid: StateFlow<Boolean> = settings.gridView(SortCategory.ALBUMS).map { it ?: true }.state(true)
 
   /** null は読み込み前 */
