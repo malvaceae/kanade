@@ -40,6 +40,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.LaunchedEffect
 import me.mallows.kanade.ui.selection.navigationBarHeight
 import me.mallows.kanade.ui.common.LocalPlaySource
@@ -106,6 +109,7 @@ fun PlaylistDetailScreen(
   ),
 ) {
   val playlist by viewModel.playlist.collectAsStateWithLifecycle()
+
   val items by viewModel.items.collectAsStateWithLifecycle()
   val sort by viewModel.sort.collectAsStateWithLifecycle()
   val sorted = sort.sort != null
@@ -113,6 +117,14 @@ fun PlaylistDetailScreen(
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
+  // カバー画像は、Androidの標準の写真の選択画面で選ぶ
+  val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+    if (uri != null) {
+      scope.launch {
+        if (!viewModel.setCover(uri)) snackbar.showMessage(res.getString(R.string.message_cover_failed))
+      }
+    }
+  }
   val showMessage = LocalShowMessage.current
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
@@ -234,6 +246,19 @@ fun PlaylistDetailScreen(
                   }
                 },
               )
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.playlist_cover_change)) },
+                onClick = {
+                  menuOpen = false
+                  coverPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+              )
+              if (playlist?.cover != null) {
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.playlist_cover_reset)) },
+                  onClick = { menuOpen = false; scope.launch { viewModel.clearCover() } },
+                )
+              }
               DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = { menuOpen = false; sheet = "delete" })
             }
           }

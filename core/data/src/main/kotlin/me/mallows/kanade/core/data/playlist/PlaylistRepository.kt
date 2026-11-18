@@ -14,6 +14,7 @@ import me.mallows.kanade.core.data.db.PlaylistSummary
 @Singleton
 class PlaylistRepository @Inject constructor(
   private val dao: PlaylistDao,
+  private val covers: PlaylistCovers,
 ) {
 
   val playlists: Flow<List<PlaylistSummary>> = dao.observePlaylists()
@@ -29,7 +30,27 @@ class PlaylistRepository @Inject constructor(
 
   suspend fun rename(id: Long, name: String) = dao.rename(id, name, System.currentTimeMillis())
 
-  suspend fun delete(id: Long) = dao.deletePlaylist(id)
+  suspend fun delete(id: Long) {
+    val cover = dao.cover(id)
+    dao.deletePlaylist(id)
+    covers.delete(cover)
+  }
+
+  /** 選んだ画像をカバーにする。読めない画像ならfalse */
+  suspend fun setCover(id: Long, image: android.net.Uri): Boolean {
+    val path = covers.save(id, image) ?: return false
+    val old = dao.cover(id)
+    dao.setCover(id, path)
+    covers.delete(old)
+    return true
+  }
+
+  /** カバーを先頭の曲のアートワークに戻す */
+  suspend fun clearCover(id: Long) {
+    val old = dao.cover(id)
+    dao.setCover(id, null)
+    covers.delete(old)
+  }
 
   /** [trackIds]のうち、すでにプレイリストに入っている曲 (アーティスト・曲名・長さが同じ曲を含む。[duplicateKey]) */
   suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> {

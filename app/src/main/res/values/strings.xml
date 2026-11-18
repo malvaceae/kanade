@@ -96,6 +96,9 @@
     <string name="playlist_name">名前</string>
     <string name="playlist_rename">名前を変更</string>
     <string name="playlist_delete">プレイリストを削除</string>
+    <string name="playlist_cover_change">カバー画像を変更</string>
+    <string name="playlist_cover_reset">カバー画像を元に戻す</string>
+    <string name="message_cover_failed">画像を読み込めませんでした</string>
     <string name="playlist_delete_confirm_title">「%1$s」を削除しますか？</string>
     <string name="playlist_delete_confirm">曲のファイルは削除されません。</string>
     <string name="playlists_delete_confirm_title">%1$d件のプレイリストを削除しますか？</string>

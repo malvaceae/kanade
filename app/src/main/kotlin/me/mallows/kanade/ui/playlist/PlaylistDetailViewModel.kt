@@ -111,6 +111,11 @@ class PlaylistDetailViewModel @AssistedInject constructor(
 
   suspend fun delete() = repository.delete(playlistId)
 
+  /** 選んだ画像をカバーにする。読めない画像ならfalse */
+  suspend fun setCover(image: android.net.Uri): Boolean = repository.setCover(playlistId, image)
+
+  suspend fun clearCover() = repository.clearCover(playlistId)
+
   /** 保存された順番の総数 (「1 ~ N」の案内用) */
   fun count(): Int = stored.value?.size ?: 0
 

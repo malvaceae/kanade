@@ -20,6 +20,8 @@ data class PlaylistEntity(
   val name: String,
   @ColumnInfo(name = "created_at") val createdAt: Long,
   @ColumnInfo(name = "updated_at") val updatedAt: Long,
+  /** 自分で選んだカバー画像 (アプリ内に保存したファイルのパス)。nullなら先頭の曲のアートワーク */
+  val cover: String? = null,
 )
 
 /**
@@ -66,7 +68,12 @@ interface PlaylistDao {
   @Query(
     """
     SELECT p.id AS id, p.name AS name, COUNT(t.id) AS trackCount,
-      COALESCE(SUM(t.duration_ms), 0) AS durationMs, MIN(t.uri) AS artUri
+      COALESCE(SUM(t.duration_ms), 0) AS durationMs,
+      COALESCE(
+        'file://' || p.cover,
+        (SELECT t2.uri FROM playlist_entry e2 JOIN track t2 ON t2.id = e2.track_id
+          WHERE e2.playlist_id = p.id ORDER BY e2.position LIMIT 1)
+      ) AS artUri
     FROM playlist p
     LEFT JOIN playlist_entry e ON e.playlist_id = p.id
     LEFT JOIN track t ON t.id = e.track_id
@@ -77,6 +84,12 @@ interface PlaylistDao {
 
   @Query("SELECT * FROM playlist WHERE id = :id")
   fun observePlaylist(id: Long): Flow<PlaylistEntity?>
+
+  @Query("SELECT cover FROM playlist WHERE id = :id")
+  suspend fun cover(id: Long): String?
+
+  @Query("UPDATE playlist SET cover = :cover WHERE id = :id")
+  suspend fun setCover(id: Long, cover: String?)
 
   @Query(
     """

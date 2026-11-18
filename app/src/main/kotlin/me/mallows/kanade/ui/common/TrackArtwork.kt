@@ -49,7 +49,11 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
   val bitmap by produceState(initialValue = ThumbnailCache.get(key), key) {
     if (value != null || ThumbnailCache.isMissing(key)) return@produceState
     value = withContext(Dispatchers.IO) {
-      runCatching { context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null) }
+      runCatching {
+        // プレイリストのカバー (アプリ内のファイル) はそのまま縮めて読む。曲はMediaStoreの縮小画像を使う
+        if (uri.startsWith("file://")) decodeFile(uri.removePrefix("file://"), px)
+        else context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null)
+      }
         .getOrNull()
         .also { ThumbnailCache.put(key, it) }
     }
@@ -78,4 +82,13 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       )
     }
   }
+}
+
+/** ファイルの画像を、[px]より小さくならない範囲で縮めて読む */
+private fun decodeFile(path: String, px: Int): android.graphics.Bitmap? {
+  val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  android.graphics.BitmapFactory.decodeFile(path, bounds)
+  var sample = 1
+  while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
+  return android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
 }

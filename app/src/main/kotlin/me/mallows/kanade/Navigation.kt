@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.unit.Dp
 import me.mallows.kanade.ui.common.NavItem
 import me.mallows.kanade.ui.common.AppNavBarHeight
@@ -74,6 +79,7 @@ import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
 import me.mallows.kanade.ui.selection.navigationBarHeight
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainNavigation(
   openPlayerRequest: MutableState<Boolean> = remember { mutableStateOf(false) },
@@ -303,6 +309,10 @@ fun MainNavigation(
             }
           },
         )
+        // キーボードが出始めたら、簡易プレイヤーと下のメニューをすぐ薄くして消す
+        // (下からせり上がるキーボードに途中まで隠れる見え方を避ける。Googleのアプリと同じ)
+        val imeVisible = WindowInsets.isImeVisible
+        val barsAlpha by animateFloatAsState(if (imeVisible) 0f else 1f, tween(if (imeVisible) 100 else 200), label = "bars")
         if (showMini) {
           MiniPlayer(
             state = player,
@@ -318,7 +328,8 @@ fun MainNavigation(
             modifier = Modifier
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
-              .padding(bottom = navBar + 8.dp),
+              .padding(bottom = navBar + 8.dp)
+              .graphicsLayer { alpha = barsAlpha },
           )
         }
         if (showNavBar) {
@@ -330,7 +341,7 @@ fun MainNavigation(
               else -> NavItem.LIBRARY
             },
             onSelect = ::navigate,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = barsAlpha },
           )
         }
         pendingAdd?.let { tracks ->
