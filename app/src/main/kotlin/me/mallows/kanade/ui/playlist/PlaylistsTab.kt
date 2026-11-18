@@ -32,11 +32,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import me.mallows.kanade.ui.common.showMessage
-import me.mallows.kanade.ui.common.LocalSnackbarHost
-import androidx.compose.ui.platform.LocalResources
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,21 +72,6 @@ fun PlaylistsTab(
   var selectedIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
   var deletingSelected by remember { mutableStateOf<List<PlaylistSummary>?>(null) }
   val scope = rememberCoroutineScope()
-  val snackbar = LocalSnackbarHost.current
-  val res = LocalResources.current
-  val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-    if (uri != null) {
-      scope.launch {
-        runCatching { viewModel.importM3u(uri) }
-          .onSuccess { r ->
-            val base = res.getQuantityString(R.plurals.message_m3u_imported, r.added, r.added, r.name)
-            val missing = if (r.missing > 0) res.getString(R.string.message_m3u_missing, r.missing) else ""
-            snackbar.showMessage(base + missing)
-          }
-          .onFailure { snackbar.showMessage(res.getString(R.string.message_m3u_failed)) }
-      }
-    }
-  }
   val list = playlists ?: return Loading()
 
   val selecting = selectedIds.isNotEmpty()
@@ -99,7 +79,6 @@ fun PlaylistsTab(
     LazyColumn(contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
       item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
       item { IconRow(KanadeIcons.Plus, stringResource(R.string.playlist_new)) { creating = true } }
-      item { IconRow(KanadeIcons.AddToPlaylist, stringResource(R.string.playlist_import_m3u)) { importLauncher.launch(M3U_TYPES) } }
       items(list, key = { it.id }) { p ->
         val toggle = { selectedIds = if (p.id in selectedIds) selectedIds - p.id else selectedIds + p.id }
         GroupRow(
@@ -189,12 +168,6 @@ fun PlaylistNameDialog(title: String, initial: String, onConfirm: (String) -> Un
     dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
   )
 }
-
-/** M3U・M3U8として選べるファイルの種類 (端末によって種類の付き方が違うため広めにとる) */
-private val M3U_TYPES = arrayOf(
-  "audio/x-mpegurl", "audio/mpegurl", "application/x-mpegurl", "application/vnd.apple.mpegurl",
-  "text/plain", "application/octet-stream",
-)
 
 /** アイコンつきの1行 (新しいプレイリスト・自動のリスト) */
 @Composable

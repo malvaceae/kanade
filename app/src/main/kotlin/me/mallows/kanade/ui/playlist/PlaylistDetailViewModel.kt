@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import me.mallows.kanade.core.data.db.PlaylistEntity
 import me.mallows.kanade.core.data.db.PlaylistItem
-import me.mallows.kanade.core.data.playlist.M3uFiles
 import me.mallows.kanade.core.data.playlist.PlaylistRepository
 import me.mallows.kanade.core.domain.reorder.Positioned
 import me.mallows.kanade.core.domain.reorder.PositionedListEditor
@@ -35,11 +34,7 @@ data class PlaylistSort(val sort: TrackSort?, val descending: Boolean = false)
 class PlaylistDetailViewModel @AssistedInject constructor(
   @Assisted val playlistId: Long,
   private val repository: PlaylistRepository,
-  private val m3u: M3uFiles,
 ) : ViewModel() {
-
-  /** M3U8で書き出す。戻り値は書いた曲数 */
-  suspend fun exportM3u(uri: android.net.Uri): Int = m3u.export(playlistId, uri)
 
 
   val playlist: StateFlow<PlaylistEntity?> =
