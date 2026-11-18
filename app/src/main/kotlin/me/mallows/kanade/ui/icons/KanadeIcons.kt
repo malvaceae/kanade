@@ -52,6 +52,8 @@ object KanadeIcons {
   val AddToQueue = stroke("add_queue", "M4 6h16", "M4 11h10", "M4 16h7", "M18 13v8", "M14 17h8")
   val AddToPlaylist = stroke("add_playlist", "M4 6h11", "M4 11h11", "M4 16h7", "M18 9v8", "M14 13h8")
   val Delete = stroke("delete", "M5 7h14", "M10 7V5h4v2", "M7 7l1 12h8l1-12")
+  /** イコライザー: 縦の3本の線とつまみ */
+  val Equalizer = stroke("equalizer", "M6 4v16", "M12 4v16", "M18 4v16", "M4 14h4", "M10 8h4", "M16 16h4")
   val Queue = stroke("queue", "M4 6h16", "M4 12h16", "M4 18h10")
   val Timer = stroke("timer", "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M12 9v4l2.5 2", "M9 2h6")
   val Info = stroke("info", "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M12 11v5", "M12 7.5h.01")

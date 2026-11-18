@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
+import me.mallows.kanade.ui.common.NavItem
+import me.mallows.kanade.ui.common.AppNavBarHeight
+import me.mallows.kanade.ui.common.AppNavBar
 import me.mallows.kanade.ui.common.showMessage
 import me.mallows.kanade.playback.PlaybackEvent
 import androidx.compose.ui.platform.LocalResources
@@ -136,10 +140,28 @@ fun MainNavigation(
       backStack.removeLastOrNull()
     }
   }
+  // 画面下の固定のメニュー。プレイヤーとフォルダの選択 (下に保存・キャンセルがある) では出さない。
+  // 選択中は選択の操作バーがその場所を使う
+  val showNavBar = top != Player && top != ScanFolders && !bottomBarActive.value
+  val navBar = if (showNavBar) AppNavBarHeight else 0.dp
   // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンスの画面には出さない
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
-  // 一覧の下の余白: ミニプレイヤー (高さ64・下8) とナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
-  val bottomPadding = (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
+  // 一覧の下の余白: 固定のメニュー、簡易プレイヤー (高さ64・下8)、ナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
+  val bottomPadding = AppNavBarHeight + (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
+  /** 固定のメニューの行き先へ移る。すでに戻る履歴にあれば、そこまで戻る (同じ画面を重ねない) */
+  fun navigate(item: NavItem) {
+    val key: NavKey = when (item) {
+      NavItem.LIBRARY -> Library
+      NavItem.EQUALIZER -> Equalizer
+      NavItem.SEARCH -> Search
+      NavItem.QUEUE -> Queue
+    }
+    if (key in backStack) {
+      while (backStack.lastOrNull() != key) backStack.removeLastOrNull()
+    } else {
+      backStack.add(key)
+    }
+  }
 
   CompositionLocalProvider(
     LocalSnackbarHost provides snackbar,
@@ -185,7 +207,7 @@ fun MainNavigation(
               Page { ScanFoldersScreen(onBack = { backStack.removeLastOrNull() }) }
             }
             entry<Licenses> {
-              Page { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }
+              Page(bottomInset = navBar) { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }
             }
             entry<Category> { key ->
               Page {
@@ -249,7 +271,7 @@ fun MainNavigation(
               }
             }
             entry<Equalizer> {
-              Page {
+              Page(bottomInset = navBar) {
                 EqualizerScreen(onBack = { backStack.removeLastOrNull() })
               }
             }
@@ -298,7 +320,19 @@ fun MainNavigation(
             modifier = Modifier
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
-              .padding(bottom = 8.dp),
+              .padding(bottom = navBar + 8.dp),
+          )
+        }
+        if (showNavBar) {
+          AppNavBar(
+            selected = when (top) {
+              Equalizer -> NavItem.EQUALIZER
+              Search -> NavItem.SEARCH
+              Queue -> NavItem.QUEUE
+              else -> NavItem.LIBRARY
+            },
+            onSelect = ::navigate,
+            modifier = Modifier.align(Alignment.BottomCenter),
           )
         }
         pendingAdd?.let { tracks ->
@@ -319,7 +353,7 @@ fun MainNavigation(
             .align(Alignment.BottomCenter)
             .navigationBarsPadding()
             // 簡易プレイヤーのある画面とない画面で知らせの位置が動かないよう、再生中の曲があれば常に簡易プレイヤーの上に出す
-            .padding(bottom = if (player.hasMedia || bottomBarActive.value) 84.dp else 8.dp),
+            .padding(bottom = navBar + if (player.hasMedia || bottomBarActive.value) 84.dp else 8.dp),
         )
       }
     }
@@ -336,10 +370,23 @@ private fun popTransition(): ContentTransform =
   (slideInHorizontally(tween(TRANSITION_MS)) { -it / 4 } togetherWith slideOutHorizontally(tween(TRANSITION_MS)) { it })
     .apply { targetContentZIndex = -1f }
 
-/** 1画面分の背景。画面の切り替え中に、下の画面が透けて見えないようにする */
+/**
+ * 1画面分の背景。画面の切り替え中に、下の画面が透けて見えないようにする。
+ * [bottomInset]は画面下の固定のメニューの高さ。中身をその上までにする (中身のナビゲーションバーの余白はメニューが受け持つ)
+ */
 @Composable
-private fun Page(content: @Composable () -> Unit) {
-  Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+private fun Page(bottomInset: Dp = 0.dp, content: @Composable () -> Unit) {
+  Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    if (bottomInset > 0.dp) {
+      Box(
+        Modifier.fillMaxSize()
+          .padding(bottom = bottomInset)
+          .navigationBarsPadding(),
+      ) { content() }
+    } else {
+      content()
+    }
+  }
 }
 
 /** アルバムなどを開く画面。アーティストはアルバムの一覧を挟む */
