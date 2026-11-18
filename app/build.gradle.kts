@@ -13,8 +13,8 @@ android {
     applicationId = "me.mallows.kanade"
     minSdk = 31
     targetSdk = 37
-    versionCode = 4
-    versionName = "1.3.0"
+    versionCode = 5
+    versionName = "1.4.0"
   }
 
   // リリース用の鍵。場所とパスワードはリポジトリの外 (~/.gradle/gradle.properties) に書く。
