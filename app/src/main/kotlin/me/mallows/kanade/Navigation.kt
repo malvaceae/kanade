@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.SideEffect
@@ -353,16 +354,21 @@ fun MainNavigation(
         var miniShownBefore by remember { mutableStateOf(false) }
         SideEffect { if (top != Search) miniShownBefore = showMini }
         val searchOpening = top == Search && !miniShownBefore && !searchImeShown
-        if (showMini) {
+        // 簡易プレイヤーを出す・消すときは、下のメニューで画面を移るときと同じフェードにする
+        AnimatedVisibility(
+          visible = showMini,
+          enter = fadeIn(tween(210, delayMillis = 90)),
+          exit = fadeOut(tween(90)),
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(bottom = navBar + 8.dp)
+            .graphicsLayer { alpha = if (searchOpening) 0f else 1f },
+        ) {
           MiniPlayer(
             state = player,
             onOpen = ::openPlayerScreen,
             onTogglePlay = playerViewModel::togglePlayPause,
-            modifier = Modifier
-              .align(Alignment.BottomCenter)
-              .navigationBarsPadding()
-              .padding(bottom = navBar + 8.dp)
-              .graphicsLayer { alpha = if (searchOpening) 0f else 1f },
           )
         }
         if (showNavBar) {
