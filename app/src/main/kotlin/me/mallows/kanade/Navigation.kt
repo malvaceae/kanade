@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import me.mallows.kanade.ui.player.LocalPlaybackPosition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
@@ -86,7 +90,7 @@ import me.mallows.kanade.ui.player.PlayerViewModel
 import me.mallows.kanade.ui.selection.TrackActions
 import me.mallows.kanade.ui.selection.navigationBarHeight
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainNavigation(
   openPlayerRequest: MutableState<Boolean> = remember { mutableStateOf(false) },
@@ -209,137 +213,6 @@ fun MainNavigation(
   ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {
-        NavDisplay(
-          backStack = backStack,
-          onBack = { backStack.removeLastOrNull() },
-          entryDecorators = listOf(
-            rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator(),
-          ),
-          // 進むときは右から重ね、戻るとき (戻るスワイプの途中も) は上の画面を右へずらして下の画面を見せる
-          transitionSpec = { if (menuMove.pending) fadeTransition() else pushTransition() },
-          popTransitionSpec = { if (menuMove.pending) fadeTransition() else popTransition() },
-          predictivePopTransitionSpec = { popTransition() },
-          entryProvider = entryProvider {
-            entry<Library> {
-              Page {
-                LibraryHomeScreen(
-                  onOpen = { tab, title ->
-                    when (tab) {
-                      LibraryTab.QUEUE -> backStack.add(Queue)
-                      LibraryTab.RECENTLY_ADDED -> backStack.add(GroupDetail(GroupKind.RECENTLY_ADDED.name, null, title))
-                      LibraryTab.RECENTLY_PLAYED -> backStack.add(GroupDetail(GroupKind.RECENTLY_PLAYED.name, null, title))
-                      LibraryTab.MOST_PLAYED -> backStack.add(GroupDetail(GroupKind.MOST_PLAYED.name, null, title))
-                      else -> backStack.add(Category(tab.name))
-                    }
-                  },
-                  onLicenses = { backStack.add(Licenses) },
-                  onScanFolders = { backStack.add(ScanFolders) },
-                  bottomPadding = bottomPadding,
-                )
-              }
-            }
-            entry<ScanFolders> {
-              Page { ScanFoldersScreen(onBack = { backStack.removeLastOrNull() }) }
-            }
-            entry<Licenses> {
-              Page(bottomInset = navBar) { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }
-            }
-            entry<Category> { key ->
-              Page {
-                CategoryScreen(
-                  category = LibraryTab.valueOf(key.name),
-                  playingMediaStoreId = player.mediaStoreId,
-                  actions = actions,
-                  onOpenGroup = { kind, k, title -> backStack.add(groupKey(kind, k, title)) },
-                  onBack = { backStack.removeLastOrNull() },
-                  playlists = { padding ->
-                    PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, actions = actions, bottomPadding = padding)
-                  },
-                  bottomPadding = bottomPadding,
-                  onScanFolders = { backStack.add(ScanFolders) },
-                )
-              }
-            }
-            entry<PlaylistDetail> { key ->
-              Page {
-                PlaylistDetailScreen(
-                  playlistId = key.id,
-                  playingMediaStoreId = player.mediaStoreId,
-                  actions = actions,
-                  onBack = { backStack.removeLastOrNull() },
-                  bottomPadding = bottomPadding,
-                )
-              }
-            }
-            entry<ArtistDetail> { key ->
-              Page {
-                ArtistDetailScreen(
-                  key = key,
-                  actions = actions,
-                  // ここからは曲の一覧を開く (アーティストの「すべての曲」も)
-                  onOpenGroup = { kind, k, title -> backStack.add(GroupDetail(kind.name, k, title)) },
-                  onBack = { backStack.removeLastOrNull() },
-                  bottomPadding = bottomPadding,
-                )
-              }
-            }
-            entry<GroupDetail> { key ->
-              Page {
-                GroupDetailScreen(
-                  key = key,
-                  playingMediaStoreId = player.mediaStoreId,
-                  actions = actions,
-                  onBack = { backStack.removeLastOrNull() },
-                  bottomPadding = bottomPadding,
-                )
-              }
-            }
-            entry<Search> {
-              Page {
-                SearchScreen(
-                  playingMediaStoreId = player.mediaStoreId,
-                  actions = actions,
-                  onBack = { backStack.removeLastOrNull() },
-                  bottomPadding = bottomPadding,
-                )
-              }
-            }
-            entry<Equalizer> {
-              Page(bottomInset = navBar) {
-                EqualizerScreen(onBack = { backStack.removeLastOrNull() })
-              }
-            }
-            entry<Queue> {
-              Page {
-                QueueScreen(onBack = { backStack.removeLastOrNull() }, onOpenPlayer = ::openPlayerScreen, bottomPadding = bottomPadding)
-              }
-            }
-            entry<Player> {
-              Page(bottomInset = navBar) {
-                PlayerScreen(
-                  state = player,
-                  sourceTitle = playSource?.title,
-                  onClose = { backStack.removeLastOrNull() },
-                  onOpenQueue = { backStack.add(Queue) },
-                  onOpenEqualizer = { backStack.add(Equalizer) },
-                  onTogglePlay = playerViewModel::togglePlayPause,
-                  onNext = playerViewModel::next,
-                  onPrevious = playerViewModel::previous,
-                  onSwipePrevious = playerViewModel::previousTrack,
-                  onSeek = playerViewModel::seekTo,
-                  onToggleShuffle = playerViewModel::toggleShuffle,
-                  onCycleRepeat = playerViewModel::cycleRepeat,
-                  sleep = sleep,
-                  onSetSleep = playerViewModel::setSleepTimer,
-                  onSetSpeed = playerViewModel::setSpeed,
-                  // 別の曲の歌詞が残っていても出さない
-                  lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
-                )
-              }
-            }
-          },
-        )
         // 簡易プレイヤーと下のメニューは、キーボードが出たらその下に隠れるだけにする (Androidの普通の動き)。
         // 検索を開くとすぐキーボードが出るので、直前の画面に簡易プレイヤーがなかったとき (EQ・ライセンス・プレイヤー) は、
         // キーボードが1度出終わるまで簡易プレイヤーを出さない (一瞬だけ現れてから隠れるのを避ける)。
@@ -357,21 +230,164 @@ fun MainNavigation(
         var miniShownBefore by remember { mutableStateOf(false) }
         SideEffect { if (top != Search) miniShownBefore = showMini }
         val searchOpening = top == Search && !miniShownBefore && !searchImeShown
-        // 簡易プレイヤーを出す・消すときは、下のメニューで画面を移るときと同じフェードにする
-        AnimatedVisibility(
-          visible = showMini,
-          enter = fadeIn(tween(210, delayMillis = 90)),
-          exit = fadeOut(tween(90)),
-          modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(bottom = navBar + 8.dp)
-            .graphicsLayer { alpha = if (searchOpening) 0f else 1f },
-        ) {
-          MiniPlayer(
-            state = player,
-            onOpen = ::openPlayerScreen,
-            onTogglePlay = playerViewModel::togglePlayPause,
+        // 簡易プレイヤーは各画面の中に置き、画面どうしの共有要素にする。
+        // 前後の両方の画面にあればその場に留まり、片方にしかなければその画面と一緒に動く (横に動く切り替えなら横に、フェードならフェード)
+        SharedTransitionLayout {
+          val miniPlayer: @Composable BoxScope.() -> Unit = {
+            if (player.hasMedia) {
+              // 選択中は下の操作バーがその場所を使うので隠す
+              AnimatedVisibility(
+                visible = !bottomBarActive.value,
+                enter = fadeIn(tween(210, delayMillis = 90)),
+                exit = fadeOut(tween(90)),
+                modifier = Modifier
+                  .align(Alignment.BottomCenter)
+                  .navigationBarsPadding()
+                  .padding(bottom = AppNavBarHeight + 8.dp)
+                  .graphicsLayer { alpha = if (searchOpening) 0f else 1f },
+              ) {
+                MiniPlayer(
+                  state = player,
+                  onOpen = ::openPlayerScreen,
+                  onTogglePlay = playerViewModel::togglePlayPause,
+                  modifier = Modifier.sharedElement(
+                    rememberSharedContentState(MINI_PLAYER_KEY),
+                    animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                  ),
+                )
+              }
+            }
+          }
+          NavDisplay(
+            backStack = backStack,
+            onBack = { backStack.removeLastOrNull() },
+            entryDecorators = listOf(
+              rememberSaveableStateHolderNavEntryDecorator(),
+              rememberViewModelStoreNavEntryDecorator(),
+            ),
+            // 進むときは右から重ね、戻るとき (戻るスワイプの途中も) は上の画面を右へずらして下の画面を見せる
+            transitionSpec = { if (menuMove.pending) fadeTransition() else pushTransition() },
+            popTransitionSpec = { if (menuMove.pending) fadeTransition() else popTransition() },
+            predictivePopTransitionSpec = { popTransition() },
+            entryProvider = entryProvider {
+              entry<Library> {
+                Page(mini = miniPlayer) {
+                  LibraryHomeScreen(
+                    onOpen = { tab, title ->
+                      when (tab) {
+                        LibraryTab.QUEUE -> backStack.add(Queue)
+                        LibraryTab.RECENTLY_ADDED -> backStack.add(GroupDetail(GroupKind.RECENTLY_ADDED.name, null, title))
+                        LibraryTab.RECENTLY_PLAYED -> backStack.add(GroupDetail(GroupKind.RECENTLY_PLAYED.name, null, title))
+                        LibraryTab.MOST_PLAYED -> backStack.add(GroupDetail(GroupKind.MOST_PLAYED.name, null, title))
+                        else -> backStack.add(Category(tab.name))
+                      }
+                    },
+                    onLicenses = { backStack.add(Licenses) },
+                    onScanFolders = { backStack.add(ScanFolders) },
+                    bottomPadding = bottomPadding,
+                  )
+                }
+              }
+              entry<ScanFolders> {
+                Page { ScanFoldersScreen(onBack = { backStack.removeLastOrNull() }) }
+              }
+              entry<Licenses> {
+                Page(bottomInset = navBar) { LicensesScreen(onBack = { backStack.removeLastOrNull() }) }
+              }
+              entry<Category> { key ->
+                Page(mini = miniPlayer) {
+                  CategoryScreen(
+                    category = LibraryTab.valueOf(key.name),
+                    playingMediaStoreId = player.mediaStoreId,
+                    actions = actions,
+                    onOpenGroup = { kind, k, title -> backStack.add(groupKey(kind, k, title)) },
+                    onBack = { backStack.removeLastOrNull() },
+                    playlists = { padding ->
+                      PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, actions = actions, bottomPadding = padding)
+                    },
+                    bottomPadding = bottomPadding,
+                    onScanFolders = { backStack.add(ScanFolders) },
+                  )
+                }
+              }
+              entry<PlaylistDetail> { key ->
+                Page(mini = miniPlayer) {
+                  PlaylistDetailScreen(
+                    playlistId = key.id,
+                    playingMediaStoreId = player.mediaStoreId,
+                    actions = actions,
+                    onBack = { backStack.removeLastOrNull() },
+                    bottomPadding = bottomPadding,
+                  )
+                }
+              }
+              entry<ArtistDetail> { key ->
+                Page(mini = miniPlayer) {
+                  ArtistDetailScreen(
+                    key = key,
+                    actions = actions,
+                    // ここからは曲の一覧を開く (アーティストの「すべての曲」も)
+                    onOpenGroup = { kind, k, title -> backStack.add(GroupDetail(kind.name, k, title)) },
+                    onBack = { backStack.removeLastOrNull() },
+                    bottomPadding = bottomPadding,
+                  )
+                }
+              }
+              entry<GroupDetail> { key ->
+                Page(mini = miniPlayer) {
+                  GroupDetailScreen(
+                    key = key,
+                    playingMediaStoreId = player.mediaStoreId,
+                    actions = actions,
+                    onBack = { backStack.removeLastOrNull() },
+                    bottomPadding = bottomPadding,
+                  )
+                }
+              }
+              entry<Search> {
+                Page(mini = miniPlayer) {
+                  SearchScreen(
+                    playingMediaStoreId = player.mediaStoreId,
+                    actions = actions,
+                    onBack = { backStack.removeLastOrNull() },
+                    bottomPadding = bottomPadding,
+                  )
+                }
+              }
+              entry<Equalizer> {
+                Page(bottomInset = navBar) {
+                  EqualizerScreen(onBack = { backStack.removeLastOrNull() })
+                }
+              }
+              entry<Queue> {
+                Page(mini = miniPlayer) {
+                  QueueScreen(onBack = { backStack.removeLastOrNull() }, onOpenPlayer = ::openPlayerScreen, bottomPadding = bottomPadding)
+                }
+              }
+              entry<Player> {
+                Page(bottomInset = navBar) {
+                  PlayerScreen(
+                    state = player,
+                    sourceTitle = playSource?.title,
+                    onClose = { backStack.removeLastOrNull() },
+                    onOpenQueue = { backStack.add(Queue) },
+                    onOpenEqualizer = { backStack.add(Equalizer) },
+                    onTogglePlay = playerViewModel::togglePlayPause,
+                    onNext = playerViewModel::next,
+                    onPrevious = playerViewModel::previous,
+                    onSwipePrevious = playerViewModel::previousTrack,
+                    onSeek = playerViewModel::seekTo,
+                    onToggleShuffle = playerViewModel::toggleShuffle,
+                    onCycleRepeat = playerViewModel::cycleRepeat,
+                    sleep = sleep,
+                    onSetSleep = playerViewModel::setSleepTimer,
+                    onSetSpeed = playerViewModel::setSpeed,
+                    // 別の曲の歌詞が残っていても出さない
+                    lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
+                  )
+                }
+              }
+            },
           )
         }
         if (showNavBar) {
@@ -440,7 +456,12 @@ private fun popTransition(): ContentTransform =
  * [bottomInset]は画面下の固定のメニューの高さ。中身をその上までにする (中身のナビゲーションバーの余白はメニューが受け持つ)
  */
 @Composable
-private fun Page(bottomInset: Dp = 0.dp, content: @Composable () -> Unit) {
+private fun Page(
+  bottomInset: Dp = 0.dp,
+  /** この画面に出す簡易プレイヤー (出さない画面はnull) */
+  mini: (@Composable BoxScope.() -> Unit)? = null,
+  content: @Composable () -> Unit,
+) {
   Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     if (bottomInset > 0.dp) {
       Box(
@@ -451,8 +472,12 @@ private fun Page(bottomInset: Dp = 0.dp, content: @Composable () -> Unit) {
     } else {
       content()
     }
+    mini?.invoke(this)
   }
 }
+
+/** 簡易プレイヤーの共有要素のキー */
+private const val MINI_PLAYER_KEY = "mini_player"
 
 /** アルバムなどを開く画面。アーティストはアルバムの一覧を挟む */
 private fun groupKey(kind: GroupKind, key: String?, title: String): NavKey =
