@@ -1,5 +1,6 @@
 package me.mallows.kanade.ui.player
 
+import me.mallows.kanade.ui.common.NowPlayingArtwork
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
@@ -145,7 +146,7 @@ fun PlayerScreen(
       ) {
         val id = state.mediaStoreId
         if (id != null) {
-          TrackArtwork(uri = audioUri(id), size = size, cornerRadius = 20.dp)
+          NowPlayingArtwork(state.artworkData, audioUri(id), size = size, cornerRadius = 20.dp)
         } else {
           Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
         }

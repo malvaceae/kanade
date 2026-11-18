@@ -159,7 +159,7 @@ class PlayerConnection @Inject constructor(
   fun playTracks(mediaStoreIds: List<Long>, startIndex: Int, shuffle: Boolean = false, source: PlaySource? = null) = withController {
     _source.value = source
     saveSource(source)
-    it.setMediaItems(mediaStoreIds.map(::mediaItemRequest), startIndex, 0L)
+    it.setMediaItems(mediaStoreIds.map { id -> mediaItemRequest(id, source = source?.key) }, startIndex, 0L)
     if (shuffle) it.shuffleModeEnabled = true
     it.prepare()
     it.play()
@@ -361,6 +361,6 @@ class PlayerConnection @Inject constructor(
   }
 }
 
-private val SOURCE_KEY = stringPreferencesKey("play_source_key")
+internal val SOURCE_KEY = stringPreferencesKey("play_source_key")
 private val SOURCE_TITLE = stringPreferencesKey("play_source_title")
 

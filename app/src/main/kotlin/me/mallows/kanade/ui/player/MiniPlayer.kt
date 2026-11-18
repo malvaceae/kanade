@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.mallows.kanade.R
 import me.mallows.kanade.playback.PlayerState
+import me.mallows.kanade.ui.common.NowPlayingArtwork
 import me.mallows.kanade.ui.common.TrackArtwork
 import me.mallows.kanade.ui.common.audioUri
 import me.mallows.kanade.ui.icons.KanadeIcons
@@ -65,7 +66,8 @@ fun MiniPlayer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        TrackArtwork(uri = audioUri(id), size = 44.dp, cornerRadius = 8.dp)
+        // プレイヤー画面と同じ絵を出す (プレイリストのカバーで再生しているときはカバー)
+        NowPlayingArtwork(state.artworkData, audioUri(id), size = 44.dp, cornerRadius = 8.dp)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(
             text = state.title.orEmpty(),

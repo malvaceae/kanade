@@ -92,3 +92,35 @@ private fun decodeFile(path: String, px: Int): android.graphics.Bitmap? {
   while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
   return android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
 }
+
+/**
+ * 再生中の曲の絵。再生情報に絵 (曲に埋め込まれた絵、またはプレイリストのカバー) があればそれを出し、
+ * なければ端末の縮小画像を出す。プレイヤー画面と簡易プレイヤーで同じ絵になるよう、どちらもこれを使う
+ */
+@Composable
+fun NowPlayingArtwork(data: ByteArray?, fallbackUri: String, size: Dp, cornerRadius: Dp) {
+  val px = with(LocalDensity.current) { size.roundToPx() }
+  val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, data, px) {
+    value = data?.let { bytes -> withContext(Dispatchers.Default) { decodeBytes(bytes, px) } }
+  }
+  val image = bitmap
+  if (data == null || image == null) {
+    TrackArtwork(uri = fallbackUri, size = size, cornerRadius = cornerRadius)
+  } else {
+    Image(
+      bitmap = image.asImageBitmap(),
+      contentDescription = null,
+      contentScale = ContentScale.Crop,
+      modifier = Modifier.size(size).clip(RoundedCornerShape(cornerRadius)),
+    )
+  }
+}
+
+/** 画像のデータを、[px]より小さくならない範囲で縮めて読む */
+private fun decodeBytes(bytes: ByteArray, px: Int): android.graphics.Bitmap? {
+  val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+  var sample = 1
+  while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
+  return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+}
