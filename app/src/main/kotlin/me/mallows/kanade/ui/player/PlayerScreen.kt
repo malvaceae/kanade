@@ -195,8 +195,8 @@ fun PlayerScreen(
         modifier = Modifier.size(76.dp).clip(CircleShape).background(scheme.primary),
       ) {
         Icon(
-          if (state.isPlaying) KanadeIcons.Pause else KanadeIcons.Play,
-          contentDescription = stringResource(if (state.isPlaying) R.string.action_pause else R.string.action_play),
+          if (state.showPause) KanadeIcons.Pause else KanadeIcons.Play,
+          contentDescription = stringResource(if (state.showPause) R.string.action_pause else R.string.action_play),
           tint = scheme.onPrimary,
           modifier = Modifier.size(32.dp),
         )

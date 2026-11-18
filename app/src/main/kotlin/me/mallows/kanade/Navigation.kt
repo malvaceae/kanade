@@ -201,7 +201,8 @@ fun MainNavigation(
   CompositionLocalProvider(
     LocalSnackbarHost provides snackbar,
     LocalBottomBarActive provides bottomBarActive,
-    LocalIsPlaying provides player.isPlaying,
+    // 曲の一覧の「再生中」の印も、読み込み中に止まって見えないようボタンと同じ決め方にする
+    LocalIsPlaying provides player.showPause,
     LocalPlaySource provides playSource,
     LocalPlaybackPosition provides playerViewModel::currentPosition,
     LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) }; Unit },

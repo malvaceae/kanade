@@ -86,8 +86,8 @@ fun MiniPlayer(
       }
       IconButton(onClick = onTogglePlay, modifier = Modifier.padding(end = 6.dp).size(48.dp)) {
         Icon(
-          imageVector = if (state.isPlaying) KanadeIcons.Pause else KanadeIcons.Play,
-          contentDescription = stringResource(if (state.isPlaying) R.string.action_pause else R.string.action_play),
+          imageVector = if (state.showPause) KanadeIcons.Pause else KanadeIcons.Play,
+          contentDescription = stringResource(if (state.showPause) R.string.action_pause else R.string.action_play),
           modifier = Modifier.size(26.dp),
         )
       }

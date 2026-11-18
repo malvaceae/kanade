@@ -37,6 +37,11 @@ data class PlayerState(
   /** 曲に埋め込まれた画像 */
   val artworkData: ByteArray? = null,
   val isPlaying: Boolean = false,
+  /**
+   * 一時停止ボタンを出すか (再生しようとしているか)。シークや曲の切り替えの直後の読み込み中は音が止まるが、
+   * そこで再生ボタンに変わらないよう、ボタンの表示にはこちらを使う (Media3の標準の画面と同じ決め方)
+   */
+  val showPause: Boolean = false,
   val positionMs: Long = 0,
   /** [positionMs]を読んだ時刻 (SystemClock.elapsedRealtime)。画面ではここから再生位置を進めて表示する */
   val positionAt: Long = 0,
@@ -358,6 +363,10 @@ class PlayerConnection @Inject constructor(
       album = metadata.albumTitle?.toString(),
       artworkData = metadata.artworkData,
       isPlaying = player.isPlaying,
+      showPause = player.playWhenReady &&
+        player.playbackState != Player.STATE_IDLE &&
+        player.playbackState != Player.STATE_ENDED &&
+        player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE,
       positionMs = player.currentPosition,
       positionAt = SystemClock.elapsedRealtime(),
       // 曲が変わった直後は、プレイヤーがまだ長さを知らないことがある。そのときはライブラリの長さを使う
