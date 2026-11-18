@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.unit.Dp
@@ -146,9 +148,9 @@ fun MainNavigation(
       backStack.removeLastOrNull()
     }
   }
-  // 画面下の固定のメニュー。プレイヤーとフォルダの選択 (下に保存・キャンセルがある) では出さない。
+  // 画面下の固定のメニュー。フォルダの選択 (下に保存・キャンセルがある) では出さない。
   // 選択中は選択の操作バーがその場所を使う
-  val showNavBar = top != Player && top != ScanFolders && !bottomBarActive.value
+  val showNavBar = top != ScanFolders && !bottomBarActive.value
   val navBar = if (showNavBar) AppNavBarHeight else 0.dp
   // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンスの画面には出さない
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
@@ -285,7 +287,7 @@ fun MainNavigation(
               }
             }
             entry<Player> {
-              Page {
+              Page(bottomInset = navBar) {
                 PlayerScreen(
                   state = player,
                   sourceTitle = playSource?.title,
@@ -310,9 +312,10 @@ fun MainNavigation(
           },
         )
         // キーボードが出始めたら、簡易プレイヤーと下のメニューをすぐ薄くして消す
-        // (下からせり上がるキーボードに途中まで隠れる見え方を避ける。Googleのアプリと同じ)
-        val imeVisible = WindowInsets.isImeVisible
-        val barsAlpha by animateFloatAsState(if (imeVisible) 0f else 1f, tween(if (imeVisible) 100 else 200), label = "bars")
+        // (下からせり上がるキーボードに途中まで隠れる見え方を避ける)。
+        // 閉じ始めたらすぐ元に戻し、下がっていくキーボードの後ろから現れるようにする (後から浮かび上がらせない)
+        val imeOpening = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
+        val barsAlpha by animateFloatAsState(if (imeOpening) 0f else 1f, if (imeOpening) tween(100) else snap(), label = "bars")
         if (showMini) {
           MiniPlayer(
             state = player,
@@ -338,6 +341,8 @@ fun MainNavigation(
               Equalizer -> NavItem.EQUALIZER
               Search -> NavItem.SEARCH
               Queue -> NavItem.QUEUE
+              // プレイヤーはメニューのどれにも当たらないので、どれも選ばない
+              Player -> null
               else -> NavItem.LIBRARY
             },
             onSelect = ::navigate,
