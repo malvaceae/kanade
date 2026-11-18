@@ -286,115 +286,35 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   val sort by viewModel.albumSort.collectAsStateWithLifecycle()
   val grid by viewModel.albumGrid.collectAsStateWithLifecycle()
   var showSort by rememberSaveable { mutableStateOf(false) }
-  // 長押しで選択を始める。選択中は押すたびに選択を切り替える
-  var selectedKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
   val list = albums ?: return Loading()
-  val unknown = stringResource(R.string.unknown_album)
-  val keyOf = { a: AlbumSummary -> a.albumId?.toString() ?: "" }
-  val targetOf = { a: AlbumSummary -> GroupTarget(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
-  val selecting = selectedKeys.isNotEmpty()
-  val toggle = { a: AlbumSummary -> val k = keyOf(a); selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
-  val click = { a: AlbumSummary -> if (selecting) toggle(a) else onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
-  val padding = if (selecting) 88.dp + navigationBarHeight() else bottomPadding
-  // 長押ししたまま指を動かすと、通ったアルバムまでをまとめて選ぶ (曲の一覧と同じ)
-  val haptic = LocalHapticFeedback.current
-  val keys = list.map(keyOf)
-  val gridState = rememberLazyGridState()
-  val listState = rememberLazyListState()
-  val header = @Composable { modifier: Modifier ->
-    ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size), modifier) {
-      IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
-        Icon(if (grid) KanadeIcons.ListView else KanadeIcons.Grid, contentDescription = stringResource(R.string.action_toggle_view))
+  val unknownArtist = stringResource(R.string.unknown_artist)
+  AlbumCollection(
+    albums = list,
+    grid = grid,
+    secondLine = { it.artist ?: unknownArtist },
+    header = { modifier ->
+      ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size), modifier) {
+        AlbumViewToggle(grid) { viewModel.setAlbumGrid(!grid) }
+        SortButton(sort != null) { showSort = true }
       }
-      SortButton(sort != null) { showSort = true }
-    }
-  }
-  Box(Modifier.fillMaxSize()) {
-    if (grid) {
-      LazyVerticalGrid(
-        state = gridState,
-        modifier = Modifier.dragToSelect(
-          state = gridState,
-          keys = keys,
-          currentSelection = { selectedKeys },
-          onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-          onChange = { selectedKeys = it },
-        ),
-        columns = GridCells.Adaptive(150.dp),
-        contentPadding = PaddingValues(start = GRID_SIDE_PADDING, end = GRID_SIDE_PADDING, bottom = padding),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-      ) {
-        // 格子の左右の余白を見出しには付けず、ほかの画面と同じ位置にボタンを置く
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-          header(Modifier.layout { measurable, constraints ->
-            val extra = (GRID_SIDE_PADDING * 2).roundToPx()
-            val width = constraints.maxWidth + extra
-            val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-            layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
-          })
-        }
-        items(list, key = keyOf) { album ->
-          val isSelected = keyOf(album) in selectedKeys
-          Column(Modifier.clickable { click(album) }) {
-            androidx.compose.foundation.layout.BoxWithConstraints {
-              TrackArtwork(uri = album.artUri, size = maxWidth, cornerRadius = 10.dp)
-              if (selecting) {
-                // 選んだアルバムは薄く覆い、右上に印を出す
-                if (isSelected) {
-                  Box(Modifier.matchParentSize().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
-                }
-                SelectionCheck(
-                  isSelected,
-                  Modifier.align(Alignment.TopEnd).padding(8.dp)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape),
-                )
-              }
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(album.album ?: unknown, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(album.artist ?: stringResource(R.string.unknown_artist), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-          }
-        }
-      }
-    } else {
-      LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(bottom = padding),
-        modifier = Modifier.dragToSelect(
-          state = listState,
-          keys = keys,
-          currentSelection = { selectedKeys },
-          onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-          onChange = { selectedKeys = it },
-        ),
-      ) {
-        item { header(Modifier) }
-        items(list, key = keyOf) { album ->
-          GroupRow(
-            title = album.album ?: unknown,
-            subtitle = "${album.artist ?: stringResource(R.string.unknown_artist)} · ${pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)}",
-            artUri = album.artUri,
-            onClick = { click(album) },
-            selected = if (selecting) keyOf(album) in selectedKeys else null,
-          )
-        }
-      }
-    }
-    GroupSelectionBars(
-      selected = list.filter { keyOf(it) in selectedKeys }.map(targetOf),
-      allSelected = selectedKeys.size == list.size,
-      onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map(keyOf).toSet() },
-      onClear = { selectedKeys = emptySet() },
-      sourceTitle = stringResource(R.string.tab_albums),
-      keyOf = { "${it.kind}:${it.key}" },
-      load = { viewModel.groupTracks(it.kind, it.key) },
-      actions = actions,
-    )
-  }
+    },
+    onOpen = { id, title -> onOpen(GroupKind.ALBUM, id, title) },
+    sourceTitle = stringResource(R.string.tab_albums),
+    load = { viewModel.groupTracks(it.kind, it.key) },
+    actions = actions,
+    bottomPadding = bottomPadding,
+  )
   if (showSort) {
     SortSheet(AlbumSort.entries.toTypedArray(), sort, AlbumSort.TITLE,
       onSelect = { viewModel.setSort(SortCategory.ALBUMS, it) }, onDismiss = { showSort = false })
+  }
+}
+
+/** アルバムの格子と一覧を切り替えるボタン */
+@Composable
+fun AlbumViewToggle(grid: Boolean, onClick: () -> Unit) {
+  IconButton(onClick = onClick) {
+    Icon(if (grid) KanadeIcons.ListView else KanadeIcons.Grid, contentDescription = stringResource(R.string.action_toggle_view))
   }
 }
 
@@ -531,6 +451,3 @@ private fun Empty(onScanFolders: () -> Unit, onRescan: () -> Unit) {
     }
   }
 }
-
-/** アルバムの格子の左右の余白 */
-private val GRID_SIDE_PADDING = 12.dp

@@ -98,11 +98,8 @@ fun ArtistDetailScreen(
 ) {
   val albums by viewModel.albums.collectAsStateWithLifecycle()
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
-  var selectedKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
-  /** 再生ボタンの行の高さ (px)。選択中の上のバーをこの高さにする */
-  var headerHeight by remember { mutableIntStateOf(0) }
-  val selecting = selectedKeys.isNotEmpty()
-  val unknown = stringResource(R.string.unknown_album)
+  // 格子か一覧かは、ライブラリのアルバムと同じ設定を使う
+  val grid by library.albumGrid.collectAsStateWithLifecycle()
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
@@ -118,64 +115,35 @@ fun ArtistDetailScreen(
     val all = tracks.orEmpty()
     val source = PlaySource("group:${GroupKind.ARTIST.name}:${key.name}", key.title)
     Box(Modifier.weight(1f)) {
-    val haptic = LocalHapticFeedback.current
-    val listState = rememberLazyListState()
-    val density = LocalDensity.current
-    LazyColumn(
-      state = listState,
-      contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
-      // 長押ししたまま指を動かすと、通ったアルバムまでをまとめて選ぶ (曲の一覧と同じ)
-      modifier = Modifier.dragToSelect(
-        state = listState,
-        keys = list.map { it.albumId?.toString() ?: "" },
-        currentSelection = { selectedKeys },
-        onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-        onChange = { selectedKeys = it },
-      ),
-    ) {
-      item {
-        Row(Modifier.fillMaxWidth().onSizeChanged { headerHeight = it.height }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            "${pluralStringResource(R.plurals.album_count, list.size, list.size)} · ${pluralStringResource(R.plurals.track_count, all.size, all.size)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-          )
-          FilledTonalIconButton(onClick = { actions.shufflePlay(all, source) }, enabled = all.isNotEmpty(), shape = CircleShape) {
-            Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
+      AlbumCollection(
+        albums = list,
+        grid = grid,
+        // アーティストの画面ではアーティスト名がどれも同じなので、発売年を出す
+        secondLine = { it.year?.toString() },
+        header = { modifier ->
+          Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              "${pluralStringResource(R.plurals.album_count, list.size, list.size)} · ${pluralStringResource(R.plurals.track_count, all.size, all.size)}",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.weight(1f),
+            )
+            AlbumViewToggle(grid) { library.setAlbumGrid(!grid) }
+            FilledTonalIconButton(onClick = { actions.shufflePlay(all, source) }, enabled = all.isNotEmpty(), shape = CircleShape) {
+              Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
+            }
+            Button(onClick = { actions.play(all, 0, source) }, enabled = all.isNotEmpty(), modifier = Modifier.padding(start = 8.dp)) {
+              Icon(KanadeIcons.Play, contentDescription = null, modifier = Modifier.size(18.dp))
+              Text(stringResource(R.string.action_play), modifier = Modifier.padding(start = 6.dp))
+            }
           }
-          Button(onClick = { actions.play(all, 0, source) }, enabled = all.isNotEmpty(), modifier = Modifier.padding(start = 8.dp)) {
-            Icon(KanadeIcons.Play, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.action_play), modifier = Modifier.padding(start = 6.dp))
-          }
-        }
-      }
-      items(list, key = { it.albumId?.toString() ?: "" }) { album ->
-        val title = album.album ?: unknown
-        val sub = listOfNotNull(album.year?.toString(), pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount))
-        val k = album.albumId?.toString() ?: ""
-        val toggle = { selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
-        GroupRow(
-          title = title,
-          subtitle = sub.joinToString(" · "),
-          artUri = album.artUri,
-          onClick = { if (selecting) toggle() else onOpenGroup(GroupKind.ALBUM, album.albumId?.toString(), title) },
-          selected = if (selecting) k in selectedKeys else null,
-        )
-      }
-    }
-    GroupSelectionBars(
-      selected = list.filter { (it.albumId?.toString() ?: "") in selectedKeys }
-        .map { GroupTarget(GroupKind.ALBUM, it.albumId?.toString(), it.album ?: unknown) },
-      allSelected = selectedKeys.size == list.size,
-      onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map { it.albumId?.toString() ?: "" }.toSet() },
-      onClear = { selectedKeys = emptySet() },
-      sourceTitle = key.title,
-      headerHeight = with(density) { headerHeight.toDp() }.coerceAtLeast(48.dp),
-      keyOf = { "${it.kind}:${it.key}" },
-      load = { library.groupTracks(it.kind, it.key) },
-      actions = actions,
-    )
+        },
+        onOpen = { id, title -> onOpenGroup(GroupKind.ALBUM, id, title) },
+        sourceTitle = key.title,
+        load = { library.groupTracks(it.kind, it.key) },
+        actions = actions,
+        bottomPadding = bottomPadding,
+      )
     }
   }
 }
