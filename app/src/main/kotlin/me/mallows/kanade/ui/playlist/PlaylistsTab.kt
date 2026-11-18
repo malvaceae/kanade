@@ -61,6 +61,9 @@ import me.mallows.kanade.ui.common.GroupRow
 import me.mallows.kanade.ui.common.ListHeader
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.library.Loading
+import me.mallows.kanade.ui.library.PlaylistListSort
+import me.mallows.kanade.ui.library.SortButton
+import me.mallows.kanade.ui.library.SortSheet
 
 /** ライブラリの「プレイリスト」タブ */
 @Composable
@@ -71,6 +74,8 @@ fun PlaylistsTab(
   viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
   val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+  val sort by viewModel.sort.collectAsStateWithLifecycle()
+  var showSort by rememberSaveable { mutableStateOf(false) }
   var creating by rememberSaveable { mutableStateOf(false) }
   // 長押しで選択を始める。選択中は押すたびに選択を切り替える
   var selectedIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
@@ -94,7 +99,11 @@ fun PlaylistsTab(
         onChange = { selectedIds = it },
       ),
     ) {
-      item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
+      item {
+        ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) {
+          SortButton(sort != null) { showSort = true }
+        }
+      }
       item { IconRow(KanadeIcons.Plus, stringResource(R.string.playlist_new)) { creating = true } }
       items(list, key = { it.id }) { p ->
         val toggle = { selectedIds = if (p.id in selectedIds) selectedIds - p.id else selectedIds + p.id }
@@ -144,6 +153,10 @@ fun PlaylistsTab(
       },
       dismissButton = { TextButton(onClick = { deletingSelected = null }) { Text(stringResource(R.string.action_cancel)) } },
     )
+  }
+  if (showSort) {
+    SortSheet(PlaylistListSort.entries.toTypedArray(), sort, PlaylistListSort.NAME,
+      onSelect = { viewModel.setSort(it) }, onDismiss = { showSort = false })
   }
   if (creating) {
     PlaylistNameDialog(

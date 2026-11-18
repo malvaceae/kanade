@@ -53,6 +53,10 @@ data class PlaylistSummary(
   val trackCount: Int,
   val durationMs: Long,
   val artUri: String?,
+  /** 作った日時 (ミリ秒) */
+  val createdAt: Long,
+  /** 最後に中身や名前を変えた日時 (ミリ秒) */
+  val updatedAt: Long,
 )
 
 /** プレイリストの中の1曲 (曲の情報つき) */
@@ -73,7 +77,8 @@ interface PlaylistDao {
         'file://' || p.cover,
         (SELECT t2.uri FROM playlist_entry e2 JOIN track t2 ON t2.id = e2.track_id
           WHERE e2.playlist_id = p.id ORDER BY e2.position LIMIT 1)
-      ) AS artUri
+      ) AS artUri,
+      p.created_at AS createdAt, p.updated_at AS updatedAt
     FROM playlist p
     LEFT JOIN playlist_entry e ON e.playlist_id = p.id
     LEFT JOIN track t ON t.id = e.track_id

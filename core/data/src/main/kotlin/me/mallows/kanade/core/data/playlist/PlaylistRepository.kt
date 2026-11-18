@@ -41,6 +41,7 @@ class PlaylistRepository @Inject constructor(
     val path = covers.save(id, image) ?: return false
     val old = dao.cover(id)
     dao.setCover(id, path)
+    dao.touch(id, System.currentTimeMillis())
     covers.delete(old)
     return true
   }
@@ -49,6 +50,7 @@ class PlaylistRepository @Inject constructor(
   suspend fun clearCover(id: Long) {
     val old = dao.cover(id)
     dao.setCover(id, null)
+    dao.touch(id, System.currentTimeMillis())
     covers.delete(old)
   }
 
@@ -91,5 +93,9 @@ class PlaylistRepository @Inject constructor(
   }
 
   /** [remove]で外した曲を元に戻す */
-  suspend fun restore(entries: List<PlaylistEntryEntity>) = dao.insertEntries(entries)
+  suspend fun restore(entries: List<PlaylistEntryEntity>) {
+    if (entries.isEmpty()) return
+    dao.insertEntries(entries)
+    entries.map { it.playlistId }.distinct().forEach { dao.touch(it, System.currentTimeMillis()) }
+  }
 }

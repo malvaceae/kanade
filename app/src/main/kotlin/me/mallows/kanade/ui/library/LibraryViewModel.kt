@@ -34,6 +34,7 @@ object SortCategory {
   const val ALBUMS = "albums"
   /** アーティストの画面のアルバム (ライブラリのアルバムとは別に覚える) */
   const val ARTIST_ALBUMS = "artist_albums"
+  const val PLAYLISTS = "playlists"
   fun group(kind: GroupKind) = kind.name.lowercase()
 }
 

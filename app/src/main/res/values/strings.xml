@@ -70,6 +70,8 @@
     <string name="sort_duration">再生時間</string>
     <string name="sort_date_added">追加日</string>
     <string name="sort_track_count">曲数</string>
+    <string name="sort_created">作成日</string>
+    <string name="sort_updated">更新日</string>
     <string name="sort_ascending">昇順</string>
     <string name="sort_descending">降順</string>
 

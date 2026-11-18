@@ -5,6 +5,7 @@ import me.mallows.kanade.core.domain.text.TextOrder
 import me.mallows.kanade.R
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
+import me.mallows.kanade.core.data.db.PlaylistSummary
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.core.data.settings.SortSetting
 
@@ -53,6 +54,14 @@ val ARTIST_ALBUM_SORTS: Array<AlbumSort> by lazy { arrayOf(AlbumSort.YEAR, Album
 enum class GroupSort(override val key: String, override val label: Int, override val comparator: Comparator<GroupSummary>) : SortOption<GroupSummary> {
   NAME("name", R.string.sort_name, nullsLastBy { it.name }),
   TRACK_COUNT("track_count", R.string.sort_track_count, compareBy<GroupSummary> { it.trackCount }.then(nullsLastBy { it.name })),
+}
+
+/** プレイリストの一覧の並べ方 (日時は、昇順で古い順) */
+enum class PlaylistListSort(override val key: String, override val label: Int, override val comparator: Comparator<PlaylistSummary>) : SortOption<PlaylistSummary> {
+  NAME("name", R.string.sort_name, nullsLastBy { it.name }),
+  CREATED("created", R.string.sort_created, compareBy<PlaylistSummary> { it.createdAt }.then(nullsLastBy { it.name })),
+  UPDATED("updated", R.string.sort_updated, compareBy<PlaylistSummary> { it.updatedAt }.then(nullsLastBy { it.name })),
+  TRACK_COUNT("track_count", R.string.sort_track_count, compareBy<PlaylistSummary> { it.trackCount }.then(nullsLastBy { it.name })),
 }
 
 /** 保存されたソート条件で並べる。条件がなければ[default] (昇順) */
