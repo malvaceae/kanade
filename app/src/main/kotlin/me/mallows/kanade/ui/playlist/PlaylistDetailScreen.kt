@@ -322,6 +322,8 @@ fun PlaylistDetailScreen(
             ) {
               TrackRow(
                 track = item.track,
+                // カバー画像を選んでいれば、プレイリストの曲はすべてその絵にする (再生したときのプレイヤーの絵と同じ)
+                artUri = playlist?.cover?.let { "file://$it" },
                 number = index + 1,
                 playing = item.track.mediaStoreId == playingId,
                 selectionMode = selecting,

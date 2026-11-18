@@ -11,11 +11,14 @@ const val EXTRA_QUEUED = "me.mallows.kanade.QUEUED"
 /** 要求の項目に付ける再生元 ([PlaySource.key])。再生サービスがプレイリストのカバーを探すのに使う */
 const val EXTRA_SOURCE = "me.mallows.kanade.SOURCE"
 
-/** プレイヤー上の項目に付ける、プレイリストのカバー画像のファイル。あれば曲のアートワークの代わりに出す ([CoverPlayer]) */
-const val EXTRA_COVER = "me.mallows.kanade.COVER"
+/**
+ * プレイヤー上の項目に付ける、再生元のプレイリストのID。そのプレイリストにカバー画像があれば、
+ * 曲のアートワークの代わりに出す ([CoverPlayer])。カバーはその都度調べるので、再生中に変えても反映される
+ */
+const val EXTRA_COVER_PLAYLIST = "me.mallows.kanade.COVER_PLAYLIST"
 
 /** 曲をプレイヤーに渡す形に変換する。mediaIdにはMediaStoreのIDを使う */
-fun TrackEntity.toMediaItem(queued: Boolean = false, cover: String? = null): MediaItem =
+fun TrackEntity.toMediaItem(queued: Boolean = false, coverPlaylist: Long? = null): MediaItem =
   MediaItem.Builder()
     .setMediaId(mediaStoreId.toString())
     .setUri(uri)
@@ -32,10 +35,10 @@ fun TrackEntity.toMediaItem(queued: Boolean = false, cover: String? = null): Med
         .setIsBrowsable(false)
         .setIsPlayable(true)
         .apply {
-          if (queued || cover != null) {
+          if (queued || coverPlaylist != null) {
             setExtras(Bundle().apply {
               if (queued) putBoolean(EXTRA_QUEUED, true)
-              if (cover != null) putString(EXTRA_COVER, cover)
+              if (coverPlaylist != null) putLong(EXTRA_COVER_PLAYLIST, coverPlaylist)
             })
           }
         }
@@ -67,3 +70,7 @@ val MediaItem.isQueuedRequest: Boolean get() = requestMetadata.extras?.getBoolea
 
 /** プレイヤー上の項目が「キューに入れた」曲か */
 val MediaItem.isQueued: Boolean get() = mediaMetadata.extras?.getBoolean(EXTRA_QUEUED) == true
+
+/** 再生元がプレイリストならそのID ("playlist:3" → 3) */
+fun playlistIdOf(sourceKey: String?): Long? =
+  sourceKey?.takeIf { it.startsWith("playlist:") }?.removePrefix("playlist:")?.toLongOrNull()

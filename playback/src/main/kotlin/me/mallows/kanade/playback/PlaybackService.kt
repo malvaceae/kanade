@@ -105,7 +105,14 @@ class PlaybackService : MediaSessionService() {
       addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     }
     // プレイリストのカバーを曲のアートワークの代わりに出すため、セッションには包んだプレイヤーを渡す
-    session = MediaSession.Builder(this, CoverPlayer(player))
+    val coverPlayer = CoverPlayer(player)
+    // プレイリストのカバーを見張り、変わったら再生中の曲の絵もすぐ変える
+    scope.launch {
+      playlistDao.observeCovers().collect { list ->
+        coverPlayer.setCovers(list.mapNotNull { c -> c.cover?.takeIf { java.io.File(it).exists() }?.let { c.id to it } }.toMap())
+      }
+    }
+    session = MediaSession.Builder(this, coverPlayer)
       .apply {
         if (open != null) {
           setSessionActivity(
@@ -118,8 +125,8 @@ class PlaybackService : MediaSessionService() {
 
     // 前回の再生キューと位置に戻し、以後の変化を保存する
     persistence = PlaybackPersistence(playbackStateDao, trackDao, scope) {
-      // 前回の再生元がカバー付きのプレイリストなら、戻した再生キューにもカバーを付ける
-      coverOf(dataStore.data.first()[SOURCE_KEY])
+      // 前回の再生元がプレイリストなら、戻した再生キューにもそのプレイリストの印を付ける (カバーを出すため)
+      playlistIdOf(dataStore.data.first()[SOURCE_KEY])
     }
     persistence.attach(player)
     scope.launch { persistence.restore(player) }
@@ -290,20 +297,16 @@ class PlaybackService : MediaSessionService() {
   private suspend fun resolve(items: List<MediaItem>): List<MediaItem> {
     val ids = items.mapNotNull { it.mediaId.toLongOrNull() }
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
-    // プレイリストから再生したときは、カバー画像を曲に付ける (プレイヤー・通知に出す)
-    val cover = coverOf(items.firstNotNullOfOrNull { it.requestSource })
+    // プレイリストから再生したときは、そのプレイリストの印を曲に付ける (カバーがあればプレイヤー・通知に出す)
+    val playlist = playlistIdOf(items.firstNotNullOfOrNull { it.requestSource })
     return items.map { item ->
       tracks[item.mediaId.toLongOrNull()]
-        ?.toMediaItem(queued = item.isQueuedRequest, cover = cover.takeIf { item.requestSource != null })
+        ?.toMediaItem(queued = item.isQueuedRequest, coverPlaylist = playlist.takeIf { item.requestSource != null })
         ?: item
     }
   }
 
-  /** 再生元がプレイリストで、カバー画像を選んでいればそのファイル */
-  private suspend fun coverOf(sourceKey: String?): String? {
-    val id = sourceKey?.removePrefix("playlist:")?.takeIf { sourceKey.startsWith("playlist:") }?.toLongOrNull() ?: return null
-    return playlistDao.cover(id)?.takeIf { java.io.File(it).exists() }
-  }
+
 
   private inner class SessionCallback : MediaSession.Callback {
     override fun onConnect(

@@ -1,5 +1,6 @@
 package me.mallows.kanade.playback
 
+import me.mallows.kanade.core.data.db.PlaylistDao
 import android.os.SystemClock
 import android.content.ComponentName
 import android.content.Context
@@ -86,8 +87,29 @@ data class PlaySource(val key: String, val title: String?)
 class PlayerConnection @Inject constructor(
   @ApplicationContext private val context: Context,
   private val dataStore: DataStore<Preferences>,
+  private val playlistDao: PlaylistDao,
 ) {
   private val scope = MainScope()
+
+  /**
+   * プレイリストのID → カバー画像のファイル。再生中の曲がカバー付きのプレイリストから再生したものなら、
+   * 画面に出す絵はアプリの側でここから決める (再生サービスから届く絵は、曲の切り替えの途中で曲の絵に戻ることがあるため)
+   */
+  private var covers: Map<Long, String> = emptyMap()
+  private var coverPath: String? = null
+  private var coverBytes: ByteArray? = null
+
+  /** 再生中の曲のカバー画像。プレイリストのカバーで出す曲でなければnull */
+  private fun coverOf(player: Player): ByteArray? {
+    val extras = player.currentMediaItem?.mediaMetadata?.extras ?: return null
+    if (!extras.containsKey(EXTRA_COVER_PLAYLIST)) return null
+    val path = covers[extras.getLong(EXTRA_COVER_PLAYLIST)] ?: return null
+    if (path != coverPath) {
+      coverPath = path
+      coverBytes = runCatching { java.io.File(path).readBytes() }.getOrNull()
+    }
+    return coverBytes
+  }
   private val _state = MutableStateFlow(PlayerState())
   val state: StateFlow<PlayerState> = _state.asStateFlow()
 
@@ -152,6 +174,13 @@ class PlayerConnection @Inject constructor(
           }
         })
         connected = c
+        // カバーが変わったら、画面の絵も出し直す
+        launch {
+          playlistDao.observeCovers().collect { list ->
+            covers = list.mapNotNull { x -> x.cover?.let { x.id to it } }.toMap()
+            publish(c)
+          }
+        }
         publish(c)
         publishQueue(c)
         deferred.complete(c)
@@ -361,7 +390,7 @@ class PlayerConnection @Inject constructor(
       title = metadata.title?.toString(),
       artist = metadata.artist?.toString(),
       album = metadata.albumTitle?.toString(),
-      artworkData = metadata.artworkData,
+      artworkData = coverOf(player) ?: metadata.artworkData,
       isPlaying = player.isPlaying,
       showPause = player.playWhenReady &&
         player.playbackState != Player.STATE_IDLE &&

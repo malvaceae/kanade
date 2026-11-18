@@ -51,7 +51,12 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
   val px = with(LocalDensity.current) { size.roundToPx() }
   val key = "$uri@$px"
   val bitmap by produceState(initialValue = ThumbnailCache.get(key), key) {
-    if (value != null || ThumbnailCache.isMissing(key)) return@produceState
+    // 同じ場所で絵が変わったとき (カバーを変えたなど) は、前の絵のまま止まらないよう、新しい絵を探し直す
+    val cached = ThumbnailCache.get(key)
+    if (cached != null || ThumbnailCache.isMissing(key)) {
+      value = cached
+      return@produceState
+    }
     value = withContext(Dispatchers.IO) {
       runCatching {
         // プレイリストのカバー (アプリ内のファイル) はそのまま縮めて読む。曲はMediaStoreの縮小画像を使う

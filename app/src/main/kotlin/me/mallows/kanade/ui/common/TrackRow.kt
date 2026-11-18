@@ -63,6 +63,8 @@ fun TrackRow(
   onLongClick: (() -> Unit)?,
   modifier: Modifier = Modifier,
   trailing: (@Composable RowScope.() -> Unit)? = null,
+  /** 曲の絵の代わりに出す絵 (プレイリストのカバーなど)。nullなら曲の絵 */
+  artUri: String? = null,
 ) {
   val scheme = MaterialTheme.colorScheme
   Row(
@@ -84,7 +86,7 @@ fun TrackRow(
     }
     // スキャン対象外の曲 (プレイリストに残っている曲) は薄く出す
     val dim = if (track.excluded) Modifier.alpha(0.45f) else Modifier
-    TrackArtwork(uri = track.uri, size = 44.dp, modifier = dim)
+    TrackArtwork(uri = artUri ?: track.uri, size = 44.dp, modifier = dim)
     Column(modifier = Modifier.weight(1f).then(dim), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(
         text = track.title,
