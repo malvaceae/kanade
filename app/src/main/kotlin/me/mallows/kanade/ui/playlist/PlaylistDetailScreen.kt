@@ -121,7 +121,8 @@ fun PlaylistDetailScreen(
   val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
     if (uri != null) {
       scope.launch {
-        if (!viewModel.setCover(uri)) snackbar.showMessage(res.getString(R.string.message_cover_failed))
+        val ok = viewModel.setCover(uri)
+        snackbar.showMessage(res.getString(if (ok) R.string.message_cover_changed else R.string.message_cover_failed))
       }
     }
   }
@@ -256,7 +257,13 @@ fun PlaylistDetailScreen(
               if (playlist?.cover != null) {
                 DropdownMenuItem(
                   text = { Text(stringResource(R.string.playlist_cover_reset)) },
-                  onClick = { menuOpen = false; scope.launch { viewModel.clearCover() } },
+                  onClick = {
+                    menuOpen = false
+                    scope.launch {
+                      viewModel.clearCover()
+                      snackbar.showMessage(res.getString(R.string.message_cover_reset))
+                    }
+                  },
                 )
               }
               DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = { menuOpen = false; sheet = "delete" })

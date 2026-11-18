@@ -324,6 +324,23 @@ fun MainNavigation(
         // 閉じ始めたらすぐ元に戻し、下がっていくキーボードの後ろから現れるようにする (後から浮かび上がらせない)
         val imeOpening = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
         val barsAlpha by animateFloatAsState(if (imeOpening) 0f else 1f, if (imeOpening) tween(100) else snap(), label = "bars")
+        // 検索の画面では、キーボードが1度出始めるまで簡易プレイヤーを出さない (開くとすぐキーボードが出るため)。
+        // 簡易プレイヤーのない画面 (EQなど) から開いたときに、一瞬だけ現れてからキーボードに隠れるのを避ける。
+        // 時間で待たず、検索の画面にいる間に実際にキーボードが出始めたかで決める
+        var searchImeShown by remember { mutableStateOf(false) }
+        LaunchedEffect(top, imeOpening) {
+          searchImeShown = top == Search && (searchImeShown || imeOpening)
+        }
+        val searchOpening = top == Search && !searchImeShown
+        val miniAlpha by animateFloatAsState(
+          if (imeOpening || searchOpening) 0f else 1f,
+          when {
+            searchOpening -> snap()
+            imeOpening -> tween(100)
+            else -> snap()
+          },
+          label = "mini",
+        )
         if (showMini) {
           MiniPlayer(
             state = player,
@@ -333,7 +350,8 @@ fun MainNavigation(
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
               .padding(bottom = navBar + 8.dp)
-              .graphicsLayer { alpha = barsAlpha },
+              // 検索を開いた瞬間は、アニメーションを待たずにその場で消す (1コマだけ出るのを避ける)
+              .graphicsLayer { alpha = if (searchOpening) 0f else miniAlpha },
           )
         }
         if (showNavBar) {
