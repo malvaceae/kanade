@@ -8,3 +8,10 @@ plugins {
   alias(libs.plugins.hilt) apply false
   alias(libs.plugins.room) apply false
 }
+
+// Kotlinの警告はエラーにする (警告が増えたまま気付かないことがないよう、CIでも手元でも止める)
+subprojects {
+  tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    compilerOptions.allWarningsAsErrors.set(true)
+  }
+}
