@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.player.LocalPlaybackPosition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
@@ -202,6 +203,7 @@ fun MainNavigation(
     LocalBottomBarActive provides bottomBarActive,
     LocalIsPlaying provides player.isPlaying,
     LocalPlaySource provides playSource,
+    LocalPlaybackPosition provides playerViewModel::currentPosition,
     LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) }; Unit },
   ) {
     AudioPermissionGate {
