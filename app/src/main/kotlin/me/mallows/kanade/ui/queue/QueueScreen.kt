@@ -177,7 +177,7 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
         )
       } else {
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = onBack) { Icon(KanadeIcons.ChevronDown, contentDescription = stringResource(R.string.action_close)) }
+          IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
           Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         }
       }

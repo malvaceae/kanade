@@ -255,6 +255,6 @@
     <string name="action_undo">元に戻す</string>
     <string name="unknown_artist">不明なアーティスト</string>
     <string name="unknown_album">不明なアルバム</string>
-    <string name="unknown_genre">ジャンルなし</string>
+    <string name="unknown_genre">不明なジャンル</string>
     <string name="unknown_folder">不明なフォルダ</string>
 </resources>

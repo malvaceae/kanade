@@ -175,6 +175,9 @@ fun SelectableTrackList(
           BarAction(KanadeIcons.Play, stringResource(R.string.action_play)) {
             actions.play(selectedTracks(), 0, PlaySource("selection:${source.key}", source.title)); clear()
           },
+          BarAction(KanadeIcons.Shuffle, stringResource(R.string.action_shuffle)) {
+            actions.shufflePlay(selectedTracks(), PlaySource("selection:${source.key}", source.title)); clear()
+          },
           BarAction(KanadeIcons.PlayNext, stringResource(R.string.action_play_next)) {
             actions.playNext(selectedTracks()); clear()
             scope.launch { snackbar.showMessage(playNextDone) }

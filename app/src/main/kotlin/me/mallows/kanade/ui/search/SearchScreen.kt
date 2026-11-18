@@ -121,7 +121,7 @@ fun SearchScreen(
         actions = actions,
         bottomPadding = bottomPadding,
         source = PlaySource("search:$query", stringResource(R.string.action_search)),
-        header = { ListHeader(pluralStringResource(R.plurals.track_count, results.size, results.size)) },
+        header = { ListHeader(stringResource(R.string.library_summary, results.size, (results.sumOf { it.durationMs } / 60_000).toInt())) },
       )
     }
   }

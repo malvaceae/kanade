@@ -29,12 +29,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.common.SelectionCheck
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import me.mallows.kanade.ui.selection.navigationBarHeight
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Checkbox
 import me.mallows.kanade.playback.PlaySource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import me.mallows.kanade.ui.common.initialOf
@@ -242,6 +245,7 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
   val sort by viewModel.trackSort.collectAsStateWithLifecycle()
   var showSort by rememberSaveable { mutableStateOf(false) }
   val list = tracks
+  val source = PlaySource("tracks", stringResource(R.string.tab_tracks))
   when {
     list == null || (list.isEmpty() && scanning) -> Loading()
     list.isEmpty() -> Empty(onScanFolders = onScanFolders, onRescan = viewModel::rescan)
@@ -250,10 +254,18 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
       playingMediaStoreId = playingId,
       actions = actions,
       bottomPadding = bottomPadding,
-      source = PlaySource("tracks", stringResource(R.string.tab_tracks)),
+      source = source,
       header = {
+        // ほかの曲の一覧 (アルバム・プレイリストなど) と同じく、シャッフル再生と再生のボタンを置く
         ListHeader(stringResource(R.string.library_summary, list.size, (list.sumOf { it.durationMs } / 60_000).toInt())) {
           SortButton(sort != null) { showSort = true }
+          FilledTonalIconButton(onClick = { actions.shufflePlay(list, source) }, shape = CircleShape) {
+            Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
+          }
+          Button(onClick = { actions.play(list, 0, source) }, modifier = Modifier.padding(start = 8.dp, end = 12.dp)) {
+            Icon(KanadeIcons.Play, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.action_play), modifier = Modifier.padding(start = 6.dp))
+          }
         }
       },
     )
@@ -281,7 +293,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   val click = { a: AlbumSummary -> if (selecting) toggle(a) else onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
   val padding = if (selecting) 88.dp + navigationBarHeight() else bottomPadding
   val header = @Composable { modifier: Modifier ->
-    ListHeader(pluralStringResource(R.plurals.album_count, list.size, list.size), modifier) {
+    ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size), modifier) {
       IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
         Icon(if (grid) KanadeIcons.ListView else KanadeIcons.Grid, contentDescription = stringResource(R.string.action_toggle_view))
       }
@@ -315,10 +327,9 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
                 if (isSelected) {
                   Box(Modifier.matchParentSize().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
                 }
-                Checkbox(
-                  checked = isSelected,
-                  onCheckedChange = null,
-                  modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)
+                SelectionCheck(
+                  isSelected,
+                  Modifier.align(Alignment.TopEnd).padding(8.dp)
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape),
                 )
               }

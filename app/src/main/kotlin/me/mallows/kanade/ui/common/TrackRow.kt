@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,18 +124,19 @@ fun GroupRow(
     modifier = modifier
       .fillMaxWidth()
       .height(72.dp)
-      .then(if (selected == true) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
+      .then(if (selected == true) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
       .combinedClickableCompat(onClick, onLongClick)
       .padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(14.dp),
   ) {
+    // 選択中は曲の一覧と同じ丸い印を左に出す
+    if (selected != null) SelectionCheck(selected)
     if (artUri != null) TrackArtwork(uri = artUri, size = 52.dp, cornerRadius = 8.dp)
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
-    if (selected != null) Checkbox(checked = selected, onCheckedChange = null)
   }
 }
 
