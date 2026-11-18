@@ -196,7 +196,6 @@ fun MainNavigation(
                       else -> backStack.add(Category(tab.name))
                     }
                   },
-                  onSearch = { backStack.add(Search) },
                   onLicenses = { backStack.add(Licenses) },
                   onScanFolders = { backStack.add(ScanFolders) },
                   bottomPadding = bottomPadding,
@@ -217,7 +216,6 @@ fun MainNavigation(
                   actions = actions,
                   onOpenGroup = { kind, k, title -> backStack.add(groupKey(kind, k, title)) },
                   onBack = { backStack.removeLastOrNull() },
-                  onSearch = { backStack.add(Search) },
                   playlists = { padding ->
                     PlaylistsTab(onOpen = { id, _ -> backStack.add(PlaylistDetail(id)) }, actions = actions, bottomPadding = padding)
                   },

@@ -97,7 +97,6 @@ enum class LibraryTab(@StringRes val label: Int, val icon: ImageVector) {
 @Composable
 fun LibraryHomeScreen(
   onOpen: (tab: LibraryTab, title: String) -> Unit,
-  onSearch: () -> Unit,
   onLicenses: () -> Unit,
   onScanFolders: () -> Unit,
   bottomPadding: Dp,
@@ -141,7 +140,6 @@ fun LibraryHomeScreen(
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 22.sp),
         modifier = Modifier.weight(1f),
       )
-      IconButton(onClick = onSearch) { Icon(KanadeIcons.Search, contentDescription = stringResource(R.string.action_search)) }
       Box {
         IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -207,7 +205,6 @@ fun CategoryScreen(
   actions: TrackActions,
   onOpenGroup: (kind: GroupKind, key: String?, title: String) -> Unit,
   onBack: () -> Unit,
-  onSearch: () -> Unit,
   playlists: @Composable (bottomPadding: Dp) -> Unit,
   bottomPadding: Dp,
   /** 曲がないときの「フォルダを選ぶ」 */
@@ -222,7 +219,6 @@ fun CategoryScreen(
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.weight(1f).padding(start = 4.dp),
       )
-      IconButton(onClick = onSearch) { Icon(KanadeIcons.Search, contentDescription = stringResource(R.string.action_search)) }
     }
     Box(Modifier.weight(1f)) {
       when (category) {
