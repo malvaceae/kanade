@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -165,6 +167,11 @@ fun MainNavigation(
       backStack.add(Player)
     }
   }
+  /**
+   * 下のメニューから移ったときは、進む・戻るの向きのある動きではなくフェードで切り替える
+   * (メニューは場所の切り替えなので、戻る履歴にある画面へ戻るときに左から入ってくるのは不自然なため)
+   */
+  val menuMove = remember { MenuMove() }
   /** 固定のメニューの行き先へ移る。すでに戻る履歴にあれば、そこまで戻る (同じ画面を重ねない) */
   fun navigate(item: NavItem) {
     val key: NavKey = when (item) {
@@ -173,6 +180,8 @@ fun MainNavigation(
       NavItem.SEARCH -> Search
       NavItem.QUEUE -> Queue
     }
+    if (backStack.lastOrNull() == key) return
+    menuMove.pending = true
     if (key in backStack) {
       while (backStack.lastOrNull() != key) backStack.removeLastOrNull()
     } else {
@@ -197,8 +206,8 @@ fun MainNavigation(
             rememberViewModelStoreNavEntryDecorator(),
           ),
           // 進むときは右から重ね、戻るとき (戻るスワイプの途中も) は上の画面を右へずらして下の画面を見せる
-          transitionSpec = { pushTransition() },
-          popTransitionSpec = { popTransition() },
+          transitionSpec = { if (menuMove.take()) fadeTransition() else pushTransition() },
+          popTransitionSpec = { if (menuMove.take()) fadeTransition() else popTransition() },
           predictivePopTransitionSpec = { popTransition() },
           entryProvider = entryProvider {
             entry<Library> {
@@ -392,6 +401,17 @@ private const val TRANSITION_MS = 300
 
 private fun pushTransition(): ContentTransform =
   slideInHorizontally(tween(TRANSITION_MS)) { it } togetherWith slideOutHorizontally(tween(TRANSITION_MS)) { -it / 4 }
+
+/** 下のメニューで移るとき。前の画面を先に薄くしてから、次の画面を浮かび上がらせる (Material の fade through) */
+private fun fadeTransition(): ContentTransform =
+  fadeIn(tween(210, delayMillis = 90)) togetherWith fadeOut(tween(90))
+
+/** 下のメニューから移ったことを、次の画面の切り替えの動きを決めるときまで覚えておく */
+private class MenuMove {
+  var pending = false
+  /** 下のメニューからの移動なら true を返し、印を消す */
+  fun take(): Boolean = pending.also { pending = false }
+}
 
 /** 戻るとき。下になる画面を奥に置き、上の画面だけが右へ抜けていくようにする */
 private fun popTransition(): ContentTransform =
