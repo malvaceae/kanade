@@ -172,6 +172,13 @@ fun MainNavigation(
    * (メニューは場所の切り替えなので、戻る履歴にある画面へ戻るときに左から入ってくるのは不自然なため)
    */
   val menuMove = remember { MenuMove() }
+  // 下のメニューで移ったら、切り替えが終わる頃に印を消す (その後の普通の移動は左右に動かす)
+  LaunchedEffect(backStack.lastOrNull()) {
+    if (menuMove.pending) {
+      kotlinx.coroutines.delay(TRANSITION_MS * 2L)
+      menuMove.pending = false
+    }
+  }
   /** 固定のメニューの行き先へ移る。すでに戻る履歴にあれば、そこまで戻る (同じ画面を重ねない) */
   fun navigate(item: NavItem) {
     val key: NavKey = when (item) {
@@ -206,8 +213,8 @@ fun MainNavigation(
             rememberViewModelStoreNavEntryDecorator(),
           ),
           // 進むときは右から重ね、戻るとき (戻るスワイプの途中も) は上の画面を右へずらして下の画面を見せる
-          transitionSpec = { if (menuMove.take()) fadeTransition() else pushTransition() },
-          popTransitionSpec = { if (menuMove.take()) fadeTransition() else popTransition() },
+          transitionSpec = { if (menuMove.pending) fadeTransition() else pushTransition() },
+          popTransitionSpec = { if (menuMove.pending) fadeTransition() else popTransition() },
           predictivePopTransitionSpec = { popTransition() },
           entryProvider = entryProvider {
             entry<Library> {
@@ -406,11 +413,12 @@ private fun pushTransition(): ContentTransform =
 private fun fadeTransition(): ContentTransform =
   fadeIn(tween(210, delayMillis = 90)) togetherWith fadeOut(tween(90))
 
-/** 下のメニューから移ったことを、次の画面の切り替えの動きを決めるときまで覚えておく */
+/**
+ * 下のメニューから移ったことを、その画面の切り替えが終わるまで覚えておく。
+ * 切り替えの動きは1回の移動で何度も問い合わせられるので、読んだだけでは消さない
+ */
 private class MenuMove {
   var pending = false
-  /** 下のメニューからの移動なら true を返し、印を消す */
-  fun take(): Boolean = pending.also { pending = false }
 }
 
 /** 戻るとき。下になる画面を奥に置き、上の画面だけが右へ抜けていくようにする */

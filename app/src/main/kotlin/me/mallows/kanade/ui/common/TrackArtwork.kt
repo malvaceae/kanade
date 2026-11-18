@@ -1,5 +1,9 @@
 package me.mallows.kanade.ui.common
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.util.Size
@@ -95,24 +99,43 @@ private fun decodeFile(path: String, px: Int): android.graphics.Bitmap? {
 
 /**
  * 再生中の曲の絵。再生情報に絵 (曲に埋め込まれた絵、またはプレイリストのカバー) があればそれを出し、
- * なければ端末の縮小画像を出す。プレイヤー画面と簡易プレイヤーで同じ絵になるよう、どちらもこれを使う
+ * なければ端末の縮小画像を出す。プレイヤー画面と簡易プレイヤーで同じ絵になるよう、どちらもこれを使う。
+ * 曲が変わっても、新しい絵を読み終わるまでは前の絵を出しておく (一瞬「絵なし」になるのを避ける)
  */
 @Composable
 fun NowPlayingArtwork(data: ByteArray?, fallbackUri: String, size: Dp, cornerRadius: Dp) {
+  val context = LocalContext.current
   val px = with(LocalDensity.current) { size.roundToPx() }
-  val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, data, px) {
-    value = data?.let { bytes -> withContext(Dispatchers.Default) { decodeBytes(bytes, px) } }
+  val key = "$fallbackUri@$px"
+  var shown by remember { mutableStateOf(data?.let { null } ?: ThumbnailCache.get(key)) }
+  LaunchedEffect(data, key) {
+    shown = withContext(Dispatchers.IO) {
+      data?.let { decodeBytes(it, px) }
+        ?: ThumbnailCache.get(key)
+        ?: if (ThumbnailCache.isMissing(key)) null
+        else runCatching { context.contentResolver.loadThumbnail(fallbackUri.toUri(), Size(px, px), null) }
+          .getOrNull()
+          .also { ThumbnailCache.put(key, it) }
+    }
   }
-  val image = bitmap
-  if (data == null || image == null) {
-    TrackArtwork(uri = fallbackUri, size = size, cornerRadius = cornerRadius)
-  } else {
-    Image(
-      bitmap = image.asImageBitmap(),
-      contentDescription = null,
-      contentScale = ContentScale.Crop,
-      modifier = Modifier.size(size).clip(RoundedCornerShape(cornerRadius)),
-    )
+  Box(
+    modifier = Modifier
+      .size(size)
+      .clip(RoundedCornerShape(cornerRadius))
+      .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+    contentAlignment = Alignment.Center,
+  ) {
+    val image = shown
+    if (image != null) {
+      Image(bitmap = image.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+    } else {
+      Icon(
+        imageVector = KanadeIcons.MusicNote,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(size * 0.4f),
+      )
+    }
   }
 }
 

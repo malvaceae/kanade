@@ -351,7 +351,8 @@ class PlayerConnection @Inject constructor(
       isPlaying = player.isPlaying,
       positionMs = player.currentPosition,
       positionAt = SystemClock.elapsedRealtime(),
-      durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
+      // 曲が変わった直後は、プレイヤーがまだ長さを知らないことがある。そのときはライブラリの長さを使う
+      durationMs = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: metadata.durationMs ?: 0,
       shuffle = player.shuffleModeEnabled,
       repeatMode = player.repeatMode,
       hasNext = player.hasNextMediaItem(),

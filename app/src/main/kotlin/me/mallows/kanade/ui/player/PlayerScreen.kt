@@ -373,7 +373,8 @@ private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifi
   var dragging by remember { mutableStateOf<Float?>(null) }
   val duration = state.durationMs.coerceAtLeast(1)
   val position by rememberPlaybackPosition(state)
-  val fraction = dragging ?: (position.toFloat() / duration).coerceIn(0f, 1f)
+  // 長さが分からない間は、バーを空にしておく
+  val fraction = dragging ?: if (state.durationMs > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
   Column(modifier = modifier) {
     Slider(
       value = fraction,

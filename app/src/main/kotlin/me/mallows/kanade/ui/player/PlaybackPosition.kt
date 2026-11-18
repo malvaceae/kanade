@@ -18,7 +18,8 @@ fun rememberPlaybackPosition(state: PlayerState): State<Long> {
   val position = remember { mutableLongStateOf(state.positionMs) }
   LaunchedEffect(state.positionMs, state.positionAt, state.isPlaying, state.speed, state.durationMs) {
     fun now(): Long {
-      if (!state.isPlaying) return state.positionMs
+      // 長さが分からない間は進めない (進めると、長さで割ったときにバーが端まで行ってしまう)
+      if (!state.isPlaying || state.durationMs <= 0) return state.positionMs
       val elapsed = ((SystemClock.elapsedRealtime() - state.positionAt) * state.speed).toLong()
       val p = state.positionMs + elapsed.coerceAtLeast(0)
       return if (state.durationMs > 0) p.coerceAtMost(state.durationMs) else p

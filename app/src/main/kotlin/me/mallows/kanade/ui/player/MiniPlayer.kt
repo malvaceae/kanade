@@ -94,7 +94,7 @@ fun MiniPlayer(
     }
     Box(Modifier.padding(horizontal = 12.dp)) {
       LinearProgressIndicator(
-        progress = { if (duration > 0) position.value.toFloat() / duration else 0f },
+        progress = { if (duration > 0) (position.value.toFloat() / duration).coerceIn(0f, 1f) else 0f },
         modifier = Modifier.fillMaxWidth().height(2.dp),
         color = MaterialTheme.colorScheme.primary,
         trackColor = Color.Transparent,
