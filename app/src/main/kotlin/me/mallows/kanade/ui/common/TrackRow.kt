@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -117,11 +118,14 @@ fun GroupRow(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
   onLongClick: (() -> Unit)? = null,
+  /** 選択モードのときだけ、選んでいるかどうか (nullなら選択モードではない) */
+  selected: Boolean? = null,
 ) {
   Row(
     modifier = modifier
       .fillMaxWidth()
       .height(72.dp)
+      .then(if (selected == true) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
       .combinedClickableCompat(onClick, onLongClick)
       .padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -132,6 +136,7 @@ fun GroupRow(
       Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
+    if (selected != null) Checkbox(checked = selected, onCheckedChange = null)
   }
 }
 

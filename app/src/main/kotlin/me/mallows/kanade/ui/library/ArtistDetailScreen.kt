@@ -1,5 +1,6 @@
 package me.mallows.kanade.ui.library
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,7 @@ import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.GroupRow
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.selection.TrackActions
+import me.mallows.kanade.ui.selection.navigationBarHeight
 
 @HiltViewModel(assistedFactory = ArtistDetailViewModel.Factory::class)
 class ArtistDetailViewModel @AssistedInject constructor(
@@ -88,8 +90,8 @@ fun ArtistDetailScreen(
 ) {
   val albums by viewModel.albums.collectAsStateWithLifecycle()
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
-  var menuFor by remember { mutableStateOf<GroupTarget?>(null) }
-  menuFor?.let { GroupMenuSheet(it, library, actions) { menuFor = null } }
+  var selectedKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
+  val selecting = selectedKeys.isNotEmpty()
   val unknown = stringResource(R.string.unknown_album)
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -105,7 +107,8 @@ fun ArtistDetailScreen(
     val list = albums ?: return@Column Loading()
     val all = tracks.orEmpty()
     val source = PlaySource("group:${GroupKind.ARTIST.name}:${key.name}", key.title)
-    LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
+    Box(Modifier.weight(1f)) {
+    LazyColumn(contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
       item {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
           Text(
@@ -135,14 +138,28 @@ fun ArtistDetailScreen(
       items(list, key = { it.albumId ?: -1L }) { album ->
         val title = album.album ?: unknown
         val sub = listOfNotNull(album.year?.toString(), pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount))
+        val k = album.albumId?.toString() ?: ""
+        val toggle = { selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
         GroupRow(
           title = title,
           subtitle = sub.joinToString(" · "),
           artUri = album.artUri,
-          onClick = { onOpenGroup(GroupKind.ALBUM, album.albumId?.toString(), title) },
-          onLongClick = { menuFor = GroupTarget(GroupKind.ALBUM, album.albumId?.toString(), title) },
+          onClick = { if (selecting) toggle() else onOpenGroup(GroupKind.ALBUM, album.albumId?.toString(), title) },
+          onLongClick = toggle,
+          selected = if (selecting) k in selectedKeys else null,
         )
       }
+    }
+    GroupSelectionBars(
+      selected = list.filter { (it.albumId?.toString() ?: "") in selectedKeys }
+        .map { GroupTarget(GroupKind.ALBUM, it.albumId?.toString(), it.album ?: unknown) },
+      allSelected = selectedKeys.size == list.size,
+      onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map { it.albumId?.toString() ?: "" }.toSet() },
+      onClear = { selectedKeys = emptySet() },
+      sourceTitle = key.title,
+      load = { library.groupTracks(it.kind, it.key) },
+      actions = actions,
+    )
     }
   }
 }

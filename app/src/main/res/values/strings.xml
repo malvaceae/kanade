@@ -74,6 +74,7 @@
     <string name="sort_descending">降順</string>
 
     <string name="selection_count">%d曲を選択中</string>
+    <string name="selection_count_items">%d件を選択中</string>
     <string name="action_select_all">すべて選択</string>
     <string name="action_clear_selection">選択を解除</string>
     <string name="action_play_next">次に再生</string>

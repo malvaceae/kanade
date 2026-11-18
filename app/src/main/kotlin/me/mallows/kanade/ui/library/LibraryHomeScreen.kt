@@ -29,6 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.selection.navigationBarHeight
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Checkbox
 import me.mallows.kanade.playback.PlaySource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import me.mallows.kanade.ui.common.initialOf
@@ -264,16 +270,20 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
 
 @Composable
 private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, String) -> Unit, actions: TrackActions, bottomPadding: Dp) {
-  var menuFor by remember { mutableStateOf<GroupTarget?>(null) }
-  menuFor?.let { GroupMenuSheet(it, viewModel, actions) { menuFor = null } }
   val albums by viewModel.albums.collectAsStateWithLifecycle()
   val sort by viewModel.albumSort.collectAsStateWithLifecycle()
   val grid by viewModel.albumGrid.collectAsStateWithLifecycle()
   var showSort by rememberSaveable { mutableStateOf(false) }
+  // 長押しで選択を始める。選択中は押すたびに選択を切り替える
+  var selectedKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
   val list = albums ?: return Loading()
   val unknown = stringResource(R.string.unknown_album)
-  val open = { a: AlbumSummary -> onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
-  val menu = { a: AlbumSummary -> menuFor = GroupTarget(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
+  val keyOf = { a: AlbumSummary -> a.albumId?.toString() ?: "" }
+  val targetOf = { a: AlbumSummary -> GroupTarget(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
+  val selecting = selectedKeys.isNotEmpty()
+  val toggle = { a: AlbumSummary -> val k = keyOf(a); selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
+  val click = { a: AlbumSummary -> if (selecting) toggle(a) else onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
+  val padding = if (selecting) 88.dp + navigationBarHeight() else bottomPadding
   val header = @Composable { modifier: Modifier ->
     ListHeader(pluralStringResource(R.plurals.album_count, list.size, list.size), modifier) {
       IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
@@ -282,46 +292,71 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
       SortButton(sort != null) { showSort = true }
     }
   }
-  if (grid) {
-    LazyVerticalGrid(
-      columns = GridCells.Adaptive(150.dp),
-      contentPadding = PaddingValues(start = GRID_SIDE_PADDING, end = GRID_SIDE_PADDING, bottom = bottomPadding),
-      horizontalArrangement = Arrangement.spacedBy(12.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-      // 格子の左右の余白を見出しには付けず、ほかの画面と同じ位置にボタンを置く
-      item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-        header(Modifier.layout { measurable, constraints ->
-          val extra = (GRID_SIDE_PADDING * 2).roundToPx()
-          val width = constraints.maxWidth + extra
-          val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-          layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
-        })
-      }
-      items(list, key = { it.albumId ?: -1L }) { album ->
-        Column(Modifier.combinedClickable(onClick = { open(album) }, onLongClick = { menu(album) })) {
-          androidx.compose.foundation.layout.BoxWithConstraints {
-            TrackArtwork(uri = album.artUri, size = maxWidth, cornerRadius = 10.dp)
+  Box(Modifier.fillMaxSize()) {
+    if (grid) {
+      LazyVerticalGrid(
+        columns = GridCells.Adaptive(150.dp),
+        contentPadding = PaddingValues(start = GRID_SIDE_PADDING, end = GRID_SIDE_PADDING, bottom = padding),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+      ) {
+        // 格子の左右の余白を見出しには付けず、ほかの画面と同じ位置にボタンを置く
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+          header(Modifier.layout { measurable, constraints ->
+            val extra = (GRID_SIDE_PADDING * 2).roundToPx()
+            val width = constraints.maxWidth + extra
+            val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+            layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+          })
+        }
+        items(list, key = { it.albumId ?: -1L }) { album ->
+          val isSelected = keyOf(album) in selectedKeys
+          Column(Modifier.combinedClickable(onClick = { click(album) }, onLongClick = { toggle(album) })) {
+            androidx.compose.foundation.layout.BoxWithConstraints {
+              TrackArtwork(uri = album.artUri, size = maxWidth, cornerRadius = 10.dp)
+              if (selecting) {
+                // 選んだアルバムは薄く覆い、右上に印を出す
+                if (isSelected) {
+                  Box(Modifier.matchParentSize().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
+                }
+                Checkbox(
+                  checked = isSelected,
+                  onCheckedChange = null,
+                  modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape),
+                )
+              }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(album.album ?: unknown, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(album.artist ?: stringResource(R.string.unknown_artist), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
           }
-          Spacer(Modifier.height(6.dp))
-          Text(album.album ?: unknown, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-          Text(album.artist ?: stringResource(R.string.unknown_artist), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+      }
+    } else {
+      LazyColumn(contentPadding = PaddingValues(bottom = padding)) {
+        item { header(Modifier) }
+        items(list, key = { it.albumId ?: -1L }) { album ->
+          GroupRow(
+            title = album.album ?: unknown,
+            subtitle = "${album.artist ?: stringResource(R.string.unknown_artist)} · ${pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)}",
+            artUri = album.artUri,
+            onClick = { click(album) },
+            onLongClick = { toggle(album) },
+            selected = if (selecting) keyOf(album) in selectedKeys else null,
+          )
         }
       }
     }
-  } else {
-    LazyColumn(contentPadding = PaddingValues(bottom = bottomPadding)) {
-      item { header(Modifier) }
-      items(list, key = { it.albumId ?: -1L }) { album ->
-        GroupRow(
-          title = album.album ?: unknown,
-          subtitle = "${album.artist ?: stringResource(R.string.unknown_artist)} · ${pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)}",
-          artUri = album.artUri,
-          onClick = { open(album) },
-          onLongClick = { menu(album) },
-        )
-      }
-    }
+    GroupSelectionBars(
+      selected = list.filter { keyOf(it) in selectedKeys }.map(targetOf),
+      allSelected = selectedKeys.size == list.size,
+      onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map(keyOf).toSet() },
+      onClear = { selectedKeys = emptySet() },
+      sourceTitle = stringResource(R.string.tab_albums),
+      load = { viewModel.groupTracks(it.kind, it.key) },
+      actions = actions,
+    )
   }
   if (showSort) {
     SortSheet(AlbumSort.entries.toTypedArray(), sort, AlbumSort.TITLE,
@@ -331,9 +366,9 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
 
 @Composable
 private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (GroupKind, String?, String) -> Unit, actions: TrackActions, bottomPadding: Dp) {
-  var menuFor by remember { mutableStateOf<GroupTarget?>(null) }
-  menuFor?.let { GroupMenuSheet(it, viewModel, actions) { menuFor = null } }
   val groups by viewModel.groups(kind).collectAsStateWithLifecycle()
+  var selectedKeys by rememberSaveable(kind) { mutableStateOf(setOf<String>()) }
+  val selecting = selectedKeys.isNotEmpty()
   val sort by viewModel.groupSort(kind).collectAsStateWithLifecycle()
   var showSort by rememberSaveable(kind) { mutableStateOf(false) }
   val list = groups ?: return Loading()
@@ -346,7 +381,7 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
   )
   val listState = rememberLazyListState()
   Box(Modifier.fillMaxSize()) {
-  LazyColumn(state = listState, contentPadding = PaddingValues(bottom = bottomPadding)) {
+  LazyColumn(state = listState, contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
     item {
       ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) {
         SortButton(sort != null) { showSort = true }
@@ -354,20 +389,41 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
     }
     items(list, key = { it.name ?: "" }) { group ->
       val title = group.displayName(kind, viewModel.volumeLabels) ?: unknown
+      val k = group.name ?: ""
+      val toggle = { selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
       GroupRow(
         title = title,
         subtitle = groupSubtitle(kind, group),
         artUri = group.artUri,
-        onClick = { onOpen(kind, group.name, title) },
-        onLongClick = { menuFor = GroupTarget(kind, group.name, title) },
+        onClick = { if (selecting) toggle() else onOpen(kind, group.name, title) },
+        onLongClick = toggle,
+        selected = if (selecting) k in selectedKeys else null,
       )
     }
   }
-  FastScroller(
-    state = listState,
-    label = { i -> initialOf(list.getOrNull(i - 1)?.let { it.displayName(kind, viewModel.volumeLabels) ?: unknown }) },
-    modifier = Modifier.align(Alignment.TopEnd),
-    bottomPadding = bottomPadding,
+  if (!selecting) {
+    FastScroller(
+      state = listState,
+      label = { i -> initialOf(list.getOrNull(i - 1)?.let { it.displayName(kind, viewModel.volumeLabels) ?: unknown }) },
+      modifier = Modifier.align(Alignment.TopEnd),
+      bottomPadding = bottomPadding,
+    )
+  }
+  GroupSelectionBars(
+    selected = list.filter { (it.name ?: "") in selectedKeys }
+      .map { GroupTarget(kind, it.name, it.displayName(kind, viewModel.volumeLabels) ?: unknown) },
+    allSelected = selectedKeys.size == list.size,
+    onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map { it.name ?: "" }.toSet() },
+    onClear = { selectedKeys = emptySet() },
+    sourceTitle = stringResource(
+      when (kind) {
+        GroupKind.ARTIST -> R.string.tab_artists
+        GroupKind.GENRE -> R.string.tab_genres
+        else -> R.string.tab_folders
+      }
+    ),
+    load = { viewModel.groupTracks(it.kind, it.key) },
+    actions = actions,
   )
   }
   if (showSort) {

@@ -28,14 +28,21 @@ import me.mallows.kanade.ui.icons.KanadeIcons
 
 /** 選択モードの上部バー: 「N曲を選択中」「すべて選択」「×」 */
 @Composable
-fun SelectionTopBar(count: Int, allSelected: Boolean, onSelectAll: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun SelectionTopBar(
+  count: Int,
+  allSelected: Boolean,
+  onSelectAll: () -> Unit,
+  onClose: () -> Unit,
+  modifier: Modifier = Modifier,
+  text: String = stringResource(R.string.selection_count, count),
+) {
   Row(
     modifier = modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IconButton(onClick = onClose) { Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_clear_selection)) }
     Text(
-      stringResource(R.string.selection_count, count),
+      text,
       style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
       modifier = Modifier.weight(1f),
     )
