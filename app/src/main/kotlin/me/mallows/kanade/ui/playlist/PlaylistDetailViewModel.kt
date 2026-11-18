@@ -1,5 +1,7 @@
 package me.mallows.kanade.ui.playlist
 
+import me.mallows.kanade.core.data.playlist.DuplicateKey
+import me.mallows.kanade.core.data.playlist.duplicateKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.assisted.Assisted
@@ -99,10 +101,13 @@ class PlaylistDetailViewModel @AssistedInject constructor(
     return { repository.restore(removed) }
   }
 
-  /** 同じ曲が2回目以降に出てくる分を外す (保存された順番で最初のものを残す)。外す曲が無ければnull */
+  /**
+   * 同じ曲 (アーティスト・曲名・長さが同じ) が2回目以降に出てくる分を外す (保存された順番で最初のものを残す)。
+   * 外す曲が無ければnull
+   */
   suspend fun removeDuplicates(): Pair<Int, Undo>? {
-    val seen = HashSet<Long>()
-    val dupes = stored.value.orEmpty().filterNot { seen.add(it.track.id) }.map { it.entryId }.toSet()
+    val seen = HashSet<DuplicateKey>()
+    val dupes = stored.value.orEmpty().filterNot { seen.add(it.track.duplicateKey) }.map { it.entryId }.toSet()
     if (dupes.isEmpty()) return null
     return dupes.size to remove(dupes)
   }

@@ -31,9 +31,14 @@ class PlaylistRepository @Inject constructor(
 
   suspend fun delete(id: Long) = dao.deletePlaylist(id)
 
-  /** [trackIds]のうち、すでにプレイリストに入っている曲 */
-  suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> =
-    dao.existingTrackIds(playlistId, trackIds.distinct()).toSet()
+  /** [trackIds]のうち、すでにプレイリストに入っている曲 (アーティスト・曲名・長さが同じ曲を含む。[duplicateKey]) */
+  suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> {
+    val existing = dao.tracksOf(playlistId).mapTo(HashSet()) { it.duplicateKey }
+    if (existing.isEmpty()) return emptySet()
+    return trackIds.distinct().chunked(500).flatMap { dao.tracksByIds(it) }
+      .filter { it.duplicateKey in existing }
+      .mapTo(HashSet()) { it.id }
+  }
 
   /** 曲を末尾 (または先頭) に追加する */
   suspend fun add(playlistId: Long, trackIds: List<Long>, atTop: Boolean = false) {

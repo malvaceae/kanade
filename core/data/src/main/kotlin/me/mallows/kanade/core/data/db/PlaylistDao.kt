@@ -114,8 +114,11 @@ interface PlaylistDao {
   @Query("SELECT MIN(position) FROM playlist_entry WHERE playlist_id = :playlistId")
   suspend fun minPosition(playlistId: Long): Double?
 
-  @Query("SELECT track_id FROM playlist_entry WHERE playlist_id = :playlistId AND track_id IN (:trackIds)")
-  suspend fun existingTrackIds(playlistId: Long, trackIds: List<Long>): List<Long>
+  @Query("SELECT t.* FROM playlist_entry e JOIN track t ON t.id = e.track_id WHERE e.playlist_id = :playlistId")
+  suspend fun tracksOf(playlistId: Long): List<TrackEntity>
+
+  @Query("SELECT * FROM track WHERE id IN (:ids)")
+  suspend fun tracksByIds(ids: List<Long>): List<TrackEntity>
 
   @Query("SELECT * FROM playlist_entry WHERE id IN (:ids)")
   suspend fun entriesByIds(ids: List<Long>): List<PlaylistEntryEntity>
