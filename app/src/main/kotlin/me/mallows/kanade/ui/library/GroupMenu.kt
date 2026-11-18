@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -48,6 +50,8 @@ fun <T> BoxScope.GroupSelectionBars(
   canAddToPlaylist: Boolean = actions.canAddToPlaylist,
   /** 最後に足すボタン (削除など) */
   extra: List<BarAction> = emptyList(),
+  /** 上のバーを重ねる見出しの行の高さ */
+  headerHeight: Dp = 48.dp,
 ) {
   val barActive = LocalBottomBarActive.current
   val selecting = selected.isNotEmpty()
@@ -78,6 +82,7 @@ fun <T> BoxScope.GroupSelectionBars(
     onSelectAll = onSelectAll,
     onClose = onClear,
     text = stringResource(R.string.selection_count_items, selected.size),
+    height = headerHeight,
     modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
   )
   SelectionBottomBar(

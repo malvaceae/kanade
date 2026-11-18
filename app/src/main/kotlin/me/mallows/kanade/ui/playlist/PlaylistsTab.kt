@@ -21,6 +21,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import me.mallows.kanade.ui.selection.dragToSelect
 import me.mallows.kanade.ui.library.GroupSelectionBars
 import me.mallows.kanade.ui.selection.BarAction
 import me.mallows.kanade.ui.selection.navigationBarHeight
@@ -76,7 +80,20 @@ fun PlaylistsTab(
 
   val selecting = selectedIds.isNotEmpty()
   Box(Modifier.fillMaxSize()) {
-    LazyColumn(contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
+    val haptic = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+    LazyColumn(
+      state = listState,
+      contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
+      // 長押ししたまま指を動かすと、通ったプレイリストまでをまとめて選ぶ (曲の一覧と同じ)
+      modifier = Modifier.dragToSelect(
+        state = listState,
+        keys = list.map { it.id },
+        currentSelection = { selectedIds },
+        onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+        onChange = { selectedIds = it },
+      ),
+    ) {
       item { ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) }
       item { IconRow(KanadeIcons.Plus, stringResource(R.string.playlist_new)) { creating = true } }
       items(list, key = { it.id }) { p ->
@@ -86,7 +103,6 @@ fun PlaylistsTab(
           subtitle = "${pluralStringResource(R.plurals.track_count, p.trackCount, p.trackCount)} · ${p.durationMs / 60_000}${stringResource(R.string.minutes_suffix)}",
           artUri = p.artUri ?: "",
           onClick = { if (selecting) toggle() else onOpen(p.id, p.name) },
-          onLongClick = toggle,
           selected = if (selecting) p.id in selectedIds else null,
         )
       }

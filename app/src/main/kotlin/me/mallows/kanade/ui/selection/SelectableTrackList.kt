@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -205,32 +206,72 @@ fun SelectableTrackList(
 }
 
 /**
- * 長押しで選択を始め、そのまま指を動かすと通った範囲を選択する。
- * 長押しした曲が選択済みなら、なぞった範囲の選択を外す。
+ * 長押しで選択を始め、そのまま指を動かすと通った範囲を選択する (縦の一覧)。
+ * 長押しした項目が選択済みなら、なぞった範囲の選択を外す。
+ * [keys]は選択に使うキーを一覧の順に並べたもの。一覧の項目のキー (items の key) と同じにする
  */
-fun Modifier.dragToSelect(
+fun <K> Modifier.dragToSelect(
   state: LazyListState,
-  keys: List<Long>,
-  currentSelection: () -> Set<Long>,
+  keys: List<K>,
+  currentSelection: () -> Set<K>,
   onStart: () -> Unit,
-  onChange: (Set<Long>) -> Unit,
+  onChange: (Set<K>) -> Unit,
   /** 行の右端のこの幅は対象外 (ドラッグハンドル用) */
   excludeEnd: Dp = 0.dp,
+): Modifier = dragToSelect(
+  keys = keys,
+  keyAt = { o -> state.layoutInfo.visibleItemsInfo.firstOrNull { o.y.toInt() in it.offset until it.offset + it.size }?.key },
+  scrollBy = { state.scrollBy(it) },
+  currentSelection = currentSelection,
+  onStart = onStart,
+  onChange = onChange,
+  excludeEnd = excludeEnd,
+)
+
+/** [dragToSelect]の格子版。なぞった項目までを、並びの順 (左から右、上から下) の範囲で選ぶ */
+fun <K> Modifier.dragToSelect(
+  state: LazyGridState,
+  keys: List<K>,
+  currentSelection: () -> Set<K>,
+  onStart: () -> Unit,
+  onChange: (Set<K>) -> Unit,
+): Modifier = dragToSelect(
+  keys = keys,
+  keyAt = { o ->
+    state.layoutInfo.visibleItemsInfo.firstOrNull {
+      o.x.toInt() in it.offset.x until it.offset.x + it.size.width && o.y.toInt() in it.offset.y until it.offset.y + it.size.height
+    }?.key
+  },
+  scrollBy = { state.scrollBy(it) },
+  currentSelection = currentSelection,
+  onStart = onStart,
+  onChange = onChange,
+  excludeEnd = 0.dp,
+)
+
+private fun <K> Modifier.dragToSelect(
+  keys: List<K>,
+  /** 指の位置にある項目のキー (一覧の key)。項目の間などではnull */
+  keyAt: (Offset) -> Any?,
+  scrollBy: suspend (Float) -> Unit,
+  currentSelection: () -> Set<K>,
+  onStart: () -> Unit,
+  onChange: (Set<K>) -> Unit,
+  excludeEnd: Dp,
 ): Modifier = pointerInput(keys) {
   val pointer = this
   coroutineScope {
     val scope = this
     var anchor = -1
-    var base = emptySet<Long>()
+    var base = emptySet<K>()
     var adding = true
     var lastPosition = Offset.Zero
     var autoScroll: Job? = null
     val edge = 64.dp.toPx()
 
     fun indexAt(offset: Offset): Int? {
-      val item = state.layoutInfo.visibleItemsInfo.firstOrNull { offset.y.toInt() in it.offset until it.offset + it.size }
-      val key = item?.key as? Long ?: return null
-      return keys.indexOf(key).takeIf { it >= 0 }
+      val key = keyAt(offset) ?: return null
+      return keys.indexOfFirst { it == key }.takeIf { it >= 0 }
     }
 
     fun select(position: Offset) {
@@ -281,7 +322,7 @@ fun Modifier.dragToSelect(
               val speed = speedAt(lastPosition.y)
               if (speed == 0f) break
               val boost = (1f + (System.currentTimeMillis() - started) / AUTO_SCROLL_RAMP_MS).coerceAtMost(AUTO_SCROLL_MAX_BOOST)
-              state.scrollBy(speed * boost)
+              scrollBy(speed * boost)
               select(lastPosition)
               delay(16)
             }

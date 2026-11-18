@@ -20,6 +20,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import me.mallows.kanade.ui.selection.dragToSelect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -74,7 +82,7 @@ class ArtistDetailViewModel @AssistedInject constructor(
   }
 }
 
-/** アーティストのアルバムの一覧。先頭の「すべての曲」でアーティストの全曲を開く */
+/** アーティストのアルバムの一覧。上の「再生」「シャッフル」でアーティストの全曲を流す */
 @Composable
 fun ArtistDetailScreen(
   key: ArtistDetail,
@@ -91,6 +99,8 @@ fun ArtistDetailScreen(
   val albums by viewModel.albums.collectAsStateWithLifecycle()
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
   var selectedKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
+  /** 再生ボタンの行の高さ (px)。選択中の上のバーをこの高さにする */
+  var headerHeight by remember { mutableIntStateOf(0) }
   val selecting = selectedKeys.isNotEmpty()
   val unknown = stringResource(R.string.unknown_album)
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -108,9 +118,23 @@ fun ArtistDetailScreen(
     val all = tracks.orEmpty()
     val source = PlaySource("group:${GroupKind.ARTIST.name}:${key.name}", key.title)
     Box(Modifier.weight(1f)) {
-    LazyColumn(contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
+    val haptic = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    LazyColumn(
+      state = listState,
+      contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
+      // 長押ししたまま指を動かすと、通ったアルバムまでをまとめて選ぶ (曲の一覧と同じ)
+      modifier = Modifier.dragToSelect(
+        state = listState,
+        keys = list.map { it.albumId?.toString() ?: "" },
+        currentSelection = { selectedKeys },
+        onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+        onChange = { selectedKeys = it },
+      ),
+    ) {
       item {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().onSizeChanged { headerHeight = it.height }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
           Text(
             "${pluralStringResource(R.plurals.album_count, list.size, list.size)} · ${pluralStringResource(R.plurals.track_count, all.size, all.size)}",
             style = MaterialTheme.typography.bodyMedium,
@@ -126,16 +150,7 @@ fun ArtistDetailScreen(
           }
         }
       }
-      // アーティストの全曲をまとめて見る
-      item {
-        GroupRow(
-          title = stringResource(R.string.library_all_tracks),
-          subtitle = pluralStringResource(R.plurals.track_count, all.size, all.size),
-          artUri = "",
-          onClick = { onOpenGroup(GroupKind.ARTIST, key.name, key.title) },
-        )
-      }
-      items(list, key = { it.albumId ?: -1L }) { album ->
+      items(list, key = { it.albumId?.toString() ?: "" }) { album ->
         val title = album.album ?: unknown
         val sub = listOfNotNull(album.year?.toString(), pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount))
         val k = album.albumId?.toString() ?: ""
@@ -145,7 +160,6 @@ fun ArtistDetailScreen(
           subtitle = sub.joinToString(" · "),
           artUri = album.artUri,
           onClick = { if (selecting) toggle() else onOpenGroup(GroupKind.ALBUM, album.albumId?.toString(), title) },
-          onLongClick = toggle,
           selected = if (selecting) k in selectedKeys else null,
         )
       }
@@ -157,6 +171,7 @@ fun ArtistDetailScreen(
       onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map { it.albumId?.toString() ?: "" }.toSet() },
       onClear = { selectedKeys = emptySet() },
       sourceTitle = key.title,
+      headerHeight = with(density) { headerHeight.toDp() }.coerceAtLeast(48.dp),
       keyOf = { "${it.kind}:${it.key}" },
       load = { library.groupTracks(it.kind, it.key) },
       actions = actions,

@@ -29,6 +29,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import me.mallows.kanade.ui.selection.dragToSelect
 import me.mallows.kanade.ui.common.SelectionCheck
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
@@ -292,6 +296,11 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   val toggle = { a: AlbumSummary -> val k = keyOf(a); selectedKeys = if (k in selectedKeys) selectedKeys - k else selectedKeys + k }
   val click = { a: AlbumSummary -> if (selecting) toggle(a) else onOpen(GroupKind.ALBUM, a.albumId?.toString(), a.album ?: unknown) }
   val padding = if (selecting) 88.dp + navigationBarHeight() else bottomPadding
+  // 長押ししたまま指を動かすと、通ったアルバムまでをまとめて選ぶ (曲の一覧と同じ)
+  val haptic = LocalHapticFeedback.current
+  val keys = list.map(keyOf)
+  val gridState = rememberLazyGridState()
+  val listState = rememberLazyListState()
   val header = @Composable { modifier: Modifier ->
     ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size), modifier) {
       IconButton(onClick = { viewModel.setAlbumGrid(!grid) }) {
@@ -303,6 +312,14 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
   Box(Modifier.fillMaxSize()) {
     if (grid) {
       LazyVerticalGrid(
+        state = gridState,
+        modifier = Modifier.dragToSelect(
+          state = gridState,
+          keys = keys,
+          currentSelection = { selectedKeys },
+          onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+          onChange = { selectedKeys = it },
+        ),
         columns = GridCells.Adaptive(150.dp),
         contentPadding = PaddingValues(start = GRID_SIDE_PADDING, end = GRID_SIDE_PADDING, bottom = padding),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -317,9 +334,9 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
             layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
           })
         }
-        items(list, key = { it.albumId ?: -1L }) { album ->
+        items(list, key = keyOf) { album ->
           val isSelected = keyOf(album) in selectedKeys
-          Column(Modifier.combinedClickable(onClick = { click(album) }, onLongClick = { toggle(album) })) {
+          Column(Modifier.clickable { click(album) }) {
             androidx.compose.foundation.layout.BoxWithConstraints {
               TrackArtwork(uri = album.artUri, size = maxWidth, cornerRadius = 10.dp)
               if (selecting) {
@@ -341,15 +358,24 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
         }
       }
     } else {
-      LazyColumn(contentPadding = PaddingValues(bottom = padding)) {
+      LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(bottom = padding),
+        modifier = Modifier.dragToSelect(
+          state = listState,
+          keys = keys,
+          currentSelection = { selectedKeys },
+          onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+          onChange = { selectedKeys = it },
+        ),
+      ) {
         item { header(Modifier) }
-        items(list, key = { it.albumId ?: -1L }) { album ->
+        items(list, key = keyOf) { album ->
           GroupRow(
             title = album.album ?: unknown,
             subtitle = "${album.artist ?: stringResource(R.string.unknown_artist)} · ${pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)}",
             artUri = album.artUri,
             onClick = { click(album) },
-            onLongClick = { toggle(album) },
             selected = if (selecting) keyOf(album) in selectedKeys else null,
           )
         }
@@ -389,7 +415,19 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
   )
   val listState = rememberLazyListState()
   Box(Modifier.fillMaxSize()) {
-  LazyColumn(state = listState, contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding)) {
+  val haptic = LocalHapticFeedback.current
+  LazyColumn(
+    state = listState,
+    contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
+    // 長押ししたまま指を動かすと、通った項目までをまとめて選ぶ (曲の一覧と同じ)
+    modifier = Modifier.dragToSelect(
+      state = listState,
+      keys = list.map { it.name ?: "" },
+      currentSelection = { selectedKeys },
+      onStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+      onChange = { selectedKeys = it },
+    ),
+  ) {
     item {
       ListHeader(pluralStringResource(R.plurals.item_count, list.size, list.size)) {
         SortButton(sort != null) { showSort = true }
@@ -404,7 +442,6 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
         subtitle = groupSubtitle(kind, group),
         artUri = group.artUri,
         onClick = { if (selecting) toggle() else onOpen(kind, group.name, title) },
-        onLongClick = toggle,
         selected = if (selecting) k in selectedKeys else null,
       )
     }
