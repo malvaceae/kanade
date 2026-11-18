@@ -354,6 +354,7 @@ private fun AlbumsTab(viewModel: LibraryViewModel, onOpen: (GroupKind, String?, 
       onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map(keyOf).toSet() },
       onClear = { selectedKeys = emptySet() },
       sourceTitle = stringResource(R.string.tab_albums),
+      keyOf = { "${it.kind}:${it.key}" },
       load = { viewModel.groupTracks(it.kind, it.key) },
       actions = actions,
     )
@@ -422,7 +423,8 @@ private fun GroupsTab(viewModel: LibraryViewModel, kind: GroupKind, onOpen: (Gro
         else -> R.string.tab_folders
       }
     ),
-    load = { viewModel.groupTracks(it.kind, it.key) },
+    keyOf = { "${it.kind}:${it.key}" },
+      load = { viewModel.groupTracks(it.kind, it.key) },
     actions = actions,
   )
   }

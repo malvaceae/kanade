@@ -31,9 +31,7 @@ class PlaylistsViewModel @Inject constructor(
 
   /** プレイリストの曲 (保存された順) */
   suspend fun tracks(id: Long): List<TrackEntity> = repository.items(id).first().map { it.track }
-  suspend fun rename(id: Long, name: String) = repository.rename(id, name.trim())
   suspend fun delete(id: Long) = repository.delete(id)
-  suspend fun exportM3u(id: Long, uri: android.net.Uri): Int = m3u.export(id, uri)
 
   suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> = repository.duplicates(playlistId, trackIds)
 

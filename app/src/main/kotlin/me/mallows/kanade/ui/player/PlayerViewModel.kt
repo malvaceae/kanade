@@ -47,10 +47,10 @@ class PlayerViewModel @Inject constructor(
    * 押した曲が対象外なら再生しない (画面が知らせる)
    */
   fun play(tracks: List<TrackEntity>, index: Int, source: PlaySource?) {
-    val target = tracks.getOrNull(index) ?: return
-    if (target.excluded) return
+    // 指定の曲が対象外なら、その後の最初の再生できる曲から始める (先頭が対象外のプレイリストを「再生」したときなど)
+    val first = (index until tracks.size).firstOrNull { !tracks[it].excluded } ?: return
     val playable = tracks.filterNot { it.excluded }
-    val start = index - tracks.take(index).count { it.excluded }
+    val start = first - tracks.take(first).count { it.excluded }
     connection.playTracks(playable.map { it.mediaStoreId }, start, source = source)
   }
 

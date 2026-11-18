@@ -28,22 +28,33 @@ import me.mallows.kanade.ui.selection.TrackActions
 data class GroupTarget(val kind: GroupKind, val key: String?, val title: String)
 
 /**
- * アルバムなどの複数選択の上下のバー。選んだものの中の全曲を、一覧の順にまとめて再生・追加する。
+ * アルバム・プレイリストなどの複数選択の上下のバー。選んだものの中の全曲を、一覧の順にまとめて再生・追加する。
  * [selected]は一覧の順に並べて渡す
  */
 @Composable
-fun BoxScope.GroupSelectionBars(
-  selected: List<GroupTarget>,
+fun <T> BoxScope.GroupSelectionBars(
+  selected: List<T>,
   allSelected: Boolean,
   onSelectAll: () -> Unit,
   onClear: () -> Unit,
   /** 再生元として出す名前 (「アルバム」など) */
   sourceTitle: String,
-  load: suspend (GroupTarget) -> List<TrackEntity>,
+  /** 選んだものを見分ける文字列 (再生元の記録に使う) */
+  keyOf: (T) -> String,
+  load: suspend (T) -> List<TrackEntity>,
   actions: TrackActions,
+  /** 同じ曲を1つにまとめるか (プレイリストは中の並びのまま、重複も残す) */
+  distinct: Boolean = true,
+  canAddToPlaylist: Boolean = actions.canAddToPlaylist,
+  /** 最後に足すボタン (削除など) */
+  extra: List<BarAction> = emptyList(),
 ) {
   val barActive = LocalBottomBarActive.current
   val selecting = selected.isNotEmpty()
+  // 選択を解くとバーは消えるが、曲の読み込みは続けたいので、スコープはバーの外 (早く戻る前) で作る
+  val scope = rememberCoroutineScope()
+  val showMessage = LocalShowMessage.current
+  val res = LocalResources.current
   DisposableEffect(selecting) {
     barActive.value = selecting
     onDispose { barActive.value = false }
@@ -51,16 +62,13 @@ fun BoxScope.GroupSelectionBars(
   BackHandler(enabled = selecting) { onClear() }
   if (!selecting) return
 
-  val scope = rememberCoroutineScope()
-  val showMessage = LocalShowMessage.current
-  val res = LocalResources.current
-  val source = PlaySource("selection:groups:" + selected.joinToString(",") { "${it.kind}:${it.key}" }, sourceTitle)
+  val source = PlaySource("selection:" + selected.joinToString(",", transform = keyOf), sourceTitle)
   // 選択を解いた後も処理が続くよう、先に曲を読んでから実行する
   fun withTracks(block: (List<TrackEntity>) -> Unit) {
     val targets = selected
     onClear()
     scope.launch {
-      val tracks = targets.flatMap { load(it) }.distinctBy { it.id }
+      val tracks = targets.flatMap { load(it) }.let { if (distinct) it.distinctBy { t -> t.id } else it }
       if (tracks.isNotEmpty()) block(tracks)
     }
   }
@@ -83,9 +91,9 @@ fun BoxScope.GroupSelectionBars(
       BarAction(KanadeIcons.AddToQueue, stringResource(R.string.action_add_to_queue)) {
         withTracks { actions.addToQueue(it); showMessage(res.getString(R.string.message_added_to_queue, it.size)) }
       },
-      if (actions.canAddToPlaylist) {
+      if (canAddToPlaylist) {
         BarAction(KanadeIcons.AddToPlaylist, stringResource(R.string.action_add_to_playlist)) { withTracks { actions.addToPlaylist(it) } }
       } else null,
-    ),
+    ) + extra,
   )
 }

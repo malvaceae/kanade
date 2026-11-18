@@ -15,6 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -74,12 +79,18 @@ fun SelectionBottomBar(actions: List<BarAction>, modifier: Modifier = Modifier) 
     verticalAlignment = Alignment.CenterVertically,
   ) {
     actions.forEach { action ->
+      // アイコンだけでなく、ラベルを含むボタン全体を押せるようにする
       Column(
-        modifier = Modifier.weight(1f).alpha(if (action.enabled) 1f else 0.38f),
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(12.dp))
+          .clickable(enabled = action.enabled, role = Role.Button, onClick = action.onClick)
+          .alpha(if (action.enabled) 1f else 0.38f)
+          .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
-        IconButton(onClick = action.onClick, enabled = action.enabled, modifier = Modifier.size(40.dp)) {
-          Icon(action.icon, contentDescription = action.label, modifier = Modifier.size(22.dp))
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+          Icon(action.icon, contentDescription = null, modifier = Modifier.size(22.dp))
         }
         Text(action.label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), maxLines = 1)
       }

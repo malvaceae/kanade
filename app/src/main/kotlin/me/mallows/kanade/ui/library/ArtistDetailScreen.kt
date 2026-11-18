@@ -157,6 +157,7 @@ fun ArtistDetailScreen(
       onSelectAll = { selectedKeys = if (selectedKeys.size == list.size) emptySet() else list.map { it.albumId?.toString() ?: "" }.toSet() },
       onClear = { selectedKeys = emptySet() },
       sourceTitle = key.title,
+      keyOf = { "${it.kind}:${it.key}" },
       load = { library.groupTracks(it.kind, it.key) },
       actions = actions,
     )

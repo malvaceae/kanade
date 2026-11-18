@@ -108,6 +108,7 @@
     <string name="playlist_delete">プレイリストを削除</string>
     <string name="playlist_delete_confirm_title">「%1$s」を削除しますか？</string>
     <string name="playlist_delete_confirm">曲のファイルは削除されません。</string>
+    <string name="playlists_delete_confirm_title">%1$d件のプレイリストを削除しますか？</string>
     <string name="playlist_empty">まだ曲がありません。ライブラリで曲を長押しして選び、「プレイリスト」から追加できます。</string>
     <plurals name="add_to_playlist_title">
         <item quantity="other">%d曲をプレイリストに追加</item>
