@@ -265,10 +265,13 @@ fun Modifier.dragToSelect(
         // 指が端にあるあいだは一覧を自動でスクロールし、指の下に来た曲まで選択を広げる
         if (speedAt(lastPosition.y) != 0f && autoScroll?.isActive != true) {
           autoScroll = scope.launch {
+            // 端に留まっているほど速くする (最初は1倍、約4秒で6倍)。端から離れると元に戻る
+            val started = System.currentTimeMillis()
             while (isActive) {
               val speed = speedAt(lastPosition.y)
               if (speed == 0f) break
-              state.scrollBy(speed)
+              val boost = (1f + (System.currentTimeMillis() - started) / AUTO_SCROLL_RAMP_MS).coerceAtMost(AUTO_SCROLL_MAX_BOOST)
+              state.scrollBy(speed * boost)
               select(lastPosition)
               delay(16)
             }
@@ -280,6 +283,12 @@ fun Modifier.dragToSelect(
     }
   }
 }
+
+/** 自動スクロールが1倍ずつ速くなるまでの時間 (ミリ秒) */
+private const val AUTO_SCROLL_RAMP_MS = 800f
+
+/** 自動スクロールの速さの上限 (倍) */
+private const val AUTO_SCROLL_MAX_BOOST = 6f
 
 /** 画面下のナビゲーションバーの高さ */
 @Composable
