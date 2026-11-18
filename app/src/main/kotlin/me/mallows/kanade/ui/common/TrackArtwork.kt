@@ -1,9 +1,5 @@
 package me.mallows.kanade.ui.common
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.LaunchedEffect
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.util.Size
@@ -100,55 +96,4 @@ private fun decodeFile(path: String, px: Int): android.graphics.Bitmap? {
   var sample = 1
   while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
   return android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
-}
-
-/**
- * 再生中の曲の絵。再生情報に絵 (曲に埋め込まれた絵、またはプレイリストのカバー) があればそれを出し、
- * なければ端末の縮小画像を出す。プレイヤー画面と簡易プレイヤーで同じ絵になるよう、どちらもこれを使う。
- * 曲が変わっても、新しい絵を読み終わるまでは前の絵を出しておく (一瞬「絵なし」になるのを避ける)
- */
-@Composable
-fun NowPlayingArtwork(data: ByteArray?, fallbackUri: String, size: Dp, cornerRadius: Dp) {
-  val context = LocalContext.current
-  val px = with(LocalDensity.current) { size.roundToPx() }
-  val key = "$fallbackUri@$px"
-  var shown by remember { mutableStateOf(data?.let { null } ?: ThumbnailCache.get(key)) }
-  LaunchedEffect(data, key) {
-    shown = withContext(Dispatchers.IO) {
-      data?.let { decodeBytes(it, px) }
-        ?: ThumbnailCache.get(key)
-        ?: if (ThumbnailCache.isMissing(key)) null
-        else runCatching { context.contentResolver.loadThumbnail(fallbackUri.toUri(), Size(px, px), null) }
-          .getOrNull()
-          .also { ThumbnailCache.put(key, it) }
-    }
-  }
-  Box(
-    modifier = Modifier
-      .size(size)
-      .clip(RoundedCornerShape(cornerRadius))
-      .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    contentAlignment = Alignment.Center,
-  ) {
-    val image = shown
-    if (image != null) {
-      Image(bitmap = image.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-    } else {
-      Icon(
-        imageVector = KanadeIcons.MusicNote,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(size * 0.4f),
-      )
-    }
-  }
-}
-
-/** 画像のデータを、[px]より小さくならない範囲で縮めて読む */
-private fun decodeBytes(bytes: ByteArray, px: Int): android.graphics.Bitmap? {
-  val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-  android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-  var sample = 1
-  while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
-  return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
 }

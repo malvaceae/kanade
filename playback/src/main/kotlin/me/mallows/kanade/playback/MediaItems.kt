@@ -8,17 +8,8 @@ import me.mallows.kanade.core.data.db.TrackEntity
 /** 「次に再生」「キューに追加」で入れた曲の印 */
 const val EXTRA_QUEUED = "me.mallows.kanade.QUEUED"
 
-/** 要求の項目に付ける再生元 ([PlaySource.key])。再生サービスがプレイリストのカバーを探すのに使う */
-const val EXTRA_SOURCE = "me.mallows.kanade.SOURCE"
-
-/**
- * プレイヤー上の項目に付ける、再生元のプレイリストのID。そのプレイリストにカバー画像があれば、
- * 曲のアートワークの代わりに出す ([CoverPlayer])。カバーはその都度調べるので、再生中に変えても反映される
- */
-const val EXTRA_COVER_PLAYLIST = "me.mallows.kanade.COVER_PLAYLIST"
-
 /** 曲をプレイヤーに渡す形に変換する。mediaIdにはMediaStoreのIDを使う */
-fun TrackEntity.toMediaItem(queued: Boolean = false, coverPlaylist: Long? = null): MediaItem =
+fun TrackEntity.toMediaItem(queued: Boolean = false): MediaItem =
   MediaItem.Builder()
     .setMediaId(mediaStoreId.toString())
     .setUri(uri)
@@ -34,43 +25,26 @@ fun TrackEntity.toMediaItem(queued: Boolean = false, coverPlaylist: Long? = null
         .setDurationMs(durationMs)
         .setIsBrowsable(false)
         .setIsPlayable(true)
-        .apply {
-          if (queued || coverPlaylist != null) {
-            setExtras(Bundle().apply {
-              if (queued) putBoolean(EXTRA_QUEUED, true)
-              if (coverPlaylist != null) putLong(EXTRA_COVER_PLAYLIST, coverPlaylist)
-            })
-          }
-        }
+        .apply { if (queued) setExtras(Bundle().apply { putBoolean(EXTRA_QUEUED, true) }) }
         .build()
     )
     .build()
 
 /** IDだけを持つ要求用の項目。再生サービス側で[toMediaItem]に置き換える */
-fun mediaItemRequest(mediaStoreId: Long, queued: Boolean = false, source: String? = null): MediaItem =
+fun mediaItemRequest(mediaStoreId: Long, queued: Boolean = false): MediaItem =
   MediaItem.Builder()
     .setMediaId(mediaStoreId.toString())
     .apply {
-      if (queued || source != null) {
+      if (queued) {
         setRequestMetadata(
-          MediaItem.RequestMetadata.Builder().setExtras(Bundle().apply {
-            if (queued) putBoolean(EXTRA_QUEUED, true)
-            if (source != null) putString(EXTRA_SOURCE, source)
-          }).build()
+          MediaItem.RequestMetadata.Builder().setExtras(Bundle().apply { putBoolean(EXTRA_QUEUED, true) }).build()
         )
       }
     }
     .build()
-
-/** 要求に付いている再生元 */
-val MediaItem.requestSource: String? get() = requestMetadata.extras?.getString(EXTRA_SOURCE)
 
 /** 要求に「キューに入れた」印があるか */
 val MediaItem.isQueuedRequest: Boolean get() = requestMetadata.extras?.getBoolean(EXTRA_QUEUED) == true
 
 /** プレイヤー上の項目が「キューに入れた」曲か */
 val MediaItem.isQueued: Boolean get() = mediaMetadata.extras?.getBoolean(EXTRA_QUEUED) == true
-
-/** 再生元がプレイリストならそのID ("playlist:3" → 3) */
-fun playlistIdOf(sourceKey: String?): Long? =
-  sourceKey?.takeIf { it.startsWith("playlist:") }?.removePrefix("playlist:")?.toLongOrNull()

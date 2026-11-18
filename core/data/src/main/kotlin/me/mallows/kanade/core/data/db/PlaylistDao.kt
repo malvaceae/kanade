@@ -56,8 +56,6 @@ data class PlaylistSummary(
 )
 
 /** プレイリストの中の1曲 (曲の情報つき) */
-data class PlaylistCover(val id: Long, val cover: String?)
-
 data class PlaylistItem(
   @ColumnInfo(name = "entry_id") val entryId: Long,
   val position: Double,
@@ -89,10 +87,6 @@ interface PlaylistDao {
 
   @Query("SELECT cover FROM playlist WHERE id = :id")
   suspend fun cover(id: Long): String?
-
-  /** カバー画像を選んでいるプレイリスト */
-  @Query("SELECT id, cover FROM playlist WHERE cover IS NOT NULL")
-  fun observeCovers(): Flow<List<PlaylistCover>>
 
   @Query("UPDATE playlist SET cover = :cover WHERE id = :id")
   suspend fun setCover(id: Long, cover: String?)

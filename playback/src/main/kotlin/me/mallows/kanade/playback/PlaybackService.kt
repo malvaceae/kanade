@@ -1,8 +1,5 @@
 package me.mallows.kanade.playback
 
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.core.DataStore
-import me.mallows.kanade.core.data.db.PlaylistDao
 import android.app.PendingIntent
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -65,8 +62,6 @@ import me.mallows.kanade.core.data.db.TrackDao
 class PlaybackService : MediaSessionService() {
 
   @Inject lateinit var trackDao: TrackDao
-  @Inject lateinit var playlistDao: PlaylistDao
-  @Inject lateinit var dataStore: DataStore<Preferences>
   @Inject lateinit var playbackStateDao: PlaybackStateDao
   @Inject lateinit var playStatsDao: PlayStatsDao
   @Inject lateinit var dsp: DspChain
@@ -104,15 +99,7 @@ class PlaybackService : MediaSessionService() {
       putExtra(EXTRA_OPEN_PLAYER, true)
       addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     }
-    // プレイリストのカバーを曲のアートワークの代わりに出すため、セッションには包んだプレイヤーを渡す
-    val coverPlayer = CoverPlayer(player)
-    // プレイリストのカバーを見張り、変わったら再生中の曲の絵もすぐ変える
-    scope.launch {
-      playlistDao.observeCovers().collect { list ->
-        coverPlayer.setCovers(list.mapNotNull { c -> c.cover?.takeIf { java.io.File(it).exists() }?.let { c.id to it } }.toMap())
-      }
-    }
-    session = MediaSession.Builder(this, coverPlayer)
+    session = MediaSession.Builder(this, player)
       .apply {
         if (open != null) {
           setSessionActivity(
@@ -124,10 +111,7 @@ class PlaybackService : MediaSessionService() {
       .build()
 
     // 前回の再生キューと位置に戻し、以後の変化を保存する
-    persistence = PlaybackPersistence(playbackStateDao, trackDao, scope) {
-      // 前回の再生元がプレイリストなら、戻した再生キューにもそのプレイリストの印を付ける (カバーを出すため)
-      playlistIdOf(dataStore.data.first()[SOURCE_KEY])
-    }
+    persistence = PlaybackPersistence(playbackStateDao, trackDao, scope)
     persistence.attach(player)
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
@@ -297,16 +281,8 @@ class PlaybackService : MediaSessionService() {
   private suspend fun resolve(items: List<MediaItem>): List<MediaItem> {
     val ids = items.mapNotNull { it.mediaId.toLongOrNull() }
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
-    // プレイリストから再生したときは、そのプレイリストの印を曲に付ける (カバーがあればプレイヤー・通知に出す)
-    val playlist = playlistIdOf(items.firstNotNullOfOrNull { it.requestSource })
-    return items.map { item ->
-      tracks[item.mediaId.toLongOrNull()]
-        ?.toMediaItem(queued = item.isQueuedRequest, coverPlaylist = playlist.takeIf { item.requestSource != null })
-        ?: item
-    }
+    return items.map { item -> tracks[item.mediaId.toLongOrNull()]?.toMediaItem(queued = item.isQueuedRequest) ?: item }
   }
-
-
 
   private inner class SessionCallback : MediaSession.Callback {
     override fun onConnect(

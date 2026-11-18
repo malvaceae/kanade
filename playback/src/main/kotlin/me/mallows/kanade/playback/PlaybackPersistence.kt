@@ -23,8 +23,6 @@ class PlaybackPersistence(
   private val trackDao: TrackDao,
   /** 再生サービスのスコープ (メインスレッド) */
   private val scope: CoroutineScope,
-  /** 戻した再生キューに付けるプレイリストのID (前回の再生元がプレイリストのとき) */
-  private val coverPlaylist: suspend () -> Long?,
 ) : Player.Listener {
 
   /** 再生サービスの終了後も保存を最後まで行うためのスコープ */
@@ -57,8 +55,7 @@ class PlaybackPersistence(
     val tracks = trackDao.getByMediaStoreIds(ids).associateBy { it.mediaStoreId }
     // 端末から消えた曲は除き、今の曲の位置を合わせ直す (スキャン対象外の曲は残し、再生のときに飛ばす)
     val currentId = ids.getOrNull(saved.currentIndex)
-    val playlist = coverPlaylist()
-    val items = ids.mapNotNull { tracks[it]?.toMediaItem(coverPlaylist = playlist) }
+    val items = ids.mapNotNull { tracks[it]?.toMediaItem() }
     if (items.isEmpty()) return null
     val index = items.indexOfFirst { it.mediaId == currentId?.toString() }
     return Saved(
