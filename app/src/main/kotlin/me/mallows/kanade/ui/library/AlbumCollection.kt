@@ -67,7 +67,7 @@ fun AlbumCollection(
   albums: List<AlbumSummary>,
   /** 格子で並べるか (ライブラリのアルバムと同じ設定) */
   grid: Boolean,
-  /** 各アルバムの2行目 (ライブラリではアーティスト、アーティストの画面では発売年)。nullなら出さない */
+  /** 各アルバムの2行目に曲数と並べて出すもの (ライブラリではアーティスト)。nullなら曲数だけを出す */
   secondLine: @Composable (AlbumSummary) -> String?,
   /** 一番上の行。格子のときは左右の余白を付けずに画面の幅で出す */
   header: @Composable (Modifier) -> Unit,
@@ -144,9 +144,14 @@ fun AlbumCollection(
             }
             Spacer(Modifier.height(6.dp))
             Text(titleOf(album), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            secondLine(album)?.let {
-              Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+            // 2行目がなければ曲数を出す (格子の高さをそろえる)
+            Text(
+              secondLine(album) ?: pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+            )
           }
         }
       }

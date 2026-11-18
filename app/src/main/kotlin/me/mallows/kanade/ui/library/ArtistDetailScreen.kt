@@ -118,8 +118,9 @@ fun ArtistDetailScreen(
       AlbumCollection(
         albums = list,
         grid = grid,
-        // アーティストの画面ではアーティスト名がどれも同じなので、発売年を出す
-        secondLine = { it.year?.toString() },
+        // アーティストの画面ではアーティスト名がどれも同じなので、曲数だけを出す
+        // (発売年は入っていない曲が多く、出すと並びがそろわないため)
+        secondLine = { null },
         header = { modifier ->
           Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
