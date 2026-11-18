@@ -38,7 +38,7 @@ data class RestoreResult(val settings: Int, val presets: Int, val playlists: Int
  */
 @Singleton
 class BackupManager @Inject constructor(
-  @ApplicationContext private val context: Context,
+  @param:ApplicationContext private val context: Context,
   private val dataStore: DataStore<Preferences>,
   private val presetDao: EqPresetDao,
   private val playlistDao: PlaylistDao,

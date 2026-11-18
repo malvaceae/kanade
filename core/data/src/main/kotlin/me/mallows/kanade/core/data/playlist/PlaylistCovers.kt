@@ -16,7 +16,7 @@ import timber.log.Timber
  * (写真の選択画面から受け取ったURIは一時的なもので、後から読めなくなるため)
  */
 class PlaylistCovers @Inject constructor(
-  @ApplicationContext private val context: Context,
+  @param:ApplicationContext private val context: Context,
 ) {
   private val dir get() = File(context.filesDir, "playlist_covers").apply { mkdirs() }
 

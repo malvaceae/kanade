@@ -39,7 +39,7 @@ fun lyricsOf(format: Format?): Lyrics? {
   for (i in 0 until metadata.length()) {
     val text = when (val e = metadata.get(i)) {
       is VorbisComment -> e.value.takeIf { e.key.uppercase() in VORBIS_KEYS }
-      is TextInformationFrame -> e.value.takeIf { e.id == "USLT" }
+      is TextInformationFrame -> e.values[0].takeIf { e.id == "USLT" }
       is BinaryFrame -> if (e.id == "USLT") parseUslt(e.data) else null
       else -> null
     }

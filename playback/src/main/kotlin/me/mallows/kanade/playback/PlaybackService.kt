@@ -292,7 +292,9 @@ class PlaybackService : MediaSessionService() {
       val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
         .add(SleepCommand.command)
         .build()
-      return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+      // どの接続元にも同じ操作を許す (Media3の既定は、信頼されていないアプリの操作を絞る)
+      return MediaSession.ConnectionResult.AcceptedResultBuilder()
+        .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
         .setAvailableSessionCommands(commands)
         .build()
     }

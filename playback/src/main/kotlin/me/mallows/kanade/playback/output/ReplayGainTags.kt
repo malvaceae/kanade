@@ -19,7 +19,7 @@ fun replayGainOf(format: Format?): ReplayGain {
   for (i in 0 until metadata.length()) {
     when (val e = metadata.get(i)) {
       is VorbisComment -> tags[e.key] = e.value
-      is TextInformationFrame -> if (e.id == "TXXX" && e.description != null) tags[e.description!!] = e.value
+      is TextInformationFrame -> if (e.id == "TXXX" && e.description != null) tags[e.description!!] = e.values[0]
       is InternalFrame -> tags[e.description] = e.text
     }
   }

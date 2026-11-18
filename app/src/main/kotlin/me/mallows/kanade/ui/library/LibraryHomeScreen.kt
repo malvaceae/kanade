@@ -87,7 +87,7 @@ import me.mallows.kanade.ui.selection.SelectableTrackList
 import me.mallows.kanade.ui.selection.TrackActions
 
 /** ライブラリのホームに並べる項目 */
-enum class LibraryTab(@StringRes val label: Int, val icon: ImageVector) {
+enum class LibraryTab(@param:StringRes val label: Int, val icon: ImageVector) {
   TRACKS(R.string.tab_tracks, KanadeIcons.MusicNote),
   ALBUMS(R.string.tab_albums, KanadeIcons.Album),
   ARTISTS(R.string.tab_artists, KanadeIcons.Artist),

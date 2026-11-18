@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 /** 端末内の曲のファイルのパス (M3Uやバックアップで、曲を端末をまたいで指すために使う) */
 @Singleton
-class LibraryFiles @Inject constructor(@ApplicationContext private val context: Context) {
+class LibraryFiles @Inject constructor(@param:ApplicationContext private val context: Context) {
 
   /** (MediaStoreのID, 「Music/Album/曲.flac」のようなパス)。[ids] を渡すとその曲だけ */
   fun list(ids: List<Long>? = null): List<Pair<Long, String>> {

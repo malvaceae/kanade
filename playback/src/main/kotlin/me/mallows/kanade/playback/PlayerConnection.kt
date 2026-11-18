@@ -84,7 +84,7 @@ data class PlaySource(val key: String, val title: String?)
 /** 画面から再生サービスを操作する窓口。MediaController経由で通知やBluetoothと同じ経路を使う */
 @Singleton
 class PlayerConnection @Inject constructor(
-  @ApplicationContext private val context: Context,
+  @param:ApplicationContext private val context: Context,
   private val dataStore: DataStore<Preferences>,
 ) {
   private val scope = MainScope()

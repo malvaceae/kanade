@@ -20,7 +20,7 @@ import me.mallows.kanade.core.domain.folder.normalize
  * docs/07-scan-folders.mdの4.3にまとめてある (パスの関数は core/domain の folder にある)。
  */
 class MediaStoreScanner @Inject constructor(
-  @ApplicationContext private val context: Context,
+  @param:ApplicationContext private val context: Context,
 ) {
   private val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 

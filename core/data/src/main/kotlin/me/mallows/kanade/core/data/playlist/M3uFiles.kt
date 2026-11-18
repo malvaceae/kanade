@@ -21,7 +21,7 @@ data class M3uImportResult(val playlistId: Long, val name: String, val added: In
 /** プレイリストをM3U8ファイルに書き出し、M3U・M3U8ファイルから読み込む */
 @Singleton
 class M3uFiles @Inject constructor(
-  @ApplicationContext private val context: Context,
+  @param:ApplicationContext private val context: Context,
   private val playlists: PlaylistRepository,
   private val playlistDao: PlaylistDao,
   private val trackDao: TrackDao,
