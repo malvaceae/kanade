@@ -25,6 +25,8 @@ dependencies {
   implementation(project(":core:data"))
   api(project(":core:domain"))
   api(project(":audio-engine"))
+  // FLACは端末のデコーダーを使わず、同梱のlibFLACで読む (Media3が拡張を見つけると自動で使う)
+  implementation(project(":decoder-flac"))
 
   api(libs.media3.exoplayer)
   api(libs.media3.session)

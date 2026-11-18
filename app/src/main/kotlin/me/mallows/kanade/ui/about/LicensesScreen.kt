@@ -29,22 +29,31 @@ import me.mallows.kanade.R
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.selection.navigationBarHeight
 
-/** 使っているライブラリ (名前と作者)。どれも Apache License 2.0 */
+private const val APACHE = "Apache License 2.0"
+private const val BSD = "BSD 3-Clause License"
+
+/** 使っているライブラリ (名前、作者、ライセンス) */
 private val LIBRARIES = listOf(
-  "Kotlin, kotlinx.coroutines, kotlinx.serialization" to "JetBrains s.r.o.",
-  "AndroidX (Activity, Compose, Core, DataStore, Lifecycle, Navigation 3, Palette, Room)" to "The Android Open Source Project",
-  "AndroidX Media3 (ExoPlayer, Session)" to "The Android Open Source Project",
-  "Dagger / Hilt" to "The Dagger Authors",
-  "Guava" to "The Guava Authors",
-  "Reorderable" to "Calvin Liang",
-  "Timber" to "Jake Wharton",
+  Triple("Kotlin, kotlinx.coroutines, kotlinx.serialization", "JetBrains s.r.o.", APACHE),
+  Triple("AndroidX (Activity, Compose, Core, DataStore, Lifecycle, Navigation 3, Palette, Room)", "The Android Open Source Project", APACHE),
+  Triple("AndroidX Media3 (ExoPlayer, Session, FLAC decoder)", "The Android Open Source Project", APACHE),
+  Triple("Dagger / Hilt", "The Dagger Authors", APACHE),
+  Triple("Guava", "The Guava Authors", APACHE),
+  Triple("libFLAC", "Josh Coalson, Xiph.Org Foundation", BSD),
+  Triple("Reorderable", "Calvin Liang", APACHE),
+  Triple("Timber", "Jake Wharton", APACHE),
 )
 
 /** オープンソースのライセンス */
 @Composable
 fun LicensesScreen(onBack: () -> Unit) {
   val res = LocalResources.current
-  val license = remember { res.openRawResource(R.raw.apache_license_2_0).bufferedReader().use { it.readText() } }
+  val licenses = remember {
+    listOf(
+      APACHE to res.openRawResource(R.raw.apache_license_2_0).bufferedReader().use { it.readText() },
+      "$BSD (libFLAC)" to res.openRawResource(R.raw.libflac_license).bufferedReader().use { it.readText() },
+    )
+  }
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
@@ -63,16 +72,18 @@ fun LicensesScreen(onBack: () -> Unit) {
           modifier = Modifier.padding(vertical = 8.dp),
         )
       }
-      items(LIBRARIES) { (name, author) ->
+      items(LIBRARIES) { (name, author, license) ->
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
           Text(name, style = MaterialTheme.typography.bodyLarge)
-          Text("$author · Apache License 2.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Text("$author · $license", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
-      item { HorizontalDivider(Modifier.padding(vertical = 16.dp)) }
-      item {
+      // ライセンスの本文 (ライセンスごとに1つ)
+      items(licenses) { (title, text) ->
+        HorizontalDivider(Modifier.padding(vertical = 16.dp))
+        Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
         Text(
-          license,
+          text,
           style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp),
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -33,7 +33,7 @@
     <string name="minutes_suffix">分</string>
 
     <string name="licenses_title">ライセンス</string>
-    <string name="licenses_intro">Kanadeは、次のオープンソースのソフトウェアを使っています。どれもApache License 2.0で配布されています。</string>
+    <string name="licenses_intro">Kanadeは、次のオープンソースのソフトウェアを使っています。それぞれのライセンスの本文は下にあります。</string>
     <string name="backup_export">バックアップを書き出す</string>
     <string name="backup_restore">バックアップから復元</string>
     <string name="message_backup_exported">設定とプレイリストを書き出しました</string>

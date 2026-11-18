@@ -1,0 +1,3 @@
+[submodule "decoder-flac/src/main/jni/libflac"]
+	path = decoder-flac/src/main/jni/libflac
+	url = https://github.com/xiph/flac.git

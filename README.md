@@ -26,9 +26,14 @@ Android向けのローカル音楽プレイヤーです。端末内の音楽フ�
 
 ## ビルド
 
+FLACのデコーダー (libFLAC) はgitのサブモジュールで、NDKでビルドします。クローンするときはサブモジュールも取ってきます。
+
 ```
+git clone --recurse-submodules https://github.com/malvaceae/kanade.git
 ./gradlew :app:assembleDebug
 ```
+
+すでにクローンしてある場合は、`git submodule update --init`でサブモジュールを取ってきます。
 
 リリース版を署名してビルドするには、`~/.gradle/gradle.properties`に鍵の場所とパスワードを書きます (リポジトリには入れません)。
 
@@ -42,4 +47,4 @@ kanade.release.storePassword=...
 
 ## 技術スタック
 
-Kotlin / Jetpack Compose / AndroidX Media3 (ExoPlayer) / Room / Hilt
+Kotlin / Jetpack Compose / AndroidX Media3 (ExoPlayer) / libFLAC / Room / Hilt

@@ -9,12 +9,16 @@ plugins {
 android {
   namespace = "me.mallows.kanade"
   compileSdk = 37
+  // 同梱のネイティブライブラリ (libFLAC) からデバッグ情報を取り除くのに使う。decoder-flacと同じ版にする
+  ndkVersion = "27.1.12297006"
   defaultConfig {
     applicationId = "me.mallows.kanade"
     minSdk = 31
     targetSdk = 37
     versionCode = 7
     versionName = "1.5.1"
+    // 32bitのx86 (古いエミュレーター用) は入れない。実機はARM、エミュレーターはx86_64で足りる
+    ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
   }
 
   // リリース用の鍵。場所とパスワードはリポジトリの外 (~/.gradle/gradle.properties) に書く。
