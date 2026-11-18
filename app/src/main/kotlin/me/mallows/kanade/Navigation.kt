@@ -156,6 +156,14 @@ fun MainNavigation(
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
   // 一覧の下の余白: 固定のメニュー、簡易プレイヤー (高さ64・下8)、ナビゲーションバーの分に、曲どうしの間隔と同じくらいの隙間 (12) を足す
   val bottomPadding = AppNavBarHeight + (if (player.hasMedia) 84.dp else 24.dp) + navigationBarHeight()
+  /** プレイヤー画面を開く。プレイヤーから開いた画面 (キューなど) では、重ねずにそのプレイヤーへ戻る */
+  fun openPlayerScreen() {
+    if (Player in backStack) {
+      while (backStack.lastOrNull() != Player) backStack.removeLastOrNull()
+    } else {
+      backStack.add(Player)
+    }
+  }
   /** 固定のメニューの行き先へ移る。すでに戻る履歴にあれば、そこまで戻る (同じ画面を重ねない) */
   fun navigate(item: NavItem) {
     val key: NavKey = when (item) {
@@ -283,7 +291,7 @@ fun MainNavigation(
             }
             entry<Queue> {
               Page {
-                QueueScreen(onBack = { backStack.removeLastOrNull() }, bottomPadding = bottomPadding)
+                QueueScreen(onBack = { backStack.removeLastOrNull() }, onOpenPlayer = ::openPlayerScreen, bottomPadding = bottomPadding)
               }
             }
             entry<Player> {
@@ -319,14 +327,7 @@ fun MainNavigation(
         if (showMini) {
           MiniPlayer(
             state = player,
-            onOpen = {
-              // プレイヤーから開いた画面 (キューなど) では、重ねずにそのプレイヤーへ戻る
-              if (Player in backStack) {
-                while (backStack.lastOrNull() != Player) backStack.removeLastOrNull()
-              } else {
-                backStack.add(Player)
-              }
-            },
+            onOpen = ::openPlayerScreen,
             onTogglePlay = playerViewModel::togglePlayPause,
             modifier = Modifier
               .align(Alignment.BottomCenter)

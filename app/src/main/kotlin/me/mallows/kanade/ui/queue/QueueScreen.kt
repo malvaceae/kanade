@@ -84,7 +84,13 @@ private data class Entry(val origin: Int, val item: QueueItem, val key: Long)
  * シャッフル中は並べ替えできない。
  */
 @Composable
-fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel = hiltViewModel()) {
+fun QueueScreen(
+  onBack: () -> Unit,
+  /** 再生中の曲を押したときにプレイヤー画面を開く */
+  onOpenPlayer: () -> Unit,
+  bottomPadding: Dp,
+  viewModel: QueueViewModel = hiltViewModel(),
+) {
   val queue by viewModel.queue.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
@@ -195,7 +201,7 @@ fun QueueScreen(onBack: () -> Unit, bottomPadding: Dp, viewModel: QueueViewModel
       ) {
         queue.current?.let { current ->
           item(key = "now_label") { SectionLabel(stringResource(R.string.queue_now_playing)) }
-          item(key = "now") { QueueRow(current, number = null, selectionMode = false, selected = false, onClick = {}, handle = null, highlight = true, excluded = current.mediaStoreId in excluded) }
+          item(key = "now") { QueueRow(current, number = null, selectionMode = false, selected = false, onClick = onOpenPlayer, handle = null, highlight = true, excluded = current.mediaStoreId in excluded) }
         }
         if (locked && local.isNotEmpty()) {
           item(key = "locked") {
