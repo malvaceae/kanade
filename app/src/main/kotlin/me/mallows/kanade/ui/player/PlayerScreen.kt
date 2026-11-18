@@ -1,5 +1,6 @@
 package me.mallows.kanade.ui.player
 
+import androidx.compose.runtime.LaunchedEffect
 import me.mallows.kanade.ui.common.NowPlayingArtwork
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -371,16 +372,34 @@ private fun SwipeableArtwork(
 @Composable
 private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
   var dragging by remember { mutableStateOf<Float?>(null) }
+  /**
+   * 指を離して移った先。プレイヤーの位置がそこに届くまでは、つまみをここに置いておく
+   * (離した直後は、プレイヤーの位置がまだ移る前の値のことがあり、つまみが一瞬戻ってから飛ぶのを避ける)
+   */
+  var seekTarget by remember { mutableStateOf<Long?>(null) }
   val duration = state.durationMs.coerceAtLeast(1)
   val position by rememberPlaybackPosition(state)
+  val target = seekTarget
+  if (target != null) {
+    // 届いたら (または一定時間たったら) プレイヤーの位置に戻す
+    LaunchedEffect(target) {
+      withTimeoutOrNull(SEEK_SETTLE_MS) { snapshotFlow { position }.first { kotlin.math.abs(it - target) < SEEK_REACHED_MS } }
+      seekTarget = null
+    }
+  }
+  val shownPosition = target ?: position
   // 長さが分からない間は、バーを空にしておく
-  val fraction = dragging ?: if (state.durationMs > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
+  val fraction = dragging ?: if (state.durationMs > 0) (shownPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f
   Column(modifier = modifier) {
     Slider(
       value = fraction,
       onValueChange = { dragging = it },
       onValueChangeFinished = {
-        dragging?.let { onSeek((it * duration).toLong()) }
+        dragging?.let {
+          val to = (it * duration).toLong()
+          seekTarget = to
+          onSeek(to)
+        }
         dragging = null
       },
       colors = SliderDefaults.colors(
@@ -390,9 +409,15 @@ private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifi
       ),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-      val shown = dragging?.let { (it * duration).toLong() } ?: position
+      val shown = dragging?.let { (it * duration).toLong() } ?: shownPosition
       Text(formatDuration(shown), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       Text(formatDuration(state.durationMs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }
 }
+
+/** シークの後、プレイヤーの位置が移った先に届くのを待つ最長の時間 */
+private const val SEEK_SETTLE_MS = 1_500L
+
+/** 移った先とのずれがこれより小さければ、届いたとみなす */
+private const val SEEK_REACHED_MS = 1_000L
