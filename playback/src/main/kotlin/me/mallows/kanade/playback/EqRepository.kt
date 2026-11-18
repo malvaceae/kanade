@@ -85,6 +85,8 @@ class EqRepository @Inject constructor(
     )
   )
 
+  suspend fun renamePreset(id: Long, name: String) = presetDao.rename(id, name)
+
   suspend fun deletePreset(id: Long) = presetDao.delete(id)
 
   companion object {

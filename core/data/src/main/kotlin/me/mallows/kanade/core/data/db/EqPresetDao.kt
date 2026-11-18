@@ -26,6 +26,9 @@ interface EqPresetDao {
   @Insert
   suspend fun insert(preset: EqPresetEntity): Long
 
+  @Query("UPDATE eq_preset SET name = :name WHERE id = :id")
+  suspend fun rename(id: Long, name: String)
+
   @Query("DELETE FROM eq_preset WHERE id = :id")
   suspend fun delete(id: Long)
 }

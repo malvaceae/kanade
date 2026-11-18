@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,6 +73,7 @@ import me.mallows.kanade.audio.EqPreset
 import me.mallows.kanade.audio.EqSettings
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.playlist.PlaylistNameDialog
+import me.mallows.kanade.playback.UserPreset
 
 /** イコライザー */
 @Composable
@@ -80,6 +82,9 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   val userPresets by viewModel.userPresets.collectAsStateWithLifecycle()
   var presetMenu by remember { mutableStateOf(false) }
   var saving by remember { mutableStateOf(false) }
+  var moreMenu by remember { mutableStateOf(false) }
+  var renaming by remember { mutableStateOf<UserPreset?>(null) }
+  var deleting by remember { mutableStateOf<UserPreset?>(null) }
   val scheme = MaterialTheme.colorScheme
   val bitPerfectActive by viewModel.bitPerfectActive.collectAsStateWithLifecycle()
   val device by viewModel.device.collectAsStateWithLifecycle()
@@ -123,15 +128,7 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
           }
           if (userPresets.isNotEmpty()) HorizontalDivider()
           userPresets.forEach { u ->
-            DropdownMenuItem(
-              text = { Text(u.preset.name) },
-              onClick = { presetMenu = false; viewModel.applyPreset(u.preset) },
-              trailingIcon = {
-                IconButton(onClick = { viewModel.deletePreset(u.id) }) {
-                  Icon(KanadeIcons.Delete, contentDescription = stringResource(R.string.action_delete))
-                }
-              },
-            )
+            DropdownMenuItem(text = { Text(u.preset.name) }, onClick = { presetMenu = false; viewModel.applyPreset(u.preset) })
           }
         }
       }
@@ -139,6 +136,23 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
       val matched = settings.matchingPresetName(userPresets)
       TextButton(onClick = { saving = true }, enabled = matched == null) { Text(stringResource(R.string.eq_save_preset)) }
       TextButton(onClick = viewModel::reset, enabled = matched != EqPreset.BUILT_IN.first().name) { Text(stringResource(R.string.eq_reset)) }
+      // 自分で保存したプリセットの名前の変更・削除。消す前に、そのプリセットを選んで確かめられるようにする
+      val selectedUser = settings.matchingUserPreset(userPresets)
+      Box {
+        IconButton(onClick = { moreMenu = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
+        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.playlist_rename)) },
+            enabled = selectedUser != null,
+            onClick = { moreMenu = false; renaming = selectedUser },
+          )
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.action_delete)) },
+            enabled = selectedUser != null,
+            onClick = { moreMenu = false; deleting = selectedUser },
+          )
+        }
+      }
     }
 
     // どの出力先の設定を編集しているか (EQがオフでも切り替えられる)
@@ -220,6 +234,25 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
         }
       }
     }
+  }
+
+  renaming?.let { u ->
+    PlaylistNameDialog(
+      title = stringResource(R.string.playlist_rename),
+      initial = u.preset.name,
+      onConfirm = { name -> renaming = null; viewModel.renamePreset(u.id, name) },
+      onDismiss = { renaming = null },
+    )
+  }
+  deleting?.let { u ->
+    AlertDialog(
+      onDismissRequest = { deleting = null },
+      title = { Text(stringResource(R.string.playlist_delete_confirm_title, u.preset.name)) },
+      confirmButton = {
+        TextButton(onClick = { deleting = null; viewModel.deletePreset(u.id) }) { Text(stringResource(R.string.action_delete)) }
+      },
+      dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.action_cancel)) } },
+    )
   }
 
   if (saving) {

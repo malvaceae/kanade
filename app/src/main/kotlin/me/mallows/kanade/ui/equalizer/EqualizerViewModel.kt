@@ -122,6 +122,10 @@ class EqualizerViewModel @Inject constructor(
     viewModelScope.launch { repository.savePreset(preset) }
   }
 
+  fun renamePreset(id: Long, name: String) {
+    viewModelScope.launch { repository.renamePreset(id, name.trim()) }
+  }
+
   fun deletePreset(id: Long) {
     viewModelScope.launch { repository.deletePreset(id) }
   }
@@ -139,7 +143,12 @@ class EqualizerViewModel @Inject constructor(
 /** 今の値と一致するプリセットの名前。どれとも違えばnull (カスタム) */
 fun EqSettings.matchingPresetName(userPresets: List<UserPreset>): String? {
   val presets = EqPreset.BUILT_IN + userPresets.map { it.preset }
-  return presets.firstOrNull {
-    it.bands == bands && it.preampDb == preampDb && it.bassDb == bassDb && it.trebleDb == trebleDb
-  }?.name
+  return presets.firstOrNull { matches(it) }?.name
 }
+
+/** 今選んでいる、自分で保存したプリセット。組み込みのプリセットと同じ値ならそちらを選んでいるとみなし、null */
+fun EqSettings.matchingUserPreset(userPresets: List<UserPreset>): UserPreset? =
+  if (EqPreset.BUILT_IN.any { matches(it) }) null else userPresets.firstOrNull { matches(it.preset) }
+
+private fun EqSettings.matches(p: EqPreset) =
+  p.bands == bands && p.preampDb == preampDb && p.bassDb == bassDb && p.trebleDb == trebleDb
