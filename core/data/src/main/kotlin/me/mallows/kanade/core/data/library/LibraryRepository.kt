@@ -76,6 +76,8 @@ class LibraryRepository @Inject constructor(
 
   fun albumTracks(albumId: Long?): Flow<List<TrackEntity>> = trackDao.observeAlbumTracks(albumId)
 
+  fun artistAlbums(name: String?): Flow<List<AlbumSummary>> = trackDao.observeArtistAlbums(name)
+
   fun groupTracks(kind: GroupKind, name: String?): Flow<List<TrackEntity>> = when (kind) {
     GroupKind.ARTIST -> trackDao.observeArtistTracks(name)
     GroupKind.FOLDER -> {

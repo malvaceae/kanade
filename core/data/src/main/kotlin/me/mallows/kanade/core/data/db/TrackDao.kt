@@ -74,6 +74,19 @@ interface TrackDao {
   )
   fun observeAlbums(): Flow<List<AlbumSummary>>
 
+  /** アーティストのアルバム (アルバムアーティストを優先)。発売年の順 */
+  @Query(
+    """
+    SELECT album_id AS albumId, MAX(album) AS album,
+      COALESCE(MAX(album_artist), MAX(artist)) AS artist,
+      COUNT(*) AS trackCount, SUM(duration_ms) AS durationMs, MAX(year) AS year,
+      MIN(uri) AS artUri, MAX(date_added) AS dateAdded
+    FROM track WHERE excluded = 0 AND COALESCE(album_artist, artist) IS :name GROUP BY album_id
+    ORDER BY year IS NULL, year, album COLLATE NOCASE
+    """
+  )
+  fun observeArtistAlbums(name: String?): Flow<List<AlbumSummary>>
+
   @Query("SELECT * FROM track WHERE excluded = 0 AND album_id IS :albumId ORDER BY disc_no, track_no, title COLLATE NOCASE")
   fun observeAlbumTracks(albumId: Long?): Flow<List<TrackEntity>>
 

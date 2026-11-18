@@ -9,6 +9,9 @@ import kotlinx.serialization.Serializable
 /** アルバム・アーティスト・フォルダ・ジャンルの中身。[kind]は GroupKind の名前 */
 @Serializable data class GroupDetail(val kind: String, val key: String?, val title: String) : NavKey
 
+/** アーティストのアルバムの一覧。[name]がnullなら不明なアーティスト */
+@Serializable data class ArtistDetail(val name: String?, val title: String) : NavKey
+
 /** プレイリストの中身 */
 @Serializable data class PlaylistDetail(val id: Long) : NavKey
 

@@ -49,6 +49,8 @@ import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
 import me.mallows.kanade.ui.library.GroupDetailScreen
+import me.mallows.kanade.ui.library.ArtistDetailScreen
+import androidx.navigation3.runtime.NavKey
 import me.mallows.kanade.ui.library.LibraryHomeScreen
 import me.mallows.kanade.core.data.library.GroupKind
 import me.mallows.kanade.ui.library.LibraryTab
@@ -191,7 +193,7 @@ fun MainNavigation(
                   category = LibraryTab.valueOf(key.name),
                   playingMediaStoreId = player.mediaStoreId,
                   actions = actions,
-                  onOpenGroup = { kind, k, title -> backStack.add(GroupDetail(kind.name, k, title)) },
+                  onOpenGroup = { kind, k, title -> backStack.add(groupKey(kind, k, title)) },
                   onBack = { backStack.removeLastOrNull() },
                   onSearch = { backStack.add(Search) },
                   playlists = { padding ->
@@ -208,6 +210,18 @@ fun MainNavigation(
                   playlistId = key.id,
                   playingMediaStoreId = player.mediaStoreId,
                   actions = actions,
+                  onBack = { backStack.removeLastOrNull() },
+                  bottomPadding = bottomPadding,
+                )
+              }
+            }
+            entry<ArtistDetail> { key ->
+              Page {
+                ArtistDetailScreen(
+                  key = key,
+                  actions = actions,
+                  // ここからは曲の一覧を開く (アーティストの「すべての曲」も)
+                  onOpenGroup = { kind, k, title -> backStack.add(GroupDetail(kind.name, k, title)) },
                   onBack = { backStack.removeLastOrNull() },
                   bottomPadding = bottomPadding,
                 )
@@ -327,3 +341,7 @@ private fun popTransition(): ContentTransform =
 private fun Page(content: @Composable () -> Unit) {
   Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
 }
+
+/** アルバムなどを開く画面。アーティストはアルバムの一覧を挟む */
+private fun groupKey(kind: GroupKind, key: String?, title: String): NavKey =
+  if (kind == GroupKind.ARTIST) ArtistDetail(key, title) else GroupDetail(kind.name, key, title)
