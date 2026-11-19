@@ -152,6 +152,10 @@ fun PlaylistsTab(
     )
   }
 
+  if (showSort) {
+    SortSheet(PlaylistListSort.entries.toTypedArray(), sort, PlaylistListSort.NAME,
+      onSelect = { viewModel.setSort(it) }, onDismiss = { showSort = false })
+  }
   if (creating) {
     PlaylistNameDialog(
       title = stringResource(R.string.playlist_new),
