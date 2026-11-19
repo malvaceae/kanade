@@ -24,7 +24,9 @@ fun ExoPlayer.shuffleFromCurrent() {
 
 /**
  * シャッフルをオンにしたときと、シャッフル中に曲の並びを入れ替えたとき (一覧から再生を始めたときなど) に、
- * 今の曲を先頭にしたシャッフルの順にする。キューへの追加では作り直さない (今のランダムな順を保つ)
+ * 今の曲を先頭にしたシャッフルの順にする。キューへの追加では作り直さない (今のランダムな順を保つ)。
+ * 全曲リピート中は、順の最後の曲が始まったときに、その曲を先頭にして順を作り直す。
+ * 次の周の順は、最初の曲から最後の曲までランダムになる (一周して戻ってから作り直すと、戻った先の曲が毎周同じになるため)
  */
 @OptIn(UnstableApi::class)
 fun ExoPlayer.keepShuffleFromCurrent() {
@@ -33,8 +35,20 @@ fun ExoPlayer.keepShuffleFromCurrent() {
       if (shuffleModeEnabled) shuffleFromCurrent()
     }
 
+    override fun onRepeatModeChanged(repeatMode: Int) {
+      reshuffleAtLast()
+    }
+
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-      if (shuffleModeEnabled && reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) shuffleFromCurrent()
+      if (!shuffleModeEnabled) return
+      if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) shuffleFromCurrent() else reshuffleAtLast()
+    }
+
+    /** 全曲リピートのシャッフル中に、順の最後の曲になったら、その曲を先頭にして次の周の順を作り直す */
+    fun reshuffleAtLast() {
+      if (!shuffleModeEnabled || repeatMode != Player.REPEAT_MODE_ALL || mediaItemCount <= 2) return
+      val timeline = currentTimeline
+      if (!timeline.isEmpty && currentMediaItemIndex == timeline.getLastWindowIndex(true)) shuffleFromCurrent()
     }
   })
 }
