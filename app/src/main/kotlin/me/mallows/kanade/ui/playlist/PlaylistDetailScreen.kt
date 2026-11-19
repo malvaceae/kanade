@@ -70,6 +70,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.selection.AnimatedSelectionBar
+import androidx.compose.foundation.background
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.mutableIntStateOf
 import me.mallows.kanade.ui.common.LocalShowUndo
 import me.mallows.kanade.core.data.db.PlaylistItem
 import me.mallows.kanade.ui.common.LocalBottomBarActive
@@ -132,6 +137,9 @@ fun PlaylistDetailScreen(
   val haptic = LocalHapticFeedback.current
   val barActive = LocalBottomBarActive.current
   val undoLabel = stringResource(R.string.action_undo)
+  /** 件数の行の高さ (px)。選択中のバーをこの高さにして、件数の行にぴったり重ねる */
+  var headerHeight by remember { mutableIntStateOf(0) }
+  val density = LocalDensity.current
 
   var selected by rememberSaveable { mutableStateOf(setOf<Long>()) }
   val selecting = selected.isNotEmpty()
@@ -210,87 +218,79 @@ fun PlaylistDetailScreen(
 
   Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-      // 上部バー
-      if (selecting) {
-        SelectionTopBar(
-          count = selected.size,
-          allSelected = selected.size == all.size,
-          onSelectAll = { selected = if (selected.size == all.size) emptySet() else ids },
-          onClose = { selected = emptySet() },
+      // 上部バー (選択中も題名の行のまま。選択のバーは件数の行に重ねる。ほかの一覧と同じ)
+      Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
+        // 題名は戻るボタンと同じ行に出す (一覧の画面とそろえる)
+        Text(
+          playlist?.name.orEmpty(),
+          style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.weight(1f).padding(start = 4.dp),
         )
-      } else {
-        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
-          // 題名は戻るボタンと同じ行に出す (一覧の画面とそろえる)
-          Text(
-            playlist?.name.orEmpty(),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(start = 4.dp),
-          )
-          SortButton(sorted) { sheet = "sort" }
-          Box {
-            IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-              DropdownMenuItem(text = { Text(stringResource(R.string.playlist_rename)) }, onClick = { menuOpen = false; sheet = "rename" })
+        SortButton(sorted) { sheet = "sort" }
+        Box {
+          IconButton(onClick = { menuOpen = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
+          DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.playlist_rename)) }, onClick = { menuOpen = false; sheet = "rename" })
+            DropdownMenuItem(
+              text = { Text(stringResource(R.string.playlist_remove_duplicates)) },
+              onClick = {
+                menuOpen = false
+                scope.launch {
+                  val result = viewModel.removeDuplicates()
+                  if (result == null) {
+                    snackbar.showMessage(res.getString(R.string.message_no_duplicates))
+                  } else {
+                    val (n, undo) = result
+                    snackbar.showUndo(res.getQuantityString(R.plurals.message_duplicates_removed, n, n), undoLabel) { scope.launch { undo() } }
+                  }
+                }
+              },
+            )
+            DropdownMenuItem(
+              text = { Text(stringResource(R.string.playlist_cover_change)) },
+              onClick = {
+                menuOpen = false
+                coverPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+              },
+            )
+            if (playlist?.cover != null) {
               DropdownMenuItem(
-                text = { Text(stringResource(R.string.playlist_remove_duplicates)) },
+                text = { Text(stringResource(R.string.playlist_cover_reset)) },
                 onClick = {
                   menuOpen = false
                   scope.launch {
-                    val result = viewModel.removeDuplicates()
-                    if (result == null) {
-                      snackbar.showMessage(res.getString(R.string.message_no_duplicates))
-                    } else {
-                      val (n, undo) = result
-                      snackbar.showUndo(res.getQuantityString(R.plurals.message_duplicates_removed, n, n), undoLabel) { scope.launch { undo() } }
-                    }
+                    viewModel.clearCover()
+                    snackbar.showMessage(res.getString(R.string.message_cover_reset))
                   }
                 },
               )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.playlist_cover_change)) },
-                onClick = {
-                  menuOpen = false
-                  coverPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                },
-              )
-              if (playlist?.cover != null) {
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.playlist_cover_reset)) },
-                  onClick = {
-                    menuOpen = false
-                    scope.launch {
-                      viewModel.clearCover()
-                      snackbar.showMessage(res.getString(R.string.message_cover_reset))
-                    }
-                  },
+            }
+            DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = {
+              menuOpen = false
+              // 確かめずに削除して前の画面に戻り、「元に戻す」を出す (曲を外すときと同じ)
+              scope.launch {
+                val deleted = viewModel.delete() ?: return@launch
+                onBack()
+                showUndo(
+                  res.getString(R.string.message_playlist_deleted, deleted.playlist.name),
+                  { viewModel.restore(deleted) },
+                  { viewModel.discard(deleted) },
                 )
               }
-              DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = {
-                menuOpen = false
-                // 確かめずに削除して前の画面に戻り、「元に戻す」を出す (曲を外すときと同じ)
-                scope.launch {
-                  val deleted = viewModel.delete() ?: return@launch
-                  onBack()
-                  showUndo(
-                    res.getString(R.string.message_playlist_deleted, deleted.playlist.name),
-                    { viewModel.restore(deleted) },
-                    { viewModel.discard(deleted) },
-                  )
-                }
-              })
-            }
+            })
           }
         }
       }
 
+      Box(Modifier.weight(1f)) {
       LazyColumn(
         state = listState,
         contentPadding = PaddingValues(bottom = if (selecting) 88.dp + navigationBarHeight() else bottomPadding),
         modifier = Modifier
-          .weight(1f)
+          .fillMaxSize()
           .dragToSelect(
             state = listState,
             keys = local.map { it.entryId },
@@ -303,6 +303,7 @@ fun PlaylistDetailScreen(
         // 見出しは選択中も残す (消すと一覧がずれる)
         run {
           item(key = "header") {
+            Box(Modifier.onSizeChanged { headerHeight = it.height }) {
             PlaylistHeader(
               name = playlist?.name.orEmpty(),
               items = all,
@@ -314,6 +315,7 @@ fun PlaylistDetailScreen(
               },
               onShuffle = { actions.shufflePlay(all.map { it.track }, source) },
             )
+            }
           }
         }
         if (all.isEmpty()) {
@@ -382,12 +384,24 @@ fun PlaylistDetailScreen(
           }
         }
       }
+        // 選択中は、件数の行に選択のバーを重ねる (題名は見えたまま。すべての曲などの一覧と同じ)
+        if (selecting) {
+          SelectionTopBar(
+            count = selected.size,
+            allSelected = selected.size == all.size,
+            onSelectAll = { selected = if (selected.size == all.size) emptySet() else ids },
+            onClose = { selected = emptySet() },
+            height = with(density) { headerHeight.toDp() }.coerceAtLeast(48.dp),
+            modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
+          )
+        }
+      }
     }
 
-    if (selecting) {
+    // 選択を解くと下へ滑って消え、固定のメニューと入れ替わる (急に切り替わらないように)
+    AnimatedSelectionBar(visible = selecting, modifier = Modifier.align(Alignment.BottomCenter)) {
       val n = selected.size
       SelectionBottomBar(
-        modifier = Modifier.align(Alignment.BottomCenter),
         actions = listOf(
           BarAction(KanadeIcons.Move, stringResource(R.string.action_move), enabled = !sorted) { sheet = "move" },
           BarAction(KanadeIcons.Swap, stringResource(R.string.action_swap), enabled = !sorted && n == 2) {

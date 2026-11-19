@@ -227,6 +227,9 @@ fun CategoryScreen(
   onScanFolders: () -> Unit,
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
+  // すべての曲の並べ替えは、題名の行に置く (件数の行は再生ボタンなどで埋まっているため。プレイリストの中の画面と同じ置き方)
+  val trackSort by viewModel.trackSort.collectAsStateWithLifecycle()
+  var showTrackSort by rememberSaveable { mutableStateOf(false) }
   Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
@@ -235,6 +238,7 @@ fun CategoryScreen(
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.weight(1f).padding(start = 4.dp),
       )
+      if (category == LibraryTab.TRACKS) SortButton(trackSort != null) { showTrackSort = true }
     }
     Box(Modifier.weight(1f)) {
       when (category) {
@@ -249,14 +253,16 @@ fun CategoryScreen(
       }
     }
   }
+  if (showTrackSort) {
+    SortSheet(TrackSort.entries.toTypedArray(), trackSort, TrackSort.TITLE,
+      onSelect = { viewModel.setSort(SortCategory.TRACKS, it) }, onDismiss = { showTrackSort = false })
+  }
 }
 
 @Composable
 private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: TrackActions, bottomPadding: Dp, onScanFolders: () -> Unit) {
   val tracks by viewModel.tracks.collectAsStateWithLifecycle()
   val scanning by viewModel.scanning.collectAsStateWithLifecycle()
-  val sort by viewModel.trackSort.collectAsStateWithLifecycle()
-  var showSort by rememberSaveable { mutableStateOf(false) }
   val list = tracks
   val source = PlaySource("tracks", stringResource(R.string.tab_tracks))
   when {
@@ -271,7 +277,6 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
       header = {
         // ほかの曲の一覧 (アルバム・プレイリストなど) と同じく、シャッフル再生と再生のボタンを置く
         ListHeader(stringResource(R.string.library_summary, list.size, (list.sumOf { it.durationMs } / 60_000).toInt())) {
-          SortButton(sort != null) { showSort = true }
           FilledTonalIconButton(onClick = { actions.shufflePlay(list, source) }, shape = CircleShape) {
             Icon(KanadeIcons.Shuffle, contentDescription = stringResource(R.string.action_shuffle_play), modifier = Modifier.size(20.dp))
           }
@@ -282,10 +287,6 @@ private fun TracksTab(viewModel: LibraryViewModel, playingId: Long?, actions: Tr
         }
       },
     )
-  }
-  if (showSort) {
-    SortSheet(TrackSort.entries.toTypedArray(), sort, TrackSort.TITLE,
-      onSelect = { viewModel.setSort(SortCategory.TRACKS, it) }, onDismiss = { showSort = false })
   }
 }
 

@@ -53,6 +53,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.selection.AnimatedSelectionBar
 import me.mallows.kanade.playback.QueueItem
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalSnackbarHost
@@ -180,6 +181,8 @@ fun QueueScreen(
           allSelected = selected.size == local.size,
           onSelectAll = { selected = if (selected.size == local.size) emptySet() else local.map { it.key }.toSet() },
           onClose = { selected = emptySet() },
+          // 題名の行と同じ高さにして、選択しても一覧が上下にずれないようにする
+          height = 56.dp,
         )
       } else {
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -275,11 +278,11 @@ fun QueueScreen(
       }
     }
 
-    if (selecting) {
+    // 選択を解くと下へ滑って消え、固定のメニューと入れ替わる (急に切り替わらないように)
+    AnimatedSelectionBar(visible = selecting, modifier = Modifier.align(Alignment.BottomCenter)) {
       val sel = originsOf(selected)
       val n = sel.size
       SelectionBottomBar(
-        modifier = Modifier.align(Alignment.BottomCenter),
         actions = listOf(
           BarAction(KanadeIcons.ToTop, stringResource(R.string.queue_play_next), enabled = !locked) {
             perform(res.getQuantityString(R.plurals.message_moved_top, n, n)) { viewModel.moveToTop(sel) }

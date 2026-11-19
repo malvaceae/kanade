@@ -173,12 +173,12 @@ fun SelectableTrackList(
         modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
       )
     }
-    if (selecting) {
+    // 選択を解くと下へ滑って消え、固定のメニューと入れ替わる (急に切り替わらないように)
+    AnimatedSelectionBar(visible = selecting, modifier = Modifier.align(Alignment.BottomCenter)) {
       val n = selected.size
       val playNextDone = stringResource(R.string.message_play_next, n)
       val queueDone = stringResource(R.string.message_added_to_queue, n)
       SelectionBottomBar(
-        modifier = Modifier.align(Alignment.BottomCenter),
         actions = listOfNotNull(
           BarAction(KanadeIcons.Play, stringResource(R.string.action_play)) {
             actions.play(selectedTracks(), 0, PlaySource("selection:${source.key}", source.title)); clear()

@@ -30,6 +30,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.mallows.kanade.R
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
 import me.mallows.kanade.ui.icons.KanadeIcons
 
 /** 選択モードの上部バー: 「N曲を選択中」「すべて選択」「×」 */
@@ -58,6 +64,20 @@ fun SelectionTopBar(
       Text(stringResource(if (allSelected) R.string.action_clear_selection else R.string.action_select_all))
     }
   }
+}
+
+/** 選択の操作バーの出入りの時間 (固定のメニューの出入りと同じにして、入れ替わって見えるようにする) */
+const val SELECTION_BAR_MS = 220
+
+/** 選択の操作バーを、下から滑らせて出し入れする */
+@Composable
+fun AnimatedSelectionBar(visible: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+  AnimatedVisibility(
+    visible = visible,
+    modifier = modifier,
+    enter = slideInVertically(tween(SELECTION_BAR_MS)) { it } + fadeIn(tween(SELECTION_BAR_MS)),
+    exit = slideOutVertically(tween(SELECTION_BAR_MS)) { it } + fadeOut(tween(SELECTION_BAR_MS)),
+  ) { content() }
 }
 
 /** 操作バーのボタン */

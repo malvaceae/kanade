@@ -21,6 +21,7 @@ import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.icons.KanadeIcons
+import me.mallows.kanade.ui.selection.AnimatedSelectionBar
 import me.mallows.kanade.ui.selection.BarAction
 import me.mallows.kanade.ui.selection.SelectionBottomBar
 import me.mallows.kanade.ui.selection.SelectionTopBar
@@ -64,7 +65,6 @@ fun <T> BoxScope.GroupSelectionBars(
     onDispose { barActive.value = false }
   }
   BackHandler(enabled = selecting) { onClear() }
-  if (!selecting) return
 
   val source = PlaySource("selection:" + selected.joinToString(",", transform = keyOf), sourceTitle)
   // 選択を解いた後も処理が続くよう、先に曲を読んでから実行する
@@ -76,17 +76,20 @@ fun <T> BoxScope.GroupSelectionBars(
       if (tracks.isNotEmpty()) block(tracks)
     }
   }
-  SelectionTopBar(
-    count = selected.size,
-    allSelected = allSelected,
-    onSelectAll = onSelectAll,
-    onClose = onClear,
-    text = stringResource(R.string.selection_count_items, selected.size),
-    height = headerHeight,
-    modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
-  )
+  if (selecting) {
+    SelectionTopBar(
+      count = selected.size,
+      allSelected = allSelected,
+      onSelectAll = onSelectAll,
+      onClose = onClear,
+      text = stringResource(R.string.selection_count_items, selected.size),
+      height = headerHeight,
+      modifier = Modifier.align(Alignment.TopCenter).background(MaterialTheme.colorScheme.background),
+    )
+  }
+  // 選択を解くと下へ滑って消え、固定のメニューと入れ替わる (急に切り替わらないように)
+  AnimatedSelectionBar(visible = selecting, modifier = Modifier.align(Alignment.BottomCenter)) {
   SelectionBottomBar(
-    modifier = Modifier.align(Alignment.BottomCenter),
     actions = listOfNotNull(
       BarAction(KanadeIcons.Play, stringResource(R.string.action_play)) { withTracks { actions.play(it, 0, source) } },
       BarAction(KanadeIcons.Shuffle, stringResource(R.string.action_shuffle)) { withTracks { actions.shufflePlay(it, source) } },
@@ -101,4 +104,5 @@ fun <T> BoxScope.GroupSelectionBars(
       } else null,
     ) + extra,
   )
+  }
 }

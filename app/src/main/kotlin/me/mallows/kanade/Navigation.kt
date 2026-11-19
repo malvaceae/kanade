@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.ui.selection.SELECTION_BAR_MS
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.layout.BoxScope
@@ -402,7 +405,13 @@ fun MainNavigation(
             },
           )
         }
-        if (showNavBar) {
+        // 選択の操作バーと入れ替わるときは、下から滑らせて出し入れする (画面を移るときは今までどおりすぐ切り替える)
+        if (top != ScanFolders) AnimatedVisibility(
+          visible = !bottomBarActive.value,
+          modifier = Modifier.align(Alignment.BottomCenter),
+          enter = slideInVertically(tween(SELECTION_BAR_MS)) { it } + fadeIn(tween(SELECTION_BAR_MS)),
+          exit = slideOutVertically(tween(SELECTION_BAR_MS)) { it } + fadeOut(tween(SELECTION_BAR_MS)),
+        ) {
           AppNavBar(
             selected = when (top) {
               Equalizer -> NavItem.EQUALIZER
@@ -413,7 +422,6 @@ fun MainNavigation(
               else -> NavItem.LIBRARY
             },
             onSelect = ::navigate,
-            modifier = Modifier.align(Alignment.BottomCenter),
           )
         }
         pendingAdd?.let { tracks ->
