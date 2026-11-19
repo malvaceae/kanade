@@ -163,7 +163,7 @@ fun LibraryHomeScreen(
             text = { Text(stringResource(R.string.backup_restore)) },
             onClick = { menuOpen = false; restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
           )
-          DropdownMenuItem(text = { Text(stringResource(R.string.app_icon_title)) }, onClick = { menuOpen = false; choosingIcon = true })
+          DropdownMenuItem(text = { Text(stringResource(R.string.app_icon_menu)) }, onClick = { menuOpen = false; choosingIcon = true })
           DropdownMenuItem(text = { Text(stringResource(R.string.licenses_title)) }, onClick = { menuOpen = false; onLicenses() })
         }
       }

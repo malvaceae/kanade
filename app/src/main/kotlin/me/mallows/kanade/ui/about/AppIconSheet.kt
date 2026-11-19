@@ -157,7 +157,7 @@ fun AppIconSheet(onChanged: () -> Unit, onDismiss: () -> Unit) {
           AppIcon.apply(context, icon)
           // アイコンを変えるとAndroidが画面を閉じるので、こちらから閉じる (少しあとで開き直す)
           (context as? android.app.Activity)?.finishAndRemoveTask()
-        }) { Text(stringResource(R.string.action_close_and_change)) }
+        }) { Text(stringResource(R.string.action_change)) }
       },
       dismissButton = { TextButton(onClick = { confirming = null }) { Text(stringResource(R.string.action_cancel)) } },
     )
