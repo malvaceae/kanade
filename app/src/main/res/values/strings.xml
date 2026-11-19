@@ -33,6 +33,8 @@
     <string name="minutes_suffix">分</string>
 
     <string name="licenses_title">ライセンス</string>
+    <string name="about_title">Kanadeについて</string>
+    <string name="about_version">バージョン %1$s</string>
     <string name="app_icon_title">アプリのアイコン</string>
     <string name="app_icon_menu">アプリのアイコンを変更</string>
     <string name="app_icon_headphones">ヘッドホン</string>

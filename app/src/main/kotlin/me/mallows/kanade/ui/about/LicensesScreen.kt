@@ -26,6 +26,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.mallows.kanade.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.selection.navigationBarHeight
 
@@ -44,10 +53,13 @@ private val LIBRARIES = listOf(
   Triple("Timber", "Jake Wharton", APACHE),
 )
 
-/** オープンソースのライセンス */
+/** Kanadeについて: アプリのアイコン・名前・バージョンと、オープンソースのライセンス */
 @Composable
 fun LicensesScreen(onBack: () -> Unit) {
   val res = LocalResources.current
+  val context = LocalContext.current
+  val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty() }
+  val icon = remember { AppIcon.current(context) }
   val licenses = remember {
     listOf(
       APACHE to res.openRawResource(R.raw.apache_license_2_0).bufferedReader().use { it.readText() },
@@ -58,12 +70,45 @@ fun LicensesScreen(onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(KanadeIcons.Back, contentDescription = stringResource(R.string.action_back)) }
       Text(
-        stringResource(R.string.licenses_title),
+        stringResource(R.string.about_title),
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.padding(start = 4.dp),
       )
     }
     LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp + navigationBarHeight())) {
+      // アプリのアイコン (今選んでいるもの)・名前・バージョン
+      item {
+        Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+          Box(Modifier.size(96.dp).clip(CircleShape)) {
+            // 絵はホーム画面で切り取られる外側まであるので、見える範囲 (108dpのうち72dp) まで拡大して出す
+            Image(
+              painter = painterResource(icon.art),
+              contentDescription = null,
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.size(96.dp).graphicsLayer { scaleX = 1.5f; scaleY = 1.5f },
+            )
+          }
+          Text(
+            stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(top = 12.dp),
+          )
+          Text(
+            stringResource(R.string.about_version, version),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+          )
+        }
+      }
+      item { HorizontalDivider() }
+      item {
+        Text(
+          stringResource(R.string.licenses_title),
+          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+          modifier = Modifier.padding(top = 16.dp),
+        )
+      }
       item {
         Text(
           stringResource(R.string.licenses_intro),
