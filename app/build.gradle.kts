@@ -15,8 +15,8 @@ android {
     applicationId = "me.mallows.kanade"
     minSdk = 31
     targetSdk = 37
-    versionCode = 9
-    versionName = "1.7.0"
+    versionCode = 10
+    versionName = "1.8.0"
     // 32bitのx86 (古いエミュレーター用) は入れない。実機はARM、エミュレーターはx86_64で足りる
     ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
   }
