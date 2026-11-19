@@ -9,11 +9,12 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.sp
 
 /**
- * 日本語の文を文節で折り返す (「削除します / か？」のように単語の途中で行が分かれないようにする)。
- * 文節の区切りは文の言語で決まるので、端末の言語が英語でも日本語として扱う。英字の折り返しは変わらない
+ * 日本語の文の折り返し。禁則 (「？」「。」を行頭に置かない) は文の言語で決まるので、端末の言語が英語でも日本語として扱う。
+ * 文節で折る設定 (WordBreak.Phrase) は使わない。Android 13以降にしか効かず、版によって折り方が変わるうえ、
+ * 行の右端がそろわなくなり、最後の行が短く余りやすくなる (単語の途中で折れるのは、日本語では普通)
  */
 private fun TextStyle.japanese(): TextStyle = copy(
-  lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
+  lineBreak = LineBreak.Paragraph,
   localeList = LocaleList("ja"),
 )
 
