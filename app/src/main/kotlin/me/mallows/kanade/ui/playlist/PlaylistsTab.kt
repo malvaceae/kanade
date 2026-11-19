@@ -52,6 +52,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -169,7 +171,8 @@ fun PlaylistsTab(
 /** プレイリスト名の入力 */
 @Composable
 fun PlaylistNameDialog(title: String, initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-  var name by rememberSaveable { mutableStateOf(initial) }
+  // 名前を変えるときは、カーソルを今の名前の末尾に置く (続けて書き足せるように)
+  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(initial, TextRange(initial.length))) }
   val focus = remember { FocusRequester() }
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -187,7 +190,7 @@ fun PlaylistNameDialog(title: String, initial: String, onConfirm: (String) -> Un
       androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
     },
     confirmButton = {
-      TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) { Text(stringResource(R.string.action_ok)) }
+      TextButton(onClick = { onConfirm(name.text) }, enabled = name.text.isNotBlank()) { Text(stringResource(R.string.action_ok)) }
     },
     dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
   )

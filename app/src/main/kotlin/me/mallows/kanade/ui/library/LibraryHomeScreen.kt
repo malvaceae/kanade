@@ -155,6 +155,7 @@ fun LibraryHomeScreen(
           DropdownMenuItem(text = { Text(stringResource(R.string.action_rescan)) }, onClick = { menuOpen = false; viewModel.rescan() }, enabled = !scanning)
           DropdownMenuItem(text = { Text(stringResource(R.string.scan_folders_title)) }, onClick = { menuOpen = false; onScanFolders() })
           DropdownMenuItem(text = { Text(stringResource(R.string.tabs_title)) }, onClick = { menuOpen = false; editingTabs = true })
+          DropdownMenuItem(text = { Text(stringResource(R.string.app_icon_menu)) }, onClick = { menuOpen = false; choosingIcon = true })
           DropdownMenuItem(
             text = { Text(stringResource(R.string.backup_export)) },
             onClick = { menuOpen = false; exportLauncher.launch("kanade-backup.json") },
@@ -163,7 +164,6 @@ fun LibraryHomeScreen(
             text = { Text(stringResource(R.string.backup_restore)) },
             onClick = { menuOpen = false; restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
           )
-          DropdownMenuItem(text = { Text(stringResource(R.string.app_icon_menu)) }, onClick = { menuOpen = false; choosingIcon = true })
           DropdownMenuItem(text = { Text(stringResource(R.string.licenses_title)) }, onClick = { menuOpen = false; onLicenses() })
         }
       }
