@@ -234,7 +234,7 @@ fun QueueScreen(
                 excluded = entry.item.mediaStoreId in excluded,
                 number = index + 1,
                 selectionMode = selecting,
-                selected = isSelected && !dragging,
+                selected = isSelected,
                 onClick = {
                   if (selecting) {
                     val k = entry.key

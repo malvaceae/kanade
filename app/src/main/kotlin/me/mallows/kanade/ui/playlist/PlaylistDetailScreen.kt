@@ -339,7 +339,7 @@ fun PlaylistDetailScreen(
                 number = index + 1,
                 playing = item.track.mediaStoreId == playingId,
                 selectionMode = selecting,
-                selected = isSelected && !dragging,
+                selected = isSelected,
                 onClick = {
                   if (selecting) {
                     selected = if (isSelected) selected - item.entryId else selected + item.entryId
