@@ -247,7 +247,7 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   deleting?.let { u ->
     AlertDialog(
       onDismissRequest = { deleting = null },
-      title = { Text(stringResource(R.string.playlist_delete_confirm_title, u.preset.name)) },
+      title = { Text(stringResource(R.string.delete_confirm_title, u.preset.name)) },
       confirmButton = {
         TextButton(onClick = { deleting = null; viewModel.deletePreset(u.id) }) { Text(stringResource(R.string.action_delete)) }
       },

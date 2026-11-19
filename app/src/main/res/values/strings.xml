@@ -111,9 +111,13 @@
     <string name="message_cover_failed">画像を読み込めませんでした</string>
     <string name="message_cover_changed">カバー画像を変更しました</string>
     <string name="message_cover_reset">カバー画像を元に戻しました</string>
-    <string name="playlist_delete_confirm_title">「%1$s」を削除しますか？</string>
-    <string name="playlist_delete_confirm">曲のファイルは削除されません。</string>
-    <string name="playlists_delete_confirm_title">%1$d件のプレイリストを削除しますか？</string>
+    <string name="delete_confirm_title">「%1$s」を削除しますか？</string>
+    <string name="message_playlist_created">「%1$s」を作成しました</string>
+    <string name="message_playlist_renamed">名前を変更しました</string>
+    <string name="message_playlist_deleted">「%1$s」を削除しました</string>
+    <plurals name="message_playlists_deleted">
+        <item quantity="other">%d件のプレイリストを削除しました</item>
+    </plurals>
     <string name="playlist_empty">まだ曲がありません。ライブラリで曲を長押しして選び、「プレイリスト」から追加できます。</string>
     <plurals name="add_to_playlist_title">
         <item quantity="other">%d曲をプレイリストに追加</item>
@@ -134,7 +138,7 @@
     <string name="move_top">先頭へ</string>
     <string name="move_bottom">末尾へ</string>
     <string name="move_to_number">位置 (番号)</string>
-    <string name="move_hint">1 ~ %1$dの番号を指定すると、選んだ曲がその位置からまとめて並びます</string>
+    <string name="move_hint">1 ~ %1$dの番号を指定すると、選んだ曲がその位置からまとめて並びます。</string>
     <plurals name="message_moved">
         <item quantity="other">%d曲を移動しました</item>
     </plurals>

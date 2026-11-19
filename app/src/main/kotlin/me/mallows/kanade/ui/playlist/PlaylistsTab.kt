@@ -61,6 +61,9 @@ import me.mallows.kanade.ui.common.GroupRow
 import me.mallows.kanade.ui.common.ListHeader
 import me.mallows.kanade.ui.icons.KanadeIcons
 import me.mallows.kanade.ui.library.Loading
+import me.mallows.kanade.ui.common.LocalShowMessage
+import me.mallows.kanade.ui.common.LocalShowUndo
+import androidx.compose.ui.platform.LocalResources
 import me.mallows.kanade.ui.library.PlaylistListSort
 import me.mallows.kanade.ui.library.SortButton
 import me.mallows.kanade.ui.library.SortSheet
@@ -79,7 +82,9 @@ fun PlaylistsTab(
   var creating by rememberSaveable { mutableStateOf(false) }
   // 長押しで選択を始める。選択中は押すたびに選択を切り替える
   var selectedIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
-  var deletingSelected by remember { mutableStateOf<List<PlaylistSummary>?>(null) }
+  val showMessage = LocalShowMessage.current
+  val showUndo = LocalShowUndo.current
+  val res = LocalResources.current
   val scope = rememberCoroutineScope()
   val list = playlists ?: return Loading()
 
@@ -129,42 +134,32 @@ fun PlaylistsTab(
       distinct = false,
       canAddToPlaylist = false,
       extra = listOf(
-        BarAction(KanadeIcons.Delete, stringResource(R.string.action_delete)) { deletingSelected = chosen },
+        BarAction(KanadeIcons.Delete, stringResource(R.string.action_delete)) {
+          // 確かめずに削除し、「元に戻す」を出す (曲を外すときと同じ)
+          val targets = chosen
+          selectedIds = emptySet()
+          scope.launch {
+            val deleted = targets.mapNotNull { viewModel.delete(it.id) }
+            if (deleted.isEmpty()) return@launch
+            val message = if (deleted.size == 1) res.getString(R.string.message_playlist_deleted, deleted.first().playlist.name)
+              else res.getQuantityString(R.plurals.message_playlists_deleted, deleted.size, deleted.size)
+            showUndo(message, { deleted.forEach { viewModel.restore(it) } }, { deleted.forEach { viewModel.discard(it) } })
+          }
+        },
       ),
     )
   }
 
-  deletingSelected?.let { targets ->
-    AlertDialog(
-      onDismissRequest = { deletingSelected = null },
-      title = {
-        Text(
-          if (targets.size == 1) stringResource(R.string.playlist_delete_confirm_title, targets.first().name)
-          else stringResource(R.string.playlists_delete_confirm_title, targets.size)
-        )
-      },
-      text = { Text(stringResource(R.string.playlist_delete_confirm)) },
-      confirmButton = {
-        TextButton(onClick = {
-          deletingSelected = null
-          selectedIds = emptySet()
-          scope.launch { targets.forEach { viewModel.delete(it.id) } }
-        }) { Text(stringResource(R.string.action_delete)) }
-      },
-      dismissButton = { TextButton(onClick = { deletingSelected = null }) { Text(stringResource(R.string.action_cancel)) } },
-    )
-  }
-  if (showSort) {
-    SortSheet(PlaylistListSort.entries.toTypedArray(), sort, PlaylistListSort.NAME,
-      onSelect = { viewModel.setSort(it) }, onDismiss = { showSort = false })
-  }
   if (creating) {
     PlaylistNameDialog(
       title = stringResource(R.string.playlist_new),
       initial = "",
       onConfirm = { name ->
         creating = false
-        scope.launch { viewModel.create(name) }
+        scope.launch {
+          viewModel.create(name)
+          showMessage(res.getString(R.string.message_playlist_created, name.trim()))
+        }
       },
       onDismiss = { creating = false },
     )

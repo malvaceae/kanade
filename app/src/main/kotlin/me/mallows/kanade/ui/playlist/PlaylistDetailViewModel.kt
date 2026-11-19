@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import me.mallows.kanade.core.data.db.PlaylistEntity
 import me.mallows.kanade.core.data.db.PlaylistItem
+import me.mallows.kanade.core.data.playlist.DeletedPlaylist
 import me.mallows.kanade.core.data.playlist.PlaylistRepository
 import me.mallows.kanade.core.domain.reorder.Positioned
 import me.mallows.kanade.core.domain.reorder.PositionedListEditor
@@ -110,6 +111,8 @@ class PlaylistDetailViewModel @AssistedInject constructor(
   suspend fun rename(name: String) = repository.rename(playlistId, name.trim())
 
   suspend fun delete() = repository.delete(playlistId)
+  suspend fun restore(deleted: DeletedPlaylist) = repository.restore(deleted)
+  fun discard(deleted: DeletedPlaylist) = repository.discard(deleted)
 
   /** 選んだ画像をカバーにする。読めない画像ならfalse */
   suspend fun setCover(image: android.net.Uri): Boolean = repository.setCover(playlistId, image)

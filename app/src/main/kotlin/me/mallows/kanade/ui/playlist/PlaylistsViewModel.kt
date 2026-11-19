@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import me.mallows.kanade.core.data.db.PlaylistSummary
+import me.mallows.kanade.core.data.playlist.DeletedPlaylist
 import me.mallows.kanade.core.data.playlist.PlaylistRepository
 
 /** プレイリストの一覧・作成・曲の追加 */
@@ -47,6 +48,8 @@ class PlaylistsViewModel @Inject constructor(
   /** プレイリストの曲 (保存された順) */
   suspend fun tracks(id: Long): List<TrackEntity> = repository.items(id).first().map { it.track }
   suspend fun delete(id: Long) = repository.delete(id)
+  suspend fun restore(deleted: DeletedPlaylist) = repository.restore(deleted)
+  fun discard(deleted: DeletedPlaylist) = repository.discard(deleted)
 
   suspend fun duplicates(playlistId: Long, trackIds: List<Long>): Set<Long> = repository.duplicates(playlistId, trackIds)
 

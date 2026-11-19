@@ -70,6 +70,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.common.LocalShowUndo
 import me.mallows.kanade.core.data.db.PlaylistItem
 import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalShowMessage
@@ -117,6 +118,7 @@ fun PlaylistDetailScreen(
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
   val res = LocalResources.current
+  val showUndo = LocalShowUndo.current
   // カバー画像は、Androidの標準の写真の選択画面で選ぶ
   val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
     if (uri != null) {
@@ -266,7 +268,19 @@ fun PlaylistDetailScreen(
                   },
                 )
               }
-              DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = { menuOpen = false; sheet = "delete" })
+              DropdownMenuItem(text = { Text(stringResource(R.string.playlist_delete)) }, onClick = {
+                menuOpen = false
+                // 確かめずに削除して前の画面に戻り、「元に戻す」を出す (曲を外すときと同じ)
+                scope.launch {
+                  val deleted = viewModel.delete() ?: return@launch
+                  onBack()
+                  showUndo(
+                    res.getString(R.string.message_playlist_deleted, deleted.playlist.name),
+                    { viewModel.restore(deleted) },
+                    { viewModel.discard(deleted) },
+                  )
+                }
+              })
             }
           }
         }
@@ -430,23 +444,14 @@ fun PlaylistDetailScreen(
     "rename" -> PlaylistNameDialog(
       title = stringResource(R.string.playlist_rename),
       initial = playlist?.name.orEmpty(),
-      onConfirm = { name -> sheet = null; scope.launch { viewModel.rename(name) } },
-      onDismiss = { sheet = null },
-    )
-    "delete" -> AlertDialog(
-      onDismissRequest = { sheet = null },
-      title = { Text(stringResource(R.string.playlist_delete_confirm_title, playlist?.name.orEmpty())) },
-      text = { Text(stringResource(R.string.playlist_delete_confirm)) },
-      confirmButton = {
-        TextButton(onClick = {
-          sheet = null
-          scope.launch {
-            viewModel.delete()
-            onBack()
-          }
-        }) { Text(stringResource(R.string.action_delete)) }
+      onConfirm = { name ->
+        sheet = null
+        scope.launch {
+          viewModel.rename(name)
+          showMessage(res.getString(R.string.message_playlist_renamed))
+        }
       },
-      dismissButton = { TextButton(onClick = { sheet = null }) { Text(stringResource(R.string.action_cancel)) } },
+      onDismiss = { sheet = null },
     )
   }
 }

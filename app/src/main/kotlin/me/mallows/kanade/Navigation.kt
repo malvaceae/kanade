@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -65,6 +66,8 @@ import me.mallows.kanade.ui.common.LocalBottomBarActive
 import me.mallows.kanade.ui.common.LocalIsPlaying
 import me.mallows.kanade.ui.common.LocalPlaySource
 import me.mallows.kanade.ui.common.LocalShowMessage
+import me.mallows.kanade.ui.common.LocalShowUndo
+import me.mallows.kanade.ui.common.showUndo
 import me.mallows.kanade.playback.PlaySource
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.equalizer.EqualizerScreen
@@ -112,6 +115,7 @@ fun MainNavigation(
   val snackbar = remember { SnackbarHostState() }
   /** 画面をまたいで続く処理 (シートを閉じた後のメッセージなど) */
   val appScope = rememberCoroutineScope()
+  val undoLabel = stringResource(R.string.action_undo)
   val resources = LocalResources.current
   // スキャンが終わったら、読み込んだ曲の数を知らせる (どの画面から始めたスキャンでも)
   LaunchedEffect(Unit) {
@@ -210,6 +214,14 @@ fun MainNavigation(
     LocalPlaySource provides playSource,
     LocalPlaybackPosition provides playerViewModel::currentPosition,
     LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) }; Unit },
+    LocalShowUndo provides { message: String, onUndo: suspend () -> Unit, onExpire: suspend () -> Unit ->
+      appScope.launch {
+        var undone = false
+        snackbar.showUndo(message, undoLabel) { undone = true }
+        if (undone) onUndo() else onExpire()
+      }
+      Unit
+    },
   ) {
     AudioPermissionGate {
       Box(Modifier.fillMaxSize()) {

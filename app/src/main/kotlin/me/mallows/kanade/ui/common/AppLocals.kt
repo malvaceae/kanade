@@ -17,6 +17,12 @@ val LocalBottomBarActive = compositionLocalOf<MutableState<Boolean>> { mutableSt
 /** メッセージを出す。シートを閉じた後も出せるよう、画面全体の処理として出す */
 val LocalShowMessage = compositionLocalOf<(String) -> Unit> { {} }
 
+/**
+ * 「元に戻す」付きのメッセージを出す。画面を離れても出し続けられるよう、画面全体の処理として出す。
+ * 押されたら onUndo、押されずに消えたら onExpire を呼ぶ (削除したものの後片付けなど)
+ */
+val LocalShowUndo = compositionLocalOf<(message: String, onUndo: suspend () -> Unit, onExpire: suspend () -> Unit) -> Unit> { { _, _, _ -> } }
+
 /** 知らせを出す時間 (ミリ秒)。「元に戻す」付きも普通の知らせも同じ長さにする (標準は10秒と4秒で、そろわないため) */
 private const val MESSAGE_DURATION_MS = 5_000L
 

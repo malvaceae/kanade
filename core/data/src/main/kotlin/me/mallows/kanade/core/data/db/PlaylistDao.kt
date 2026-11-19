@@ -126,6 +126,22 @@ interface PlaylistDao {
     deletePlaylistRow(id)
   }
 
+  @Query("SELECT * FROM playlist WHERE id = :id")
+  suspend fun getPlaylist(id: Long): PlaylistEntity?
+
+  @Query("SELECT * FROM playlist_entry WHERE playlist_id = :id")
+  suspend fun entriesOf(id: Long): List<PlaylistEntryEntity>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun restorePlaylistRow(playlist: PlaylistEntity)
+
+  /** 削除したプレイリストを、同じIDと曲のまま戻す */
+  @Transaction
+  suspend fun restorePlaylist(playlist: PlaylistEntity, entries: List<PlaylistEntryEntity>) {
+    restorePlaylistRow(playlist)
+    insertEntries(entries)
+  }
+
   @Query("SELECT MAX(position) FROM playlist_entry WHERE playlist_id = :playlistId")
   suspend fun maxPosition(playlistId: Long): Double?
 
