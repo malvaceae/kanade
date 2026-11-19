@@ -33,6 +33,13 @@
     <string name="minutes_suffix">分</string>
 
     <string name="licenses_title">ライセンス</string>
+    <string name="app_icon_title">アプリのアイコン</string>
+    <string name="app_icon_headphones">ヘッドホン</string>
+    <string name="app_icon_pair">寄り添う2羽</string>
+    <string name="app_icon_staff">五線譜</string>
+    <string name="app_icon_confirm_title">アプリのアイコンを変えますか？</string>
+    <string name="app_icon_confirm_body">アイコンを変えるには、アプリをいったん閉じて開き直します。再生は止まりません。ホーム画面に置いたアイコンは消えることがあるので、そのときはアプリの一覧から置き直してください。</string>
+    <string name="action_close_and_change">変更して開き直す</string>
     <string name="licenses_intro">Kanadeは、次のオープンソースのソフトウェアを使っています。それぞれのライセンスの本文は下にあります。</string>
     <string name="backup_export">バックアップを書き出す</string>
     <string name="backup_restore">バックアップから復元</string>

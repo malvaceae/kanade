@@ -24,7 +24,7 @@ import me.mallows.kanade.ui.theme.KanadeTheme
 import me.mallows.kanade.ui.theme.isDarkTheme
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class KanadeActivity : ComponentActivity() {
 
   @Inject lateinit var settings: SettingsRepository
 

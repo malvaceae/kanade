@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.about.AppIconSheet
 import me.mallows.kanade.core.data.db.AlbumSummary
 import me.mallows.kanade.core.data.db.GroupSummary
 import me.mallows.kanade.core.data.library.GroupKind
@@ -119,6 +120,7 @@ fun LibraryHomeScreen(
   val genres by viewModel.groups(GroupKind.GENRE).collectAsStateWithLifecycle()
   var editingTabs by rememberSaveable { mutableStateOf(false) }
   var menuOpen by remember { mutableStateOf(false) }
+  var choosingIcon by rememberSaveable { mutableStateOf(false) }
   val scanning by viewModel.scanning.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val snackbar = LocalSnackbarHost.current
@@ -161,6 +163,7 @@ fun LibraryHomeScreen(
             text = { Text(stringResource(R.string.backup_restore)) },
             onClick = { menuOpen = false; restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
           )
+          DropdownMenuItem(text = { Text(stringResource(R.string.app_icon_title)) }, onClick = { menuOpen = false; choosingIcon = true })
           DropdownMenuItem(text = { Text(stringResource(R.string.licenses_title)) }, onClick = { menuOpen = false; onLicenses() })
         }
       }
@@ -179,6 +182,12 @@ fun LibraryHomeScreen(
         MenuRow(t.icon, title, count) { onOpen(t, title) }
       }
     }
+  }
+  if (choosingIcon) {
+    AppIconSheet(
+      onChanged = { choosingIcon = false },
+      onDismiss = { choosingIcon = false },
+    )
   }
   if (editingTabs) {
     TabsSheet(tabs = tabSettings, onChange = viewModel::setTabs, onDismiss = { editingTabs = false })

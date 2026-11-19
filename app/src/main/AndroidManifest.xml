@@ -19,13 +19,50 @@
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.Kanade">
         <activity
+            android:name=".KanadeActivity"
+            android:exported="false" />
+
+        <!--
+            アプリのアイコンは、アプリ内で切り替えられる (AppIcon.kt)。アイコンごとに入り口 (activity-alias) を置き、
+            選んだものだけを有効にする。G (ヘッドホン) の入り口は、前からの入り口の名前 (.MainActivity) のままにして、
+            更新してもホーム画面に置いたアイコンが消えないようにする
+        -->
+        <activity-alias
             android:name=".MainActivity"
-            android:exported="true">
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".KanadeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherE"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_e"
+            android:roundIcon="@mipmap/ic_launcher_e"
+            android:targetActivity=".KanadeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherH"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_h"
+            android:roundIcon="@mipmap/ic_launcher_h"
+            android:targetActivity=".KanadeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>
