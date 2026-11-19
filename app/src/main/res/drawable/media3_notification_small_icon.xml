@@ -1,26 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 通知のステータスバーに出る小さなアイコン (Media3の既定のアイコンを置き換える)。アプリのアイコンと同じ波形を白一色で描く -->
+<!-- 通知のステータスバーに出る小さなアイコン (Media3の既定のアイコンを置き換える)。アプリのアイコン (ヘッドホンのインコ) の影絵を白一色で描く。
+     白一色でもヘッドホンと分かるよう、帯と耳あては頭から少し離す。座標は絵と同じ (鳥の中心が231, 265) で、鳥のまわりだけを切り出す -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <group
-        android:scaleX="0.4167"
-        android:scaleY="0.4167"
-        android:translateX="-9.6667"
-        android:translateY="-10.5000">
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="5"
-            android:strokeLineCap="round"
-            android:pathData="M32,49 V59 M38,43 V65 M44,46 V62 M50,37 V71 M56,41 V67 M62,39 V69 M68,47 V61 M74,50 V58" />
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="2.4"
-            android:strokeLineCap="round"
-            android:pathData="M53,30 V78" />
+    android:viewportWidth="270"
+    android:viewportHeight="270">
+    <group android:translateX="-96" android:translateY="-104">
+        <group android:translateX="229" android:translateY="168" android:scaleX="1.36" android:scaleY="1.36">
+            <path android:fillColor="#FFFFFFFF" android:pathData="M-4,0 C-10,-22 0,-40 16,-48 C8,-36 8,-20 10,0Z M4,0 C4,-18 14,-30 26,-34 C18,-24 16,-12 16,0Z" />
+        </group>
+        <group android:translateX="231" android:translateY="265" android:scaleX="1.55" android:scaleY="1.55">
+            <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M0,-62 C34,-62 52,-30 54,8 C56,44 36,66 0,66 C-36,66 -56,44 -54,8 C-52,-30 -34,-62 0,-62Z M-20.6,-25 a4.6,5.4 0 1,0 9.2,0 a4.6,5.4 0 1,0 -9.2,0 M11.4,-25 a4.6,5.4 0 1,0 9.2,0 a4.6,5.4 0 1,0 -9.2,0" />
+            <path android:fillColor="#FFFFFFFF" android:pathData="M-72,-14 C-72,-54 -42,-90 0,-90 C42,-90 72,-54 72,-14 L62,-14 C62,-48 36,-79 0,-79 C-36,-79 -62,-48 -62,-14Z" />
+            <path android:fillColor="#FFFFFFFF" android:pathData="M-79,-34 Q-79,-38 -75,-38 L-63,-38 Q-60,-38 -60,-34 L-60,4 Q-60,8 -63,8 L-75,8 Q-79,8 -79,4Z M79,-34 Q79,-38 75,-38 L63,-38 Q60,-38 60,-34 L60,4 Q60,8 63,8 L75,8 Q79,8 79,4Z" />
+        </group>
     </group>
 </vector>
