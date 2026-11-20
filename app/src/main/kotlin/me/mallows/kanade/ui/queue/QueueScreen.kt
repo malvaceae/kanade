@@ -106,7 +106,8 @@ fun QueueScreen(
   val entries = remember(queue) {
     val seen = HashMap<Long, Int>()
     queue.upcoming.mapIndexed { i, item ->
-      val n = seen.merge(item.mediaStoreId, 1, Int::plus)!!
+      val n = (seen[item.mediaStoreId] ?: 0) + 1
+      seen[item.mediaStoreId] = n
       Entry(i, item, item.mediaStoreId * 1000 + n)
     }
   }

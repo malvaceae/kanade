@@ -1,6 +1,7 @@
 package me.mallows.kanade.ui.common
 
 import android.graphics.Bitmap
+import android.os.Build
 import android.util.LruCache
 import android.util.Size
 import androidx.compose.foundation.Image
@@ -57,7 +58,8 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       runCatching {
         // プレイリストのカバー (アプリ内のファイル) はそのまま縮めて読む。曲はMediaStoreの縮小画像を使う
         if (uri.startsWith("file://")) decodeFile(uri.removePrefix("file://"), px)
-        else context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null)
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null)
+        else decodeEmbedded(context, uri.toUri(), px)
       }
         .getOrNull()
         .also { ThumbnailCache.put(key, it) }
@@ -96,4 +98,25 @@ private fun decodeFile(path: String, px: Int): android.graphics.Bitmap? {
   var sample = 1
   while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
   return android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+}
+
+/**
+ * Android 9以前 (loadThumbnailがない) では、ファイルに埋め込まれた画像を直接読み出して縮める。
+ * 埋め込み画像がない曲は null (音符の仮表示)
+ */
+private fun decodeEmbedded(context: android.content.Context, uri: android.net.Uri, px: Int): android.graphics.Bitmap? {
+  val retriever = android.media.MediaMetadataRetriever()
+  try {
+    retriever.setDataSource(context, uri)
+    val bytes = retriever.embeddedPicture ?: return null
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= px) sample *= 2
+    return android.graphics.BitmapFactory.decodeByteArray(
+      bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample },
+    )
+  } finally {
+    retriever.release()
+  }
 }

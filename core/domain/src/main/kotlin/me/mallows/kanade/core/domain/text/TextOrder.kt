@@ -36,9 +36,14 @@ object TextOrder : Comparator<String> {
     }
   }
 
-  private fun isLatin(c: Char): Boolean {
-    val script = Character.UnicodeScript.of(c.code)
-    return script == Character.UnicodeScript.LATIN
+  /**
+   * ラテン文字か (英字・アクセント付き・全角の英字など)。`Character.UnicodeScript`はAndroid 7.0 (API 24) からなので、
+   * Android 6.0でも動くよう、範囲で調べる。文字の種類は`isLetter()`で絞ってから呼ぶ
+   */
+  private fun isLatin(c: Char): Boolean = when (c.code) {
+    in 0x41..0x5A, in 0x61..0x7A, 0xAA, 0xBA, in 0xC0..0xD6, in 0xD8..0xF6, in 0xF8..0x2B8,
+    in 0x1E00..0x1EFF, in 0x2C60..0x2C7F, in 0xA720..0xA7FF, in 0xFF21..0xFF3A, in 0xFF41..0xFF5A -> true
+    else -> false
   }
 
   override fun compare(a: String, b: String): Int {
