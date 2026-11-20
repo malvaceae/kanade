@@ -1,22 +1,31 @@
 package me.mallows.kanade.core.data.playlist
 
 import android.content.Context
+import android.os.Build
 import android.os.storage.StorageManager
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import me.mallows.kanade.core.data.library.StorageVolumes
+import me.mallows.kanade.core.domain.folder.StoragePaths
 
 /** 端末内の曲のファイルのパス (M3Uやバックアップで、曲を端末をまたいで指すために使う) */
 @Singleton
-class LibraryFiles @Inject constructor(@param:ApplicationContext private val context: Context) {
+class LibraryFiles @Inject constructor(
+  @param:ApplicationContext private val context: Context,
+  private val storage: StorageVolumes,
+) {
 
   /** (MediaStoreのID, 「Music/Album/曲.flac」のようなパス)。[ids] を渡すとその曲だけ */
   fun list(ids: List<Long>? = null): List<Pair<Long, String>> {
     if (ids != null && ids.isEmpty()) return emptyList()
+    val modern = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    // API 28以下は、RELATIVE_PATHがないので、絶対パスから作る
+    val roots = if (modern) emptyList() else storage.list().map { it.root }
     val projection = arrayOf(
       MediaStore.Audio.Media._ID,
-      MediaStore.Audio.Media.RELATIVE_PATH,
+      if (modern) MediaStore.Audio.Media.RELATIVE_PATH else DATA,
       MediaStore.Audio.Media.DISPLAY_NAME,
     )
     val selection = ids?.let { "${MediaStore.Audio.Media._ID} IN (${it.joinToString(",")})" }
@@ -24,7 +33,9 @@ class LibraryFiles @Inject constructor(@param:ApplicationContext private val con
     context.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, selection, null, null)?.use { c ->
       while (c.moveToNext()) {
         val name = c.getString(2) ?: continue
-        result += c.getLong(0) to (c.getString(1).orEmpty() + name)
+        val folder = if (modern) c.getString(1).orEmpty()
+        else c.getString(1)?.let { StoragePaths.relativePathOf(roots, it)?.relativePath }.orEmpty()
+        result += c.getLong(0) to (folder + name)
       }
     }
     return result
@@ -36,6 +47,7 @@ class LibraryFiles @Inject constructor(@param:ApplicationContext private val con
    */
   fun absolutePaths(ids: List<Long>): Map<Long, String> {
     if (ids.isEmpty()) return emptyMap()
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return absolutePathsFromData(ids)
     val roots = storageRoots()
     val projection = arrayOf(
       MediaStore.Audio.Media._ID,
@@ -58,10 +70,25 @@ class LibraryFiles @Inject constructor(@param:ApplicationContext private val con
     return result
   }
 
-  /** ボリューム名 → 根のパス (つながっているストレージだけ) */
+  /** API 28以下: 絶対パス (`DATA`) がそのまま使える */
+  private fun absolutePathsFromData(ids: List<Long>): Map<Long, String> {
+    val result = HashMap<Long, String>()
+    for (chunk in ids.distinct().chunked(500)) {
+      val selection = "${MediaStore.Audio.Media._ID} IN (${chunk.joinToString(",")})"
+      context.contentResolver.query(
+        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media._ID, DATA), selection, null, null,
+      )?.use { c ->
+        while (c.moveToNext()) result[c.getLong(0)] = c.getString(1) ?: continue
+      }
+    }
+    return result
+  }
+
+  /** ボリューム名 → 根のパス (つながっているストレージだけ)。API 30以上はOSに聞き、API 29はアプリの外部ファイル用フォルダから求める */
   private fun storageRoots(): Map<String, String> {
-    val storage = context.getSystemService(StorageManager::class.java) ?: return emptyMap()
-    return storage.storageVolumes.mapNotNull { v ->
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return storage.list().associate { it.name to it.root }
+    val manager = context.getSystemService(StorageManager::class.java) ?: return emptyMap()
+    return manager.storageVolumes.mapNotNull { v ->
       val name = v.mediaStoreVolumeName ?: return@mapNotNull null
       val dir = v.directory ?: return@mapNotNull null
       name to dir.absolutePath.trimEnd('/')
@@ -74,5 +101,9 @@ class LibraryFiles @Inject constructor(@param:ApplicationContext private val con
 
   private companion object {
     const val PRIMARY_ROOT = "/storage/emulated/0"
+
+    /** 曲の絶対パスの列。API 29で非推奨だが、API 28以下では、これでしか場所が分からないので使う */
+    @Suppress("DEPRECATION")
+    val DATA: String = MediaStore.Audio.Media.DATA
   }
 }
