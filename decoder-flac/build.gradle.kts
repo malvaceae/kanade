@@ -11,14 +11,13 @@ android {
   compileSdk = 37
   ndkVersion = "27.1.12297006"
   defaultConfig {
-    minSdk = 31
+    minSdk = 23
     consumerProguardFiles("consumer-rules.pro")
     // アプリと同じABIだけ作る (x86は作らない)
     ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     externalNativeBuild {
       cmake {
-        // 32bitのABIでfseekoの有無の判定が外れ、stdio.hと食い違うため、あることにする (API 24以降はある)
-        arguments("-DHAVE_FSEEKO=1", "-DWITH_OGG=OFF", "-DINSTALL_MANPAGES=OFF", "-DBUILD_PROGRAMS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTING=OFF", "-DBUILD_DOCS=OFF")
+        arguments("-DWITH_OGG=OFF", "-DINSTALL_MANPAGES=OFF", "-DBUILD_PROGRAMS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTING=OFF", "-DBUILD_DOCS=OFF")
         targets("flacJNI")
       }
     }

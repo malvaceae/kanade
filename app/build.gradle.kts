@@ -13,7 +13,7 @@ android {
   ndkVersion = "27.1.12297006"
   defaultConfig {
     applicationId = "me.mallows.kanade"
-    minSdk = 31
+    minSdk = 23
     targetSdk = 37
     versionCode = 12
     versionName = "1.10.0"
