@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.mallows.kanade.R
 import me.mallows.kanade.core.common.AndroidVersion
+import me.mallows.kanade.ui.library.LibraryViewModel
 import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.player.PlayerViewModel
 
@@ -54,6 +56,32 @@ object AudioPermissions {
 
   fun hasAudio(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, audio()) == PackageManager.PERMISSION_GRANTED
+
+  /** 動画の読み取り権限が必要で (Android 13以降)、まだ許可されていないか */
+  fun needsVideo(context: Context, version: AndroidVersion = AndroidVersion.current): Boolean =
+    version.usesReadMediaAudio &&
+      ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED
+}
+
+/** 動画の権限を、音楽の権限だけ許可していた人 (更新前から使っている人) に、一度だけ尋ねたか */
+private const val VIDEO_ASKED_PREFS = "permission"
+private const val VIDEO_ASKED_KEY = "video_asked"
+
+/**
+ * 音楽の権限だけ許可済みの人に、動画の権限を一度だけ尋ねる (系統の確認画面が出る)。拒否されても、音楽は今までどおり使える。
+ * 許可されたら、動画を読み込むために再スキャンする。尋ねるのは一度だけで、あとは何も出さない
+ */
+@Composable
+private fun AskVideoPermissionOnce(onGranted: () -> Unit) {
+  val context = LocalContext.current
+  val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) onGranted() }
+  LaunchedEffect(Unit) {
+    val prefs = context.getSharedPreferences(VIDEO_ASKED_PREFS, Context.MODE_PRIVATE)
+    if (AudioPermissions.needsVideo(context) && !prefs.getBoolean(VIDEO_ASKED_KEY, false)) {
+      prefs.edit().putBoolean(VIDEO_ASKED_KEY, true).apply()
+      launcher.launch(Manifest.permission.READ_MEDIA_VIDEO)
+    }
+  }
 }
 
 /** 音楽ファイルの読み取りが許可されていれば[content]を、されていなければ説明画面を表示する */
@@ -73,6 +101,8 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
   }
 
   if (granted) {
+    val library: LibraryViewModel = hiltViewModel()
+    AskVideoPermissionOnce(onGranted = library::rescan)
     content()
   } else {
     // 外部のアプリから開いた音声ファイルは、ライブラリの権限がなくても再生できる。再生中なら、その曲を見て止められるよう、下に簡易プレイヤーを出す
