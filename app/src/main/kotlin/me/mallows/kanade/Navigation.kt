@@ -492,15 +492,12 @@ private fun Page(
   content: @Composable () -> Unit,
 ) {
   Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    if (bottomInset > 0.dp) {
-      Box(
-        Modifier.fillMaxSize()
-          .padding(bottom = bottomInset)
-          .navigationBarsPadding(),
-      ) { content() }
-    } else {
-      content()
-    }
+    // 余白の有無で組み立て方を変えない (変えると、中の画面の状態が捨てられる。動画の全画面に入ると余白が0になる)
+    Box(
+      Modifier.fillMaxSize()
+        .padding(bottom = bottomInset)
+        .then(if (bottomInset > 0.dp) Modifier.navigationBarsPadding() else Modifier),
+    ) { content() }
     mini?.invoke(this)
   }
 }
