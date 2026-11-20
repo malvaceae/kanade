@@ -117,6 +117,8 @@ class PlaybackService : MediaSessionService() {
     scope.launch { persistence.restore(player) }
     sleepTimer = SleepTimer(player, scope)
     PlayCounter(playStatsDao, scope).attach(player)
+    // 動画には埋め込みの絵がないので、通知・ロック画面用に、動画のフレームを絵として付ける
+    VideoArtwork(this, player, scope).attach()
     // シャッフルは今の曲を先頭にした順にする (途中の曲からオンにしても全曲が流れるように)
     player.keepShuffleFromCurrent()
     // スキャン対象外の曲は、キューに残したまま再生の順番が来たら飛ばす
