@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** 端末内の1曲。MediaStoreから取り込んだ情報を保存する */
+/** 端末内の1曲 (音声または動画)。MediaStoreから取り込んだ情報を保存する */
 @Entity(
   tableName = "track",
   indices = [Index(value = ["media_store_id"], unique = true), Index("album"), Index("artist"), Index("excluded")],
@@ -36,4 +36,15 @@ data class TrackEntity(
    * ライブラリの一覧には出さない
    */
   @ColumnInfo(defaultValue = "0") val excluded: Boolean = false,
-)
+  /**
+   * 音声か動画か ([MEDIA_TYPE_AUDIO]・[MEDIA_TYPE_VIDEO])。
+   * MediaStoreのIDは、音声と動画で同じ番号の空間を共有する (どちらも`files`の表の行) ので、`media_store_id`はこのままで1つに決まる。
+   * 再生に使うURIだけが、音声と動画で違う集まり (`uri`) を指す
+   */
+  @ColumnInfo(name = "media_type", defaultValue = "0") val mediaType: Int = MEDIA_TYPE_AUDIO,
+) {
+  val isVideo: Boolean get() = mediaType == MEDIA_TYPE_VIDEO
+}
+
+const val MEDIA_TYPE_AUDIO = 0
+const val MEDIA_TYPE_VIDEO = 1

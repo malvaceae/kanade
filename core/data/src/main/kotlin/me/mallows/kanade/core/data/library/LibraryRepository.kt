@@ -115,7 +115,8 @@ class LibraryRepository @Inject constructor(
       val result = withContext(Dispatchers.IO) {
         // MediaStoreの問い合わせはトランザクションの外で行い、DBへの書き込みだけをまとめる
         val included = scanner.scan(folders)
-        val existing = scanner.existingIds()
+        // 動画を読む権限がないときは、動画が端末から消えたのではなく読めないだけなので、消さずに隠したままにする
+        val existing = if (scanner.canReadVideo()) scanner.existingIds() else scanner.existingIds() + trackDao.videoIds()
         db.withTransaction {
           trackDao.sync(included, existing).also { playlistDao.deleteOrphans() }
         }

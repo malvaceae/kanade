@@ -46,6 +46,10 @@ interface TrackDao {
   @Query("SELECT media_store_id FROM track WHERE excluded = 1")
   fun observeExcludedIds(): Flow<List<Long>>
 
+  /** 動画のMediaStore ID。動画を読む権限がないときに、動画を消さずに残すのに使う */
+  @Query("SELECT media_store_id FROM track WHERE media_type = 1")
+  suspend fun videoIds(): List<Long>
+
   /**
    * スキャンの結果をデータベースに反映する。
    * 対象フォルダの曲 ([included]) は登録・更新し、対象外の印を外す。登録済みの曲はIDを引き継ぐ (プレイリストなどからの参照を保つため)。

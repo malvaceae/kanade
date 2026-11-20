@@ -45,9 +45,10 @@ object AudioPermissions {
   fun audio(version: AndroidVersion = AndroidVersion.current): String =
     if (version.usesReadMediaAudio) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
-  /** 最初にまとめて要求する権限。通知の権限は拒否されても再生はできる */
+  /** 最初にまとめて要求する権限。動画 (Android 13以降) と通知の権限は、拒否されても音楽は再生できる */
   fun request(version: AndroidVersion = AndroidVersion.current): Array<String> = buildList {
     add(audio(version))
+    if (version.usesReadMediaAudio) add(Manifest.permission.READ_MEDIA_VIDEO)
     if (version.requiresNotificationPermission) add(Manifest.permission.POST_NOTIFICATIONS)
   }.toTypedArray()
 
