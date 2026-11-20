@@ -25,7 +25,8 @@
         <!--
             アプリのアイコンは、アプリ内で切り替えられる (AppIcon.kt)。アイコンごとに入り口 (activity-alias) を置き、
             選んだものだけを有効にする。G (ヘッドホン) の入り口は、前からの入り口の名前 (.MainActivity) のままにして、
-            更新してもホーム画面に置いたアイコンが消えないようにする
+            更新してもホーム画面に置いたアイコンが消えないようにする。
+            DEFAULT は、通知から開くとき (PlaybackService) に、今有効な入り口を探せるようにするためのもの
         -->
         <activity-alias
             android:name=".MainActivity"
@@ -37,6 +38,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
         <activity-alias
@@ -49,6 +51,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
         <activity-alias
@@ -61,6 +64,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
     </application>

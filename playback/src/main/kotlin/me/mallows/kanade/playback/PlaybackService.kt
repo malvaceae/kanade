@@ -95,18 +95,17 @@ class PlaybackService : MediaSessionService() {
       .setWakeMode(C.WAKE_MODE_LOCAL)
       .build()
     // 通知やロック画面の再生中の曲をタップしたら、アプリのプレイヤー画面を開く
-    val open = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-      putExtra(EXTRA_OPEN_PLAYER, true)
-      addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-    }
+    // 入り口は、タップされたときに決まるようにする (起動時に決めて持っておくと、アプリのアイコンを変えたあとは
+    // 無効になった入り口を指してしまい、タップしても開かない)
+    val open = Intent(Intent.ACTION_MAIN)
+      .addCategory(Intent.CATEGORY_LAUNCHER)
+      .setPackage(packageName)
+      .putExtra(EXTRA_OPEN_PLAYER, true)
+      .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     session = MediaSession.Builder(this, player)
-      .apply {
-        if (open != null) {
-          setSessionActivity(
-            PendingIntent.getActivity(this@PlaybackService, 0, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
-          )
-        }
-      }
+      .setSessionActivity(
+        PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+      )
       .setCallback(SessionCallback())
       .build()
 
