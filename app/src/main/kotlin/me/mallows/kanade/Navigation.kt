@@ -221,14 +221,13 @@ fun MainNavigation(
     LocalIsPlaying provides player.showPause,
     LocalPlaySource provides playSource,
     LocalPlaybackPosition provides playerViewModel::currentPosition,
-    LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) }; Unit },
+    LocalShowMessage provides { message: String -> appScope.launch { snackbar.showMessage(message) } },
     LocalShowUndo provides { message: String, onUndo: suspend () -> Unit, onExpire: suspend () -> Unit ->
       appScope.launch {
         var undone = false
         snackbar.showUndo(message, undoLabel) { undone = true }
         if (undone) onUndo() else onExpire()
       }
-      Unit
     },
   ) {
     AudioPermissionGate {
