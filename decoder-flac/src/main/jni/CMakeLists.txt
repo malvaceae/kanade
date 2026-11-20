@@ -27,14 +27,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-cast-align")
 
 set(libflac_jni_root "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# fseeko/ftello (libFLACのファイル読み書きで使う) の有無を、判定に任せず決める。
-# 32bitのABIでは、Android 6.0 (API 23) のstdio.hにこれらがない (API 24以降にある)。
-# 本アプリはファイルではなくコールバックで読むので、ない側 (fseek/ftell) で問題ない。64bitのABIには、どのAPIでもある。
-if(ANDROID_ABI STREQUAL "armeabi-v7a" OR ANDROID_ABI STREQUAL "x86")
-  set(HAVE_FSEEKO 0 CACHE INTERNAL "" FORCE)
-else()
-  set(HAVE_FSEEKO 1 CACHE INTERNAL "" FORCE)
-endif()
+# fseeko/ftello (libFLACが自分でファイルを開くときの位置の移動) は使わない。
+# 本アプリはファイルをlibFLACに開かせず、コールバックで読むので、どのABIでも使われない。
+# 32bitのABIでは、Android 6.0 (API 23) のstdio.hにこれらがなく (API 24以降にある)、宣言がなくてビルドが通らないため、全ABIでそろえて外す。
+set(HAVE_FSEEKO 0 CACHE INTERNAL "" FORCE)
 
 # Build libflac.
 add_subdirectory("${libflac_jni_root}/libflac"
