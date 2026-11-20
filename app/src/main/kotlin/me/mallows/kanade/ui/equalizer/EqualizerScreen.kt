@@ -67,6 +67,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import me.mallows.kanade.R
 import me.mallows.kanade.audio.ReplayGainMode
+import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.common.LocalShowUndo
 import me.mallows.kanade.ui.player.deviceLabel
 import me.mallows.kanade.audio.DspChain
@@ -84,10 +85,11 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
   val settings by viewModel.settings.collectAsStateWithLifecycle()
   val userPresets by viewModel.userPresets.collectAsStateWithLifecycle()
   var presetMenu by remember { mutableStateOf(false) }
+  var moreMenu by remember { mutableStateOf(false) }
   var saving by remember { mutableStateOf(false) }
-  var rowMenu by remember { mutableStateOf<Long?>(null) }
   var renaming by remember { mutableStateOf<UserPreset?>(null) }
   val showUndo = LocalShowUndo.current
+  val showMessage = LocalShowMessage.current
   val scope = rememberCoroutineScope()
   val res = LocalResources.current
   val scheme = MaterialTheme.colorScheme
@@ -125,42 +127,42 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
 
     // プリセット
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Box(Modifier.weight(1f)) {
-        OutlinedButton(onClick = { presetMenu = true }) { Text(presetName) }
-        DropdownMenu(expanded = presetMenu, onDismissRequest = { presetMenu = false }) {
-          EqPreset.BUILT_IN.forEach { p ->
-            DropdownMenuItem(text = { Text(p.name) }, onClick = { presetMenu = false; viewModel.applyPreset(p) })
+      // プリセットの名前の右に、そのプリセットへの操作 (名前の変更・削除) のメニューを置く。
+      // 保存したプリセットを選んでいるときだけ出す (それ以外では、使えない項目が並ばないように)
+      val selectedUser = settings.matchingUserPreset(userPresets)
+      Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+        Box {
+          OutlinedButton(onClick = { presetMenu = true }) { Text(presetName) }
+          DropdownMenu(expanded = presetMenu, onDismissRequest = { presetMenu = false }) {
+            EqPreset.BUILT_IN.forEach { p ->
+              DropdownMenuItem(text = { Text(p.name) }, onClick = { presetMenu = false; viewModel.applyPreset(p) })
+            }
+            if (userPresets.isNotEmpty()) HorizontalDivider()
+            userPresets.forEach { u ->
+              DropdownMenuItem(text = { Text(u.preset.name) }, onClick = { presetMenu = false; viewModel.applyPreset(u.preset) })
+            }
           }
-          if (userPresets.isNotEmpty()) HorizontalDivider()
-          userPresets.forEach { u ->
-            DropdownMenuItem(
-              text = { Text(u.preset.name) },
-              onClick = { presetMenu = false; viewModel.applyPreset(u.preset) },
-              // 自分で保存したプリセットの名前の変更・削除は、そのプリセットの行から行う
-              trailingIcon = {
-                Box {
-                  IconButton(onClick = { rowMenu = u.id }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
-                  DropdownMenu(expanded = rowMenu == u.id, onDismissRequest = { rowMenu = null }) {
-                    DropdownMenuItem(
-                      text = { Text(stringResource(R.string.playlist_rename)) },
-                      onClick = { rowMenu = null; presetMenu = false; renaming = u },
-                    )
-                    DropdownMenuItem(
-                      text = { Text(stringResource(R.string.action_delete)) },
-                      onClick = {
-                        rowMenu = null
-                        presetMenu = false
-                        // 確認は出さず、すぐ削除して「元に戻す」を出す (プレイリストの削除と同じ)
-                        scope.launch {
-                          val removed = viewModel.deletePreset(u.id) ?: return@launch
-                          showUndo(res.getString(R.string.message_eq_preset_deleted, u.preset.name), { viewModel.restorePreset(removed) }, {})
-                        }
-                      },
-                    )
+        }
+        if (selectedUser != null) {
+          Box {
+            IconButton(onClick = { moreMenu = true }) { Icon(KanadeIcons.More, contentDescription = stringResource(R.string.action_more)) }
+            DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.playlist_rename)) },
+                onClick = { moreMenu = false; renaming = selectedUser },
+              )
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_delete)) },
+                onClick = {
+                  moreMenu = false
+                  // 確認は出さず、すぐ削除して「元に戻す」を出す (プレイリストの削除と同じ)
+                  scope.launch {
+                    val removed = viewModel.deletePreset(selectedUser.id) ?: return@launch
+                    showUndo(res.getString(R.string.message_eq_preset_deleted, selectedUser.preset.name), { viewModel.restorePreset(removed) }, {})
                   }
-                }
-              },
-            )
+                },
+              )
+            }
           }
         }
       }
@@ -255,7 +257,13 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
     PlaylistNameDialog(
       title = stringResource(R.string.playlist_rename),
       initial = u.preset.name,
-      onConfirm = { name -> renaming = null; viewModel.renamePreset(u.id, name) },
+      onConfirm = { name ->
+        renaming = null
+        scope.launch {
+          viewModel.renamePreset(u.id, name)
+          showMessage(res.getString(R.string.message_eq_preset_renamed))
+        }
+      },
       onDismiss = { renaming = null },
     )
   }
@@ -263,7 +271,10 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
     PlaylistNameDialog(
       title = stringResource(R.string.eq_save_preset),
       initial = "",
-      onConfirm = { name -> saving = false; viewModel.savePreset(name) },
+      onConfirm = { name ->
+        saving = false
+        scope.launch { showMessage(res.getString(R.string.message_eq_preset_saved, viewModel.savePreset(name))) }
+      },
       onDismiss = { saving = false },
     )
   }

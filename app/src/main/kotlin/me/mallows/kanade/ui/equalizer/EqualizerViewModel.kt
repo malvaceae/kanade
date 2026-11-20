@@ -118,14 +118,14 @@ class EqualizerViewModel @Inject constructor(
 
   fun reset() = edit { it.applyPreset(EqPreset.BUILT_IN.first()) }
 
-  fun savePreset(name: String) {
+  /** 今の設定を、[name]のプリセットとして保存する。保存した名前を返す */
+  suspend fun savePreset(name: String): String {
     val preset = _settings.value.toPreset(name.trim())
-    viewModelScope.launch { repository.savePreset(preset) }
+    repository.savePreset(preset)
+    return preset.name
   }
 
-  fun renamePreset(id: Long, name: String) {
-    viewModelScope.launch { repository.renamePreset(id, name.trim()) }
-  }
+  suspend fun renamePreset(id: Long, name: String) = repository.renamePreset(id, name.trim())
 
   /** プリセットを削除する。元に戻すための内容を返す (なければnull) */
   suspend fun deletePreset(id: Long) = repository.deletePreset(id)

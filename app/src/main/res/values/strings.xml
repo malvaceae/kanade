@@ -116,6 +116,8 @@
     <string name="message_cover_reset">カバー画像を元に戻しました</string>
     <string name="message_playlist_created">「%1$s」を作成しました</string>
     <string name="message_playlist_renamed">名前を変更しました</string>
+    <string name="message_eq_preset_saved">「%1$s」を保存しました</string>
+    <string name="message_eq_preset_renamed">名前を変更しました</string>
     <string name="message_eq_preset_deleted">「%1$s」を削除しました</string>
     <string name="message_playlist_deleted">「%1$s」を削除しました</string>
     <plurals name="message_playlists_deleted">
@@ -200,6 +202,7 @@
 
     <string name="eq_title">イコライザー</string>
     <string name="eq_custom">カスタム</string>
+    <string name="eq_preset_title">プリセット</string>
     <string name="eq_save_preset">保存</string>
     <string name="eq_reset">リセット</string>
     <string name="eq_preamp">プリアンプ</string>
