@@ -35,7 +35,7 @@ class KanadeActivity : ComponentActivity() {
   }
 
   /**
-   * ファイラーなどの「このアプリで開く」(ACTION_VIEW) で渡された音声ファイルを再生する。
+   * ファイラーなどの「このアプリで開く」(ACTION_VIEW) で渡された音声・動画ファイルを再生する。
    * ライブラリには入れず、スキャン対象の設定も変えない。ライブラリ全体の読み取り権限がなくても、渡されたファイルは再生できる
    */
   private fun openExternal(intent: Intent) {

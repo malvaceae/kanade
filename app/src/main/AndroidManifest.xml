@@ -72,7 +72,7 @@
         <!--
             ファイラーなどの「このアプリで開く」に出すための入り口 (ACTION_VIEW)。アプリのアイコンの切り替え (上の3つ) とは別で、
             いつも有効にしておく。ランチャーには出さないので、MAINもLAUNCHERも付けない。
-            ライブラリに入っていない音声ファイルも、渡されたURIから直接再生する (KanadeActivity.openExternal)。
+            ライブラリに入っていない音声・動画ファイルも、渡されたURIから直接再生する (KanadeActivity.openExternal)。
             file:// は古いファイラー用 (Android 7.0以降は、アプリ間でfile://を渡せない)
         -->
         <activity-alias
@@ -89,6 +89,7 @@
                 <data android:scheme="file" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="application/ogg" />
+                <data android:mimeType="video/*" />
             </intent-filter>
         </activity-alias>
     </application>
