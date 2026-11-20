@@ -273,6 +273,7 @@
     <string name="action_shuffle">シャッフル</string>
     <string name="action_repeat">リピート</string>
     <string name="action_close">閉じる</string>
+    <string name="action_fullscreen">全画面</string>
     <string name="action_back">戻る</string>
     <string name="action_search">検索</string>
     <string name="action_sort">並べ替え</string>

@@ -35,6 +35,7 @@ object KanadeIcons {
   val Genre = stroke("genre", "M3 12V4h8l10 10-8 8z", "M7.5 7.5h.01")
   val Back = stroke("back", "M15 5l-7 7 7 7")
   val Check = stroke("check", "M5 12.5l4.5 4.5L19 7.5")
+  val Fullscreen = stroke("fullscreen", "M4 9V4h5", "M15 4h5v5", "M20 15v5h-5", "M9 20H4v-5")
   val Close = stroke("close", "M6 6l12 12", "M18 6L6 18")
   val Sort = stroke("sort", "M4 7h10", "M4 12h7", "M4 17h4", "M18 5v14", "M15 16l3 3 3-3")
   val Search = stroke("search", "M10.5 17a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13z", "M20 20l-4.8-4.8")

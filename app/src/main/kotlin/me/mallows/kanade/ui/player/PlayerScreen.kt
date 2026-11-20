@@ -1,6 +1,24 @@
 package me.mallows.kanade.ui.player
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.res.Configuration
 import android.view.SurfaceView
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,6 +107,8 @@ fun PlayerScreen(
   /** 動画の映像を出す面の取り付けと取り外し */
   onAttachVideo: (SurfaceView) -> Unit,
   onDetachVideo: (SurfaceView) -> Unit,
+  /** 全画面に入る・出るときの知らせ (全画面のあいだ、下のメニューを隠すため) */
+  onFullscreenChange: (Boolean) -> Unit,
   /** 再生元の一覧の名前 (分からなければアルバム名を出す) */
   sourceTitle: String?,
   lyrics: Lyrics?,
@@ -104,6 +124,27 @@ fun PlayerScreen(
   )
   // 既定のばねの動きでは暗い色から明るい色へ急に変わって見えるので、時間をかけて移す
   val background by animateColorAsState(target, animationSpec = tween(700, easing = LinearOutSlowInEasing), label = "background")
+
+  // 動画の全画面。自分で選んだとき、または横向きのとき (横向きの動画は、全画面で見るもの)
+  var fullscreenChosen by rememberSaveable { mutableStateOf(false) }
+  val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+  val fullscreen = state.isVideo && (fullscreenChosen || landscape)
+  DisposableEffect(fullscreen) {
+    onFullscreenChange(fullscreen)
+    onDispose { onFullscreenChange(false) }
+  }
+  if (fullscreen) {
+    VideoFullscreen(
+      state = state,
+      onAttach = onAttachVideo,
+      onDetach = onDetachVideo,
+      onTogglePlay = onTogglePlay,
+      onSeek = onSeek,
+      // 横向きでは全画面から戻せないので、画面ごと閉じる。縦向きなら、全画面をやめる
+      onExit = { if (landscape) onClose() else fullscreenChosen = false },
+    )
+    return
+  }
 
   Column(
     modifier = Modifier
@@ -143,11 +184,23 @@ fun PlayerScreen(
     ) {
       val size = minOf(maxWidth, maxHeight)
       if (state.isVideo) {
-        VideoSurface(
-          aspect = state.videoAspect,
-          onAttach = onAttachVideo,
-          onDetach = onDetachVideo,
-        )
+        // 映像をタップすると全画面
+        Box(contentAlignment = Alignment.BottomEnd) {
+          VideoSurface(
+            aspect = state.videoAspect,
+            onAttach = onAttachVideo,
+            onDetach = onDetachVideo,
+          )
+          Box(
+            Modifier.matchParentSize().clickable(interactionSource = null, indication = null) { fullscreenChosen = true },
+          )
+          Icon(
+            KanadeIcons.Fullscreen,
+            contentDescription = stringResource(R.string.action_fullscreen),
+            tint = Color.White,
+            modifier = Modifier.padding(8.dp).size(22.dp),
+          )
+        }
       } else SwipeableArtwork(
         mediaId = state.mediaId,
         hasNext = state.hasNext,
@@ -435,7 +488,12 @@ private const val SEEK_REACHED_MS = 1_000L
 
 /** 動画の映像。縦横比を保って、いっぱいに広げる。画面から外れる (または背景へ回る) と、映像の出力は止まる */
 @Composable
-private fun VideoSurface(aspect: Float, onAttach: (SurfaceView) -> Unit, onDetach: (SurfaceView) -> Unit) {
+private fun VideoSurface(
+  aspect: Float,
+  onAttach: (SurfaceView) -> Unit,
+  onDetach: (SurfaceView) -> Unit,
+  modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(if (aspect > 0f) aspect else 16f / 9f),
+) {
   var view by remember { mutableStateOf<SurfaceView?>(null) }
   DisposableEffect(view) {
     val v = view
@@ -446,6 +504,81 @@ private fun VideoSurface(aspect: Float, onAttach: (SurfaceView) -> Unit, onDetac
     factory = { SurfaceView(it) },
     update = { if (view !== it) view = it },
     // 縦横比が分かるまでは、16:9の黒い面にしておく
-    modifier = Modifier.fillMaxWidth().aspectRatio(if (aspect > 0f) aspect else 16f / 9f),
+    modifier = modifier,
   )
 }
+
+/** 動画の全画面。黒い背景に映像を最大に出す。画面をタップすると操作を出し入れする (再生中は3秒で隠す) */
+@Composable
+private fun VideoFullscreen(
+  state: PlayerState,
+  onAttach: (SurfaceView) -> Unit,
+  onDetach: (SurfaceView) -> Unit,
+  onTogglePlay: () -> Unit,
+  onSeek: (Long) -> Unit,
+  onExit: () -> Unit,
+) {
+  var controls by remember { mutableStateOf(true) }
+  val view = LocalView.current
+  // 全画面のあいだは、ステータスバーとナビゲーションバーを隠す (端から払うと一時的に出る)
+  DisposableEffect(view) {
+    val window = generateSequence(view.context) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<Activity>().firstOrNull()?.window
+    val insets = window?.let { WindowCompat.getInsetsController(it, view) }
+    insets?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    insets?.hide(WindowInsetsCompat.Type.systemBars())
+    onDispose { insets?.show(WindowInsetsCompat.Type.systemBars()) }
+  }
+  BackHandler(onBack = onExit)
+  LaunchedEffect(controls, state.showPause) {
+    if (controls && state.showPause) {
+      delay(CONTROLS_HIDE_MS)
+      controls = false
+    }
+  }
+  Box(
+    Modifier
+      .fillMaxSize()
+      .background(Color.Black)
+      .clickable(interactionSource = null, indication = null) { controls = !controls },
+  ) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      val aspect = if (state.videoAspect > 0f) state.videoAspect else 16f / 9f
+      val fitWidth = maxWidth / maxHeight <= aspect
+      VideoSurface(
+        aspect = aspect,
+        onAttach = onAttach,
+        onDetach = onDetach,
+        modifier = if (fitWidth) Modifier.fillMaxWidth().aspectRatio(aspect) else Modifier.fillMaxHeight().aspectRatio(aspect),
+      )
+    }
+    AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
+      Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).safeDrawingPadding()) {
+        IconButton(onClick = onExit, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
+          Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)
+        }
+        Text(
+          text = state.title.orEmpty(),
+          style = MaterialTheme.typography.titleMedium,
+          color = Color.White,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.align(Alignment.TopStart).padding(start = 56.dp, top = 14.dp, end = 16.dp),
+        )
+        IconButton(
+          onClick = onTogglePlay,
+          modifier = Modifier.align(Alignment.Center).size(72.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)),
+        ) {
+          Icon(
+            if (state.showPause) KanadeIcons.Pause else KanadeIcons.Play,
+            contentDescription = stringResource(if (state.showPause) R.string.action_pause else R.string.action_play),
+            tint = Color.White,
+            modifier = Modifier.size(34.dp),
+          )
+        }
+        SeekBar(state = state, onSeek = onSeek, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 24.dp, vertical = 8.dp))
+      }
+    }
+  }
+}
+
+private const val CONTROLS_HIDE_MS = 3_000L

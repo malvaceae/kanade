@@ -139,6 +139,8 @@ fun MainNavigation(
     }
   }
   val bottomBarActive = remember { mutableStateOf(false) }
+  // 動画の全画面のあいだは、下のメニューを出さない
+  var videoFullscreen by remember { mutableStateOf(false) }
   /** プレイリストへの追加を待っている曲 */
   var pendingAdd by remember { mutableStateOf<List<TrackEntity>?>(null) }
 
@@ -171,7 +173,7 @@ fun MainNavigation(
   }
   // 画面下の固定のメニュー。フォルダの選択 (下に保存・キャンセルがある) では出さない。
   // 選択中は選択の操作バーがその場所を使う
-  val showNavBar = top != ScanFolders && !bottomBarActive.value
+  val showNavBar = top != ScanFolders && !bottomBarActive.value && !videoFullscreen
   val navBar = if (showNavBar) AppNavBarHeight else 0.dp
   // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンス・フォルダの選択の画面には出さない
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
@@ -403,6 +405,7 @@ fun MainNavigation(
                     onSetSpeed = playerViewModel::setSpeed,
                     onAttachVideo = playerViewModel::attachVideo,
                     onDetachVideo = playerViewModel::detachVideo,
+                    onFullscreenChange = { videoFullscreen = it },
                     // 別の曲の歌詞が残っていても出さない
                     lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
                   )
@@ -412,7 +415,7 @@ fun MainNavigation(
           )
         }
         // 選択の操作バーと入れ替わるときは、下から滑らせて出し入れする (画面を移るときは今までどおりすぐ切り替える)
-        if (top != ScanFolders) AnimatedVisibility(
+        if (top != ScanFolders && !videoFullscreen) AnimatedVisibility(
           visible = !bottomBarActive.value,
           modifier = Modifier.align(Alignment.BottomCenter),
           enter = slideInVertically(tween(SELECTION_BAR_MS)) { it } + fadeIn(tween(SELECTION_BAR_MS)),
