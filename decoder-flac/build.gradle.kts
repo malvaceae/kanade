@@ -17,7 +17,12 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     externalNativeBuild {
       cmake {
-        arguments("-DWITH_OGG=OFF", "-DINSTALL_MANPAGES=OFF", "-DBUILD_PROGRAMS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTING=OFF", "-DBUILD_DOCS=OFF")
+        val flags = mutableListOf("-DWITH_OGG=OFF", "-DINSTALL_MANPAGES=OFF", "-DBUILD_PROGRAMS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTING=OFF", "-DBUILD_DOCS=OFF")
+        // CIでは、コンパイル結果をキャッシュ (ccache) して、毎回libFLACを作り直さないようにする。手元では使わない (ccacheがなくても動くように)
+        if (System.getenv("KANADE_CCACHE") == "1") {
+          flags += listOf("-DCMAKE_C_COMPILER_LAUNCHER=ccache", "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
+        }
+        arguments(*flags.toTypedArray())
         targets("flacJNI")
       }
     }
