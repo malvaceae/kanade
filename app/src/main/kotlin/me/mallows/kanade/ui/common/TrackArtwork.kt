@@ -9,7 +9,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,9 +45,9 @@ private object ThumbnailCache {
   }
 }
 
-/** 曲のアートワーク (埋め込み画像など)。ない場合は音符の仮表示 */
+/** 曲のアートワーク (埋め込み画像など)。ない場合は音符の仮表示。[video]なら、動画のフレームを使い、仮表示と角の印を動画のものにする */
 @Composable
-fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRadius: Dp = 6.dp) {
+fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRadius: Dp = 6.dp, video: Boolean = false) {
   val context = LocalContext.current
   val px = with(LocalDensity.current) { size.roundToPx() }
   val key = "$uri@$px"
@@ -62,6 +65,7 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
         // 外部のアプリから開いたファイル (MediaStoreにない) は、MediaStoreの縮小画像がないので、埋め込み画像を直接読む
         else if (uri.toUri().authority != MediaStore.AUTHORITY) decodeEmbedded(context, uri.toUri(), px)
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null)
+        else if (video) decodeVideoFrame(context, uri.toUri(), px)
         else decodeEmbedded(context, uri.toUri(), px)
       }
         .getOrNull()
@@ -85,11 +89,25 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       )
     } else {
       Icon(
-        imageVector = KanadeIcons.MusicNote,
+        imageVector = if (video) KanadeIcons.Video else KanadeIcons.MusicNote,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.size(size * 0.45f),
       )
+    }
+    // 動画の印 (右下の小さな再生マーク)。小さい絵には付けない
+    if (video && size >= 36.dp) {
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .padding(3.dp)
+          .size(size * 0.34f)
+          .clip(CircleShape)
+          .background(Color.Black.copy(alpha = 0.65f)),
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(KanadeIcons.Play, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.2f))
+      }
     }
   }
 }
@@ -119,6 +137,21 @@ private fun decodeEmbedded(context: android.content.Context, uri: android.net.Ur
     return android.graphics.BitmapFactory.decodeByteArray(
       bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample },
     )
+  } finally {
+    retriever.release()
+  }
+}
+
+/** Android 9以前 (loadThumbnailがない) で、動画の最初のほうのフレームを縮めて読む。読めなければ null */
+private fun decodeVideoFrame(context: android.content.Context, uri: android.net.Uri, px: Int): android.graphics.Bitmap? {
+  val retriever = android.media.MediaMetadataRetriever()
+  try {
+    retriever.setDataSource(context, uri)
+    // 先頭は真っ黒なことが多いので、1秒の位置に近いフレームを使う
+    val frame = retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: return null
+    val scale = px.toFloat() / minOf(frame.width, frame.height)
+    if (scale >= 1f) return frame
+    return android.graphics.Bitmap.createScaledBitmap(frame, (frame.width * scale).toInt().coerceAtLeast(1), (frame.height * scale).toInt().coerceAtLeast(1), true)
   } finally {
     retriever.release()
   }

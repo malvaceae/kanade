@@ -84,7 +84,7 @@ fun TrackRow(
     }
     // スキャン対象外の曲 (プレイリストに残っている曲) は薄く出す
     val dim = if (track.excluded) Modifier.alpha(0.45f) else Modifier
-    TrackArtwork(uri = track.uri, size = 44.dp, modifier = dim)
+    TrackArtwork(uri = track.uri, size = 44.dp, modifier = dim, video = track.isVideo)
     Column(modifier = Modifier.weight(1f).then(dim), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(
         text = track.title,

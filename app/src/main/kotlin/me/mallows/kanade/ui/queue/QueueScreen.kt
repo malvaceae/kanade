@@ -345,7 +345,7 @@ private fun QueueRow(
       }
     }
     val dim = if (excluded) Modifier.alpha(0.45f) else Modifier
-    TrackArtwork(uri = item.uri ?: audioUri(item.mediaStoreId), size = 44.dp, modifier = dim)
+    TrackArtwork(uri = item.uri ?: audioUri(item.mediaStoreId), size = 44.dp, modifier = dim, video = item.isVideo)
     Column(Modifier.weight(1f).then(dim), verticalArrangement = Arrangement.spacedBy(2.dp)) {
       Text(
         item.title,

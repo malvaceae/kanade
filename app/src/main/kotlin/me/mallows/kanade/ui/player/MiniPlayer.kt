@@ -64,7 +64,7 @@ fun MiniPlayer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        TrackArtwork(uri = state.uri.orEmpty(), size = 44.dp, cornerRadius = 8.dp)
+        TrackArtwork(uri = state.uri.orEmpty(), size = 44.dp, cornerRadius = 8.dp, video = state.isVideo)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(
             text = state.title.orEmpty(),

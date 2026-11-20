@@ -75,6 +75,8 @@ data class QueueItem(
   val mediaStoreId: Long,
   /** ファイルのURI (絵を読むのに使う) */
   val uri: String? = null,
+  /** 動画か */
+  val isVideo: Boolean = false,
   val title: String,
   val artist: String?,
   /** 「次に再生」「キューに追加」で入れた曲 */
@@ -357,6 +359,7 @@ class PlayerConnection @Inject constructor(
       return QueueItem(
         mediaStoreId = item.mediaId.toLongOrNull() ?: -1,
         uri = item.localConfiguration?.uri?.toString(),
+        isVideo = item.localConfiguration?.mimeType?.startsWith("video/") == true,
         // 外部から開いたファイルは、タグを読んだ結果が今の曲の情報 (player.mediaMetadata) にだけ入る
         title = (item.mediaMetadata.title ?: if (i == index) player.mediaMetadata.title else null)?.toString().orEmpty(),
         artist = (item.mediaMetadata.artist ?: if (i == index) player.mediaMetadata.artist else null)?.toString(),

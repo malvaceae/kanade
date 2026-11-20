@@ -13,6 +13,8 @@ object KanadeIcons {
 
   val MusicNote = stroke("music_note", "M9 18V5l11-2v13", "M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "M20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z")
   val Play = filled("play", "M8 5.5v13l10.5-6.5z")
+  /** 動画 (映像の枠と再生の三角) */
+  val Video = stroke("video", "M3 5h18v14H3z", "M10 9.5v5l4.5-2.5z")
   val Pause = filled("pause", "M7 5h3.5v14H7z", "M13.5 5H17v14h-3.5z")
   val Next = filled("next", "M5 5.5v13L15 12z", "M16.6 5h2.4v14h-2.4z")
   val Previous = filled("previous", "M19 5.5v13L9 12z", "M5 5h2.4v14H5z")
