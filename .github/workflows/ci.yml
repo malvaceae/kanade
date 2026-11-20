@@ -26,21 +26,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      # libFLAC (C) のコンパイル結果を、Actionsのキャッシュに保存して、次回から使い回す
-      - name: Set up ccache
-        uses: hendrikmuhs/ccache-action@v1.2.25
-        with:
-          key: ccache-${{ runner.os }}-${{ hashFiles('decoder-flac/src/main/jni/CMakeLists.txt', 'decoder-flac/build.gradle.kts') }}
-          max-size: 200M
-
       - name: Build, unit test, lint
-        env:
-          KANADE_CCACHE: "1"
         run: ./gradlew assembleDebug testDebugUnitTest lintDebug --console=plain
-
-      - name: ccache statistics
-        if: always()
-        run: ccache --show-stats
 
       - name: Upload reports
         if: always()
