@@ -1,5 +1,6 @@
 package me.mallows.kanade.ui.player
 
+import android.view.SurfaceView
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -62,6 +63,8 @@ class PlayerViewModel @Inject constructor(
 
   fun playNext(tracks: List<TrackEntity>) = connection.playNext(tracks.filterNot { it.excluded }.map { it.mediaStoreId })
   fun addToQueue(tracks: List<TrackEntity>) = connection.addToQueue(tracks.filterNot { it.excluded }.map { it.mediaStoreId })
+  fun attachVideo(view: SurfaceView) = connection.attachVideo(view)
+  fun detachVideo(view: SurfaceView) = connection.detachVideo(view)
   fun togglePlayPause() = connection.togglePlayPause()
   fun next() = connection.next()
   fun previous() = connection.previous()

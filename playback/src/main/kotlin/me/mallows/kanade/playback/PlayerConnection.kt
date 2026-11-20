@@ -2,6 +2,7 @@ package me.mallows.kanade.playback
 
 import android.net.Uri
 import android.os.SystemClock
+import android.view.SurfaceView
 import android.content.ComponentName
 import android.content.Context
 import kotlinx.coroutines.flow.first
@@ -57,6 +58,10 @@ data class PlayerState(
   val hasPrevious: Boolean = false,
   /** 再生速度 (1が等速) */
   val speed: Float = 1f,
+  /** 再生中の項目が動画か (映像を出す) */
+  val isVideo: Boolean = false,
+  /** 映像の縦横比 (横 / 縦、画素の縦横比を含む)。まだ分からなければ0 */
+  val videoAspect: Float = 0f,
 ) {
   val hasMedia: Boolean get() = mediaId != null
 
@@ -228,6 +233,12 @@ class PlayerConnection @Inject constructor(
     while (index < it.mediaItemCount && it.getMediaItemAt(index).isQueued) index++
     it.addMediaItems(index, mediaStoreIds.map { id -> mediaItemRequest(id, queued = true) })
   }
+
+  /** 映像の出力先を[view]にする。画面から外れるとき ([detachVideo]) まで、映像はここに出る */
+  fun attachVideo(view: SurfaceView) = withController { it.setVideoSurfaceView(view) }
+
+  /** 映像の出力先が[view]なら外す。別の画面が引き継いだ後に外さないよう、[view]を指定する */
+  fun detachVideo(view: SurfaceView) = withController { it.clearVideoSurfaceView(view) }
 
   fun togglePlayPause() = withController {
     if (it.isPlaying) {
@@ -408,6 +419,8 @@ class PlayerConnection @Inject constructor(
       hasNext = player.hasNextMediaItem(),
       hasPrevious = player.hasPreviousMediaItem(),
       speed = player.playbackParameters.speed,
+      isVideo = player.currentMediaItem?.localConfiguration?.mimeType?.startsWith("video/") == true,
+      videoAspect = player.videoSize.let { if (it.width > 0 && it.height > 0) it.width * it.pixelWidthHeightRatio / it.height else 0f },
     )
   }
 }

@@ -401,6 +401,8 @@ fun MainNavigation(
                     sleep = sleep,
                     onSetSleep = playerViewModel::setSleepTimer,
                     onSetSpeed = playerViewModel::setSpeed,
+                    onAttachVideo = playerViewModel::attachVideo,
+                    onDetachVideo = playerViewModel::detachVideo,
                     // 別の曲の歌詞が残っていても出さない
                     lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
                   )

@@ -80,7 +80,9 @@ class PlaybackService : MediaSessionService() {
   override fun onCreate() {
     super.onCreate()
     outputRouter.start(Handler(Looper.getMainLooper()))
+    // デコーダーの初期化に失敗したら、次のデコーダーに切り替える
     val renderers = KanadeRenderersFactory()
+    renderers.setEnableDecoderFallback(true)
     scope.launch { eqSettings.settings.collect(dsp::update) }
 
     val player = ExoPlayer.Builder(this, renderers)

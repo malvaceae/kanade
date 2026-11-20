@@ -1,6 +1,9 @@
 package me.mallows.kanade.ui.player
 
+import android.view.SurfaceView
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
@@ -83,6 +86,9 @@ fun PlayerScreen(
   sleep: PlayerConnection.Sleep,
   onSetSleep: (minutes: Int, endOfTrack: Boolean) -> Unit,
   onSetSpeed: (Float) -> Unit,
+  /** 動画の映像を出す面の取り付けと取り外し */
+  onAttachVideo: (SurfaceView) -> Unit,
+  onDetachVideo: (SurfaceView) -> Unit,
   /** 再生元の一覧の名前 (分からなければアルバム名を出す) */
   sourceTitle: String?,
   lyrics: Lyrics?,
@@ -136,7 +142,13 @@ fun PlayerScreen(
       contentAlignment = Alignment.Center,
     ) {
       val size = minOf(maxWidth, maxHeight)
-      SwipeableArtwork(
+      if (state.isVideo) {
+        VideoSurface(
+          aspect = state.videoAspect,
+          onAttach = onAttachVideo,
+          onDetach = onDetachVideo,
+        )
+      } else SwipeableArtwork(
         mediaId = state.mediaId,
         hasNext = state.hasNext,
         hasPrevious = state.hasPrevious,
@@ -420,3 +432,20 @@ private const val SEEK_SETTLE_MS = 1_500L
 
 /** 移った先とのずれがこれより小さければ、届いたとみなす */
 private const val SEEK_REACHED_MS = 1_000L
+
+/** 動画の映像。縦横比を保って、いっぱいに広げる。画面から外れる (または背景へ回る) と、映像の出力は止まる */
+@Composable
+private fun VideoSurface(aspect: Float, onAttach: (SurfaceView) -> Unit, onDetach: (SurfaceView) -> Unit) {
+  var view by remember { mutableStateOf<SurfaceView?>(null) }
+  DisposableEffect(view) {
+    val v = view
+    if (v != null) onAttach(v)
+    onDispose { if (v != null) onDetach(v) }
+  }
+  AndroidView(
+    factory = { SurfaceView(it) },
+    update = { if (view !== it) view = it },
+    // 縦横比が分かるまでは、16:9の黒い面にしておく
+    modifier = Modifier.fillMaxWidth().aspectRatio(if (aspect > 0f) aspect else 16f / 9f),
+  )
+}
