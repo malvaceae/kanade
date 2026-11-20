@@ -14,22 +14,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import me.mallows.kanade.core.data.settings.SettingsRepository
-import me.mallows.kanade.core.data.settings.ThemeMode
 import me.mallows.kanade.playback.PlayerConnection
 import me.mallows.kanade.ui.theme.KanadeTheme
-import me.mallows.kanade.ui.theme.isDarkTheme
 
 @AndroidEntryPoint
 class KanadeActivity : ComponentActivity() {
 
-  @Inject lateinit var settings: SettingsRepository
   @Inject lateinit var player: PlayerConnection
 
   /** 通知などから開かれ、プレイヤー画面を出す必要がある */
@@ -67,20 +60,11 @@ class KanadeActivity : ComponentActivity() {
     }
     // 画面の作り直し (回転など) では、開き直さない
     if (savedInstanceState == null) intent?.let(::openExternal)
+    // ダークだけなので、ステータスバーなどのアイコンは、明るい色にする
+    val style = SystemBarStyle.dark(Color.TRANSPARENT)
+    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     setContent {
-      val themeMode by settings.themeMode.collectAsStateWithLifecycle(ThemeMode.DARK)
-      val dark = isDarkTheme(themeMode)
-      // テーマに合わせてステータスバーなどのアイコン色を切り替える
-      DisposableEffect(dark) {
-        val style = if (dark) {
-          SystemBarStyle.dark(Color.TRANSPARENT)
-        } else {
-          SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-        }
-        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
-        onDispose { }
-      }
-      KanadeTheme(darkTheme = dark) {
+      KanadeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
           MainNavigation(openPlayerRequest = openPlayer)
         }

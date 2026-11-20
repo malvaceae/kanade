@@ -13,9 +13,6 @@ import kotlinx.coroutines.flow.map
 import me.mallows.kanade.core.domain.folder.ScanFolder
 import me.mallows.kanade.core.domain.folder.normalize
 
-/** テーマの選択 */
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
-
 /** 一覧のソート条件。[key]の意味は一覧ごとに決める */
 data class SortSetting(val key: String, val descending: Boolean)
 
@@ -24,14 +21,6 @@ data class SortSetting(val key: String, val descending: Boolean)
 class SettingsRepository @Inject constructor(
   private val dataStore: DataStore<Preferences>,
 ) {
-
-  val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
-    prefs[THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: ThemeMode.DARK
-  }
-
-  suspend fun setThemeMode(mode: ThemeMode) {
-    dataStore.edit { it[THEME_MODE] = mode.name }
-  }
 
   /** ライブラリのタブの並びと表示 ("TRACKS,!ALBUMS,..."、!は隠す)。未設定ならnull */
   val libraryTabs: Flow<String?> = dataStore.data.map { it[LIBRARY_TABS] }
@@ -80,7 +69,6 @@ class SettingsRepository @Inject constructor(
   private fun sortKey(category: String) = stringPreferencesKey("sort_$category")
 
   private companion object {
-    val THEME_MODE = stringPreferencesKey("theme_mode")
     val LIBRARY_TABS = stringPreferencesKey("library_tabs")
     val SCAN_FOLDERS = stringSetPreferencesKey("scan_folders")
     val INITIAL_SCAN_DONE = booleanPreferencesKey("initial_scan_done")
