@@ -1,5 +1,6 @@
 package me.mallows.kanade.playback
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -48,3 +49,28 @@ val MediaItem.isQueuedRequest: Boolean get() = requestMetadata.extras?.getBoolea
 
 /** プレイヤー上の項目が「キューに入れた」曲か */
 val MediaItem.isQueued: Boolean get() = mediaMetadata.extras?.getBoolean(EXTRA_QUEUED) == true
+
+/**
+ * 外部のアプリ (ファイラーの「このアプリで開く」など) から渡された音声ファイルの印。mediaIdは「ext:」のあとにURIを付ける。
+ * ライブラリの曲のmediaId (MediaStoreのID、数字だけ) と区別するためで、数字にならないので、
+ * 「対象外の曲を飛ばす」「再生回数を数える」処理 (mediaIdを数字として読む) の対象にならない
+ */
+const val EXTERNAL_ID_PREFIX = "ext:"
+
+/** プレイヤー上の項目が、外部のアプリから開いたファイルか */
+val MediaItem.isExternal: Boolean get() = mediaId.startsWith(EXTERNAL_ID_PREFIX)
+
+/** 外部のアプリから渡された音声ファイルを、そのまま再生する項目にする。ライブラリ (DB) には入れない */
+fun externalMediaItem(uri: Uri, displayName: String?, mimeType: String?): MediaItem =
+  MediaItem.Builder()
+    .setMediaId(EXTERNAL_ID_PREFIX + uri)
+    .setUri(uri)
+    .setMimeType(mimeType?.takeUnless { it == "application/octet-stream" || it.endsWith("/*") })
+    .setMediaMetadata(
+      MediaMetadata.Builder()
+        .setTitle(displayName?.substringBeforeLast('.', displayName)?.takeIf { it.isNotBlank() } ?: displayName ?: uri.lastPathSegment)
+        .setIsBrowsable(false)
+        .setIsPlayable(true)
+        .build()
+    )
+    .build()

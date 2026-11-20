@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import me.mallows.kanade.R
 import me.mallows.kanade.playback.PlayerState
 import me.mallows.kanade.ui.common.TrackArtwork
-import me.mallows.kanade.ui.common.audioUri
 import me.mallows.kanade.ui.icons.KanadeIcons
 
 /** 画面下に常に出す小さなプレイヤー。タップでプレイヤー画面を開く */
@@ -41,7 +40,7 @@ fun MiniPlayer(
   onTogglePlay: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val id = state.mediaStoreId ?: return
+  if (!state.hasMedia) return
   // 毎フレーム変わるので、読むのは進み具合のバーの中だけにする (全体を描き直さない)
   val position = rememberPlaybackPosition(state)
   val duration = state.durationMs
@@ -65,7 +64,7 @@ fun MiniPlayer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        TrackArtwork(uri = audioUri(id), size = 44.dp, cornerRadius = 8.dp)
+        TrackArtwork(uri = state.uri.orEmpty(), size = 44.dp, cornerRadius = 8.dp)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(
             text = state.title.orEmpty(),

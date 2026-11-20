@@ -2,6 +2,7 @@ package me.mallows.kanade.ui.common
 
 import android.graphics.Bitmap
 import android.os.Build
+import android.provider.MediaStore
 import android.util.LruCache
 import android.util.Size
 import androidx.compose.foundation.Image
@@ -58,6 +59,8 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       runCatching {
         // プレイリストのカバー (アプリ内のファイル) はそのまま縮めて読む。曲はMediaStoreの縮小画像を使う
         if (uri.startsWith("file://")) decodeFile(uri.removePrefix("file://"), px)
+        // 外部のアプリから開いたファイル (MediaStoreにない) は、MediaStoreの縮小画像がないので、埋め込み画像を直接読む
+        else if (uri.toUri().authority != MediaStore.AUTHORITY) decodeEmbedded(context, uri.toUri(), px)
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.contentResolver.loadThumbnail(uri.toUri(), Size(px, px), null)
         else decodeEmbedded(context, uri.toUri(), px)
       }

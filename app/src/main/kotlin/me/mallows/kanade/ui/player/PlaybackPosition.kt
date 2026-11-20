@@ -25,7 +25,7 @@ fun rememberPlaybackPosition(state: PlayerState): State<Long> {
   }
   val position = remember { mutableLongStateOf(now()) }
   // 届いた状態が変わったら (曲・再生中かどうか・シーク) すぐ読み直し、再生中は毎コマ読む
-  LaunchedEffect(state.mediaStoreId, state.isPlaying, state.positionMs, state.durationMs) {
+  LaunchedEffect(state.mediaId, state.isPlaying, state.positionMs, state.durationMs) {
     position.longValue = now()
     while (state.isPlaying) withFrameMillis { position.longValue = now() }
   }

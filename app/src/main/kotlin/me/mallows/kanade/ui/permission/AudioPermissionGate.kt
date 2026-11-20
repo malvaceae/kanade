@@ -9,8 +9,10 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
@@ -28,9 +30,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.mallows.kanade.R
 import me.mallows.kanade.core.common.AndroidVersion
+import me.mallows.kanade.ui.player.MiniPlayer
+import me.mallows.kanade.ui.player.PlayerViewModel
 
 /** OSバージョンごとに必要な権限 */
 object AudioPermissions {
@@ -68,16 +74,29 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
   if (granted) {
     content()
   } else {
-    PermissionScreen(
-      showSettings = asked,
-      onRequest = { launcher.launch(AudioPermissions.request()) },
-      onOpenSettings = {
-        context.startActivity(
-          Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    // 外部のアプリから開いた音声ファイルは、ライブラリの権限がなくても再生できる。再生中なら、その曲を見て止められるよう、下に簡易プレイヤーを出す
+    val player: PlayerViewModel = hiltViewModel()
+    val state by player.state.collectAsStateWithLifecycle()
+    Box(Modifier.fillMaxSize()) {
+      PermissionScreen(
+        showSettings = asked,
+        onRequest = { launcher.launch(AudioPermissions.request()) },
+        onOpenSettings = {
+          context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          )
+        },
+      )
+      if (state.isExternal) {
+        MiniPlayer(
+          state = state,
+          onOpen = {},
+          onTogglePlay = player::togglePlayPause,
+          modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp),
         )
-      },
-    )
+      }
+    }
   }
 }
 

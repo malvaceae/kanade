@@ -114,6 +114,9 @@ class PlaybackPersistence(
   }
 
   private fun save(player: Player) {
+    // 外部のアプリから開いたファイルは、ライブラリにないので保存しない。かといって保存を続けると、数字でない項目を除いた
+    // 空の (またはずれた) キューで、前回のキューを上書きしてしまう。外部のファイルがあるあいだは、何も保存せず前回のまま残す
+    if ((0 until player.mediaItemCount).any { player.getMediaItemAt(it).isExternal }) return
     // プレイヤーはメインスレッドで読み、書き込みはIOスレッドで行う
     val ids = (0 until player.mediaItemCount).mapNotNull { player.getMediaItemAt(it).idOrNull() }
     val state = PlaybackStateEntity(

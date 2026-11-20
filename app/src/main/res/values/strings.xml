@@ -15,6 +15,7 @@
     <string name="message_file_not_found">ファイルが見つからないため、スキップしました。再スキャンしてください。</string>
     <string name="message_unplayable">再生できないファイルのため、スキップしました</string>
     <string name="message_playback_error">再生できませんでした</string>
+    <string name="message_external_unplayable">ファイルを再生できませんでした</string>
     <string name="action_choose_folders">フォルダを選ぶ</string>
     <string name="action_save">保存</string>
     <string name="scan_folders_add">フォルダを追加</string>

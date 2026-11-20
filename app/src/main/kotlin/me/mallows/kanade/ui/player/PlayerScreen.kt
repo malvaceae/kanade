@@ -137,16 +137,16 @@ fun PlayerScreen(
     ) {
       val size = minOf(maxWidth, maxHeight)
       SwipeableArtwork(
-        mediaStoreId = state.mediaStoreId,
+        mediaId = state.mediaId,
         hasNext = state.hasNext,
         hasPrevious = state.hasPrevious,
         onNext = onNext,
         onPrevious = onSwipePrevious,
         onRestart = onPrevious,
       ) {
-        val id = state.mediaStoreId
-        if (id != null) {
-          TrackArtwork(uri = audioUri(id), size = size, cornerRadius = 20.dp)
+        val uri = state.uri
+        if (uri != null) {
+          TrackArtwork(uri = uri, size = size, cornerRadius = 20.dp)
         } else {
           Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
         }
@@ -296,7 +296,7 @@ private fun sleepLabel(sleep: PlayerConnection.Sleep): String {
 /** 左右のスワイプで曲を切り替えるアートワーク */
 @Composable
 private fun SwipeableArtwork(
-  mediaStoreId: Long?,
+  mediaId: String?,
   hasNext: Boolean,
   hasPrevious: Boolean,
   onNext: () -> Unit,
@@ -307,7 +307,7 @@ private fun SwipeableArtwork(
 ) {
   val scope = rememberCoroutineScope()
   val offset = remember { Animatable(0f) }
-  val currentId by rememberUpdatedState(mediaStoreId)
+  val currentId by rememberUpdatedState(mediaId)
   val canNext by rememberUpdatedState(hasNext)
   val canPrevious by rememberUpdatedState(hasPrevious)
   Box(

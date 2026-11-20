@@ -132,6 +132,7 @@ fun MainNavigation(
       val text = when (event) {
         PlaybackEvent.FILE_NOT_FOUND -> R.string.message_file_not_found
         PlaybackEvent.UNPLAYABLE -> R.string.message_unplayable
+        PlaybackEvent.EXTERNAL_UNPLAYABLE -> R.string.message_external_unplayable
         PlaybackEvent.ERROR -> R.string.message_playback_error
       }
       snackbar.showMessage(resources.getString(text))
@@ -158,8 +159,12 @@ fun MainNavigation(
   val top = backStack.lastOrNull()
   // 再生キューが空になったら (読めない曲を飛ばして最後の曲もなくなった、など)、プレイヤーの画面を閉じる。
   // プレイヤーから開いたキューの画面も一緒に閉じる (ライブラリから開いたキューは、空でも見られるよう残す)
+  // (起動の直後は、つながっても曲がまだ入っていないことがある。曲が入ったことが一度もないうちは閉じない。
+  // 外部のアプリから開いたファイルでプレイヤーを出したとき、曲が入る前に閉じてしまうのを防ぐ)
+  var hadMedia by remember { mutableStateOf(false) }
+  LaunchedEffect(player.hasMedia) { if (player.hasMedia) hadMedia = true }
   LaunchedEffect(player.connected, player.hasMedia) {
-    if (player.connected && !player.hasMedia && Player in backStack) {
+    if (player.connected && !player.hasMedia && hadMedia && Player in backStack) {
       while (backStack.isNotEmpty() && backStack.last() != Player) backStack.removeLastOrNull()
       backStack.removeLastOrNull()
     }

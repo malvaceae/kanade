@@ -1,5 +1,6 @@
 package me.mallows.kanade.playback
 
+import android.net.Uri
 import android.os.SystemClock
 import android.content.ComponentName
 import android.content.Context
@@ -29,8 +30,12 @@ import timber.log.Timber
 /** 画面に見せる再生状態 */
 data class PlayerState(
   val connected: Boolean = false,
-  /** 再生中の曲のMediaStore ID */
+  /** 再生中の曲のMediaStore ID。ライブラリの曲でなければ (外部のアプリから開いたファイルなど) null */
   val mediaStoreId: Long? = null,
+  /** 再生中の項目の識別子。ライブラリの曲はMediaStore IDの文字列、外部のファイルは「ext:」から始まる */
+  val mediaId: String? = null,
+  /** 再生中のファイルのURI。絵や曲の情報を読むのに使う */
+  val uri: String? = null,
   val title: String? = null,
   val artist: String? = null,
   val album: String? = null,
@@ -53,12 +58,18 @@ data class PlayerState(
   /** 再生速度 (1が等速) */
   val speed: Float = 1f,
 ) {
-  val hasMedia: Boolean get() = mediaStoreId != null
+  val hasMedia: Boolean get() = mediaId != null
+
+  /** 外部のアプリから開いたファイル (ライブラリの曲ではない) を再生中か */
+  val isExternal: Boolean get() = mediaId?.startsWith(EXTERNAL_ID_PREFIX) == true
 }
 
 /** キューの1曲 */
 data class QueueItem(
+  /** ライブラリの曲のMediaStore ID。外部のファイルは-1 */
   val mediaStoreId: Long,
+  /** ファイルのURI (絵を読むのに使う) */
+  val uri: String? = null,
   val title: String,
   val artist: String?,
   /** 「次に再生」「キューに追加」で入れた曲 */
@@ -91,6 +102,9 @@ class PlayerConnection @Inject constructor(
   private val _state = MutableStateFlow(PlayerState())
   val state: StateFlow<PlayerState> = _state.asStateFlow()
 
+  /** 外部のアプリから開いたファイルを再生した (前回の再生元を読み込んだ後で戻さないための印) */
+  @Volatile private var externalOpened = false
+
   private val _source = MutableStateFlow<PlaySource?>(null)
   /** 今の再生キューを、どの一覧から再生したか。保存しておき、アプリを開き直しても戻す。分からなければnull */
   val source: StateFlow<PlaySource?> = _source.asStateFlow()
@@ -100,7 +114,8 @@ class PlayerConnection @Inject constructor(
     scope.launch {
       val prefs = dataStore.data.first()
       val key = prefs[SOURCE_KEY]
-      if (_source.value == null && key != null) _source.value = PlaySource(key, prefs[SOURCE_TITLE])
+      // 外部のファイルを開いた直後は、前回の再生元 (一覧) の名前を出さない
+      if (_source.value == null && key != null && !externalOpened) _source.value = PlaySource(key, prefs[SOURCE_TITLE])
     }
   }
 
@@ -175,6 +190,19 @@ class PlayerConnection @Inject constructor(
     saveSource(source)
     it.setMediaItems(mediaStoreIds.map(::mediaItemRequest), startIndex, 0L)
     if (shuffle) it.shuffleModeEnabled = true
+    it.prepare()
+    it.play()
+  }
+
+  /**
+   * 外部のアプリから渡された音声ファイルを、そのファイルだけの再生キューにして再生する。
+   * ライブラリには入れず、再生キューの保存 (前回のキューの復元用) も上書きしない ([PlaybackPersistence])
+   */
+  fun playExternal(uri: Uri, displayName: String?, mimeType: String?) = withController {
+    // 再生元は、メモリ上だけで外す (保存した前回の再生元は、前回のキューを戻すために残す)
+    externalOpened = true
+    _source.value = null
+    it.setMediaItem(externalMediaItem(uri, displayName, mimeType))
     it.prepare()
     it.play()
   }
@@ -317,8 +345,10 @@ class PlayerConnection @Inject constructor(
       val item = player.getMediaItemAt(i)
       return QueueItem(
         mediaStoreId = item.mediaId.toLongOrNull() ?: -1,
-        title = item.mediaMetadata.title?.toString().orEmpty(),
-        artist = item.mediaMetadata.artist?.toString(),
+        uri = item.localConfiguration?.uri?.toString(),
+        // 外部から開いたファイルは、タグを読んだ結果が今の曲の情報 (player.mediaMetadata) にだけ入る
+        title = (item.mediaMetadata.title ?: if (i == index) player.mediaMetadata.title else null)?.toString().orEmpty(),
+        artist = (item.mediaMetadata.artist ?: if (i == index) player.mediaMetadata.artist else null)?.toString(),
         queued = item.isQueued,
         index = i,
       )
@@ -358,6 +388,8 @@ class PlayerConnection @Inject constructor(
     _state.value = PlayerState(
       connected = true,
       mediaStoreId = player.currentMediaItem?.mediaId?.toLongOrNull(),
+      mediaId = player.currentMediaItem?.mediaId,
+      uri = player.currentMediaItem?.localConfiguration?.uri?.toString(),
       title = metadata.title?.toString(),
       artist = metadata.artist?.toString(),
       album = metadata.albumTitle?.toString(),

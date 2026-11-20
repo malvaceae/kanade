@@ -145,7 +145,15 @@ class PlaybackService : MediaSessionService() {
           return
         }
         if (player.mediaItemCount == 0) return
-        playbackEvents.emit(if (notFound) PlaybackEvent.FILE_NOT_FOUND else PlaybackEvent.UNPLAYABLE)
+        // 外部のアプリから開いたファイルは、「再スキャンしてください」と案内しても意味がないので、専用の知らせにする
+        val external = player.currentMediaItem?.isExternal == true
+        playbackEvents.emit(
+          when {
+            external -> PlaybackEvent.EXTERNAL_UNPLAYABLE
+            notFound -> PlaybackEvent.FILE_NOT_FOUND
+            else -> PlaybackEvent.UNPLAYABLE
+          },
+        )
         val wasLast = player.currentMediaItemIndex == player.mediaItemCount - 1
         player.removeMediaItem(player.currentMediaItemIndex)
         if (player.mediaItemCount > 0 && !wasLast) {

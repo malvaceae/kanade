@@ -91,9 +91,9 @@ private fun SheetText(text: String, onClick: () -> Unit) {
 @Composable
 fun TrackInfoDialog(state: PlayerState, onDismiss: () -> Unit) {
   val context = LocalContext.current
-  val id = state.mediaStoreId ?: return
-  val format by produceState<TrackFormat?>(null, id) {
-    value = readTrackFormat(context, audioUri(id), state.durationMs)
+  val uri = state.uri ?: return
+  val format by produceState<TrackFormat?>(null, uri) {
+    value = readTrackFormat(context, uri, state.durationMs)
   }
   AlertDialog(
     onDismissRequest = onDismiss,
