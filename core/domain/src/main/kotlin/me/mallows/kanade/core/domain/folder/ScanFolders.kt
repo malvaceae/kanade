@@ -55,8 +55,11 @@ data class ScanFolder(
       return ScanFolder(volume, dir(documentId.substring(i + 1)))
     }
 
-    /** 初期値: 各ストレージの「Music/」 */
-    fun defaults(volumes: Collection<String>): List<ScanFolder> = volumes.map { ScanFolder(it, "Music/") }
+    /** 初期値: 各ストレージの「Music/」と「Movies/」 */
+    fun defaults(volumes: Collection<String>): List<ScanFolder> =
+      volumes.flatMap { v -> DEFAULT_DIRS.map { ScanFolder(v, it) } }
+
+    private val DEFAULT_DIRS = listOf("Music/", "Movies/")
   }
 }
 

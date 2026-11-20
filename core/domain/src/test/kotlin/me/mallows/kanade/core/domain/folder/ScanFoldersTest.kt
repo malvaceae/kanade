@@ -78,4 +78,17 @@ class ScanFoldersTest {
     assertNull(ScanFolder.fromTree("com.android.providers.downloads.documents", "msf:123"))
     assertNull(ScanFolder.fromTree(ext, "downloads"))
   }
+
+  @Test
+  fun 初期値は各ストレージのMusicとMovies() {
+    assertEquals(
+      listOf(
+        ScanFolder(ScanFolder.PRIMARY, "Music/"),
+        ScanFolder(ScanFolder.PRIMARY, "Movies/"),
+        ScanFolder("1234-abcd", "Music/"),
+        ScanFolder("1234-abcd", "Movies/"),
+      ),
+      ScanFolder.defaults(listOf(ScanFolder.PRIMARY, "1234-abcd")),
+    )
+  }
 }
