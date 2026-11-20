@@ -9,7 +9,7 @@ plugins {
 android {
   namespace = "androidx.media3.decoder.flac"
   compileSdk = 37
-  ndkVersion = "27.1.12297006"
+  ndkVersion = "30.0.16248370"
   defaultConfig {
     minSdk = 23
     consumerProguardFiles("consumer-rules.pro")
