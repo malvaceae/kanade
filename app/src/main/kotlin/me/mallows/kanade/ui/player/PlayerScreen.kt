@@ -128,7 +128,14 @@ fun PlayerScreen(
   // 動画の全画面。自分で選んだとき、または横向きのとき (横向きの動画は、全画面で見るもの)
   var fullscreenChosen by rememberSaveable { mutableStateOf(false) }
   val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-  val fullscreen = state.isVideo && (fullscreenChosen || landscape)
+  val pip = LocalPictureInPicture.current
+  // 動画を映していて再生中のあいだ、ホームへ戻るとPiPの小窓に移れるようにする
+  DisposableEffect(state.isVideo, state.showPause, state.videoAspect) {
+    pip.eligible = state.isVideo && state.showPause
+    if (state.videoAspect > 0f) pip.aspect = state.videoAspect
+    onDispose { pip.eligible = false }
+  }
+  val fullscreen = state.isVideo && (fullscreenChosen || landscape || pip.active)
   DisposableEffect(fullscreen) {
     onFullscreenChange(fullscreen)
     onDispose { onFullscreenChange(false) }
@@ -136,6 +143,9 @@ fun PlayerScreen(
   if (fullscreen) {
     VideoFullscreen(
       state = state,
+      pip = pip.active,
+      onNext = onNext,
+      onPrevious = onPrevious,
       onAttach = onAttachVideo,
       onDetach = onDetachVideo,
       onTogglePlay = onTogglePlay,
@@ -512,6 +522,10 @@ private fun VideoSurface(
 @Composable
 private fun VideoFullscreen(
   state: PlayerState,
+  /** PiPの小窓で表示中か (操作は出さず、映像だけにする) */
+  pip: Boolean,
+  onNext: () -> Unit,
+  onPrevious: () -> Unit,
   onAttach: (SurfaceView) -> Unit,
   onDetach: (SurfaceView) -> Unit,
   onTogglePlay: () -> Unit,
@@ -551,7 +565,7 @@ private fun VideoFullscreen(
         modifier = if (fitWidth) Modifier.fillMaxWidth().aspectRatio(aspect) else Modifier.fillMaxHeight().aspectRatio(aspect),
       )
     }
-    AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(controls && !pip, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).safeDrawingPadding()) {
         IconButton(onClick = onExit, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
           Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)
@@ -564,16 +578,37 @@ private fun VideoFullscreen(
           overflow = TextOverflow.Ellipsis,
           modifier = Modifier.align(Alignment.TopStart).padding(start = 56.dp, top = 14.dp, end = 16.dp),
         )
-        IconButton(
-          onClick = onTogglePlay,
-          modifier = Modifier.align(Alignment.Center).size(72.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)),
+        Row(
+          modifier = Modifier.align(Alignment.Center),
+          horizontalArrangement = Arrangement.spacedBy(24.dp),
+          verticalAlignment = Alignment.CenterVertically,
         ) {
-          Icon(
-            if (state.showPause) KanadeIcons.Pause else KanadeIcons.Play,
-            contentDescription = stringResource(if (state.showPause) R.string.action_pause else R.string.action_play),
-            tint = Color.White,
-            modifier = Modifier.size(34.dp),
-          )
+          IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))) {
+            Icon(KanadeIcons.Previous, contentDescription = stringResource(R.string.action_previous), tint = Color.White, modifier = Modifier.size(26.dp))
+          }
+          IconButton(
+            onClick = onTogglePlay,
+            modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)),
+          ) {
+            Icon(
+              if (state.showPause) KanadeIcons.Pause else KanadeIcons.Play,
+              contentDescription = stringResource(if (state.showPause) R.string.action_pause else R.string.action_play),
+              tint = Color.White,
+              modifier = Modifier.size(34.dp),
+            )
+          }
+          IconButton(
+            onClick = onNext,
+            enabled = state.hasNext,
+            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+          ) {
+            Icon(
+              KanadeIcons.Next,
+              contentDescription = stringResource(R.string.action_next),
+              tint = Color.White.copy(alpha = if (state.hasNext) 1f else 0.4f),
+              modifier = Modifier.size(26.dp),
+            )
+          }
         }
         SeekBar(state = state, onSeek = onSeek, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 24.dp, vertical = 8.dp))
       }
