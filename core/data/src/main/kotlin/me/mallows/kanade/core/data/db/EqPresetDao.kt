@@ -3,6 +3,7 @@ package me.mallows.kanade.core.data.db
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,13 @@ interface EqPresetDao {
   @Query("UPDATE eq_preset SET name = :name WHERE id = :id")
   suspend fun rename(id: Long, name: String)
 
+  @Query("SELECT * FROM eq_preset WHERE id = :id")
+  suspend fun get(id: Long): EqPresetEntity?
+
   @Query("DELETE FROM eq_preset WHERE id = :id")
   suspend fun delete(id: Long)
+
+  /** 削除したプリセットを、元のIDのまま戻す (元に戻す用) */
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun restore(preset: EqPresetEntity)
 }

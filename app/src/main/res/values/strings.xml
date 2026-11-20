@@ -114,9 +114,9 @@
     <string name="message_cover_failed">画像を読み込めませんでした</string>
     <string name="message_cover_changed">カバー画像を変更しました</string>
     <string name="message_cover_reset">カバー画像を元に戻しました</string>
-    <string name="delete_confirm_title">「%1$s」を削除しますか？</string>
     <string name="message_playlist_created">「%1$s」を作成しました</string>
     <string name="message_playlist_renamed">名前を変更しました</string>
+    <string name="message_eq_preset_deleted">「%1$s」を削除しました</string>
     <string name="message_playlist_deleted">「%1$s」を削除しました</string>
     <plurals name="message_playlists_deleted">
         <item quantity="other">%d件のプレイリストを削除しました</item>

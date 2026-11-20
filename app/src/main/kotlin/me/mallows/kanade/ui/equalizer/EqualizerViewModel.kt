@@ -24,6 +24,7 @@ import me.mallows.kanade.playback.output.OutputDevice
 import me.mallows.kanade.playback.output.OutputMonitor
 import me.mallows.kanade.playback.output.OutputSettings
 import me.mallows.kanade.audio.ReplayGainMode
+import me.mallows.kanade.core.data.db.EqPresetEntity
 
 /**
  * イコライザーの編集。変更はすぐに音声処理へ反映し、保存は0.3秒待ってまとめて行う
@@ -126,9 +127,11 @@ class EqualizerViewModel @Inject constructor(
     viewModelScope.launch { repository.renamePreset(id, name.trim()) }
   }
 
-  fun deletePreset(id: Long) {
-    viewModelScope.launch { repository.deletePreset(id) }
-  }
+  /** プリセットを削除する。元に戻すための内容を返す (なければnull) */
+  suspend fun deletePreset(id: Long) = repository.deletePreset(id)
+
+  /** [deletePreset]で削除したプリセットを戻す */
+  suspend fun restorePreset(preset: EqPresetEntity) = repository.restorePreset(preset)
 
   override fun onCleared() {
     // 画面を閉じたときは待たずに保存する

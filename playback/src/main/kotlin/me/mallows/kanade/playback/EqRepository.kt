@@ -87,7 +87,15 @@ class EqRepository @Inject constructor(
 
   suspend fun renamePreset(id: Long, name: String) = presetDao.rename(id, name)
 
-  suspend fun deletePreset(id: Long) = presetDao.delete(id)
+  /** プリセットを削除する。元に戻すための内容を返す (なければnull) */
+  suspend fun deletePreset(id: Long): EqPresetEntity? {
+    val removed = presetDao.get(id) ?: return null
+    presetDao.delete(id)
+    return removed
+  }
+
+  /** [deletePreset]で削除したプリセットを戻す */
+  suspend fun restorePreset(preset: EqPresetEntity) = presetDao.restore(preset)
 
   companion object {
     private val KEY = stringPreferencesKey("eq_settings")
