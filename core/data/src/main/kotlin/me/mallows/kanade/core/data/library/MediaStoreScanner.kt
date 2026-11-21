@@ -229,7 +229,7 @@ class MediaStoreScanner @Inject constructor(
       dateAdded = long(MediaStore.Audio.Media.DATE_ADDED) ?: 0,
       dateModified = long(MediaStore.Audio.Media.DATE_MODIFIED) ?: 0,
       relativePath = if (modern) string(MediaStore.Audio.Media.RELATIVE_PATH) else located?.second,
-      genre = if (genres == null) string(MediaStore.Audio.Media.GENRE).orUnknownNull() else genres[id],
+      genre = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) string(MediaStore.Audio.Media.GENRE).orUnknownNull() else genres?.get(id),
       volume = if (modern) string(MediaStore.Audio.Media.VOLUME_NAME) else located?.first,
     )
   }
