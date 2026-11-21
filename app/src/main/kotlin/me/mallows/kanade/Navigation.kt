@@ -393,6 +393,17 @@ fun MainNavigation(
                     sourceTitle = playSource?.title,
                     onClose = { backStack.removeLastOrNull() },
                     onOpenQueue = { backStack.add(Queue) },
+                    onOpenSource = {
+                      val destination = sourceDestination(playSource)
+                      if (destination == null) {
+                        // 一覧を開けない再生元 (選択した曲・検索・外から開いた曲) は、再生キューを開く
+                        backStack.add(Queue)
+                      } else {
+                        // プレイヤーを閉じて一覧を開く。すでにその一覧から来ていたら、閉じるだけ
+                        backStack.removeLastOrNull()
+                        if (backStack.lastOrNull() != destination) backStack.add(destination)
+                      }
+                    },
                     onOpenEqualizer = { backStack.add(Equalizer) },
                     onTogglePlay = playerViewModel::togglePlayPause,
                     onNext = playerViewModel::next,
@@ -512,3 +523,22 @@ private const val MINI_PLAYER_KEY = "mini_player"
 /** アルバムなどを開く画面。アーティストはアルバムの一覧を挟む */
 private fun groupKey(kind: GroupKind, key: String?, title: String): NavKey =
   if (kind == GroupKind.ARTIST) ArtistDetail(key, title) else GroupDetail(kind.name, key, title)
+
+/**
+ * 再生元の曲の一覧を開く画面。一覧を開けない再生元 (選択した曲・検索・外から開いた曲) はnull。
+ * キーの形は、曲の一覧を作る側 (PlaySource) が決めている: "tracks"、"playlist:ID"、"group:種類:キー"。
+ * キーが無い一覧 (最近追加した曲など) は、キーの部分が"null"になっている
+ */
+internal fun sourceDestination(source: PlaySource?): NavKey? {
+  val key = source?.key ?: return null
+  return when {
+    key == "tracks" -> Category(LibraryTab.TRACKS.name)
+    key.startsWith("playlist:") -> key.removePrefix("playlist:").toLongOrNull()?.let(::PlaylistDetail)
+    key.startsWith("group:") -> {
+      val parts = key.split(':', limit = 3)
+      val kind = GroupKind.entries.firstOrNull { it.name == parts.getOrNull(1) }
+      if (parts.size == 3 && kind != null) groupKey(kind, parts[2].takeIf { it != "null" }, source.title.orEmpty()) else null
+    }
+    else -> null
+  }
+}

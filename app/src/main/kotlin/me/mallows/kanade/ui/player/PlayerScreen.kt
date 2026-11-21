@@ -95,6 +95,8 @@ fun PlayerScreen(
   state: PlayerState,
   onClose: () -> Unit,
   onOpenQueue: () -> Unit,
+  /** 曲名とアーティストの行をタップしたとき。再生元の一覧を開く */
+  onOpenSource: () -> Unit,
   onOpenEqualizer: () -> Unit,
   onTogglePlay: () -> Unit,
   onNext: () -> Unit,
@@ -202,7 +204,9 @@ fun PlayerScreen(
         .fillMaxWidth()
         .weight(1f)
         // アートワークは左右に余白を空けるが、動画の映像は、画面の幅いっぱいに出す
-        .padding(horizontal = if (state.isVideo) 0.dp else 32.dp, vertical = 16.dp),
+        .padding(horizontal = if (state.isVideo) 0.dp else 32.dp)
+        // 下の空白は、曲名の行のタップできる範囲 (上に8dp) の分、狭める
+        .padding(top = 16.dp, bottom = 8.dp),
       contentAlignment = Alignment.Center,
     ) {
       val size = minOf(maxWidth, maxHeight)
@@ -251,7 +255,11 @@ fun PlayerScreen(
     }
 
     // 曲名
-    Column(modifier = Modifier.padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // タップできる範囲は、文字の上下に8dpずつ広げる (まわりの空白を同じだけ狭めてあるので、文字の位置は変わらない)
+    Column(
+      modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenSource).padding(horizontal = 32.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
       Text(
         text = state.title.orEmpty(),
         style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
@@ -269,7 +277,8 @@ fun PlayerScreen(
     }
 
     // シークバー
-    SeekBar(state = state, onSeek = onSeek, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+    // 上の空白は、曲名の行のタップできる範囲 (下に8dp) の分、狭める
+    SeekBar(state = state, onSeek = onSeek, modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 12.dp))
 
     // 操作ボタン
     Row(
