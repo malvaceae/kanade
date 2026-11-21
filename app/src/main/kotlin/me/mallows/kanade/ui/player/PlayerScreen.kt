@@ -234,7 +234,8 @@ fun PlayerScreen(
             // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、画面の背景で覆う
             if (!showVideo) Box(Modifier.fillMaxSize().background(background))
             // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
-            IconButton(
+            // 新しい動画の映像が出るまでは出さない (枠が前の動画の大きさのままなので、前の動画の右下に残って見える)
+            if (showVideo) IconButton(
               onClick = { fullscreenChosen = true },
               modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp),
             ) {
