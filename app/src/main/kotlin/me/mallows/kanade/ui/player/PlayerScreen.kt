@@ -193,34 +193,39 @@ fun PlayerScreen(
       contentAlignment = Alignment.Center,
     ) {
       val size = minOf(maxWidth, maxHeight)
-      if (state.isVideo) {
-        // 映像をタップすると全画面
-        Box(contentAlignment = Alignment.BottomEnd) {
-          VideoSurface(
-            aspect = state.videoAspect,
-            onAttach = onAttachVideo,
-            onDetach = onDetachVideo,
-          )
-          Box(
-            Modifier.matchParentSize().clickable(interactionSource = null, indication = null) { fullscreenChosen = true },
-          )
-          Icon(
-            KanadeIcons.Fullscreen,
-            contentDescription = stringResource(R.string.action_fullscreen),
-            tint = Color.White,
-            modifier = Modifier.padding(8.dp).size(22.dp),
-          )
-        }
-      } else SwipeableArtwork(
+      SwipeableArtwork(
         mediaId = state.mediaId,
         hasNext = state.hasNext,
         hasPrevious = state.hasPrevious,
         onNext = onNext,
         onPrevious = onSwipePrevious,
         onRestart = onPrevious,
+        // 動画は映像の縦横比の枠にする (縦長でも、はみ出さず、枠の中に収まる)
+        aspect = if (state.isVideo) (state.videoAspect.takeIf { it > 0f } ?: (16f / 9f)) else 1f,
       ) {
         val uri = state.uri
-        if (uri != null) {
+        if (state.isVideo) {
+          Box(Modifier.fillMaxSize()) {
+            VideoSurface(
+              aspect = state.videoAspect,
+              onAttach = onAttachVideo,
+              onDetach = onDetachVideo,
+              modifier = Modifier.fillMaxSize(),
+            )
+            // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
+            IconButton(
+              onClick = { fullscreenChosen = true },
+              modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+            ) {
+              Icon(
+                KanadeIcons.Fullscreen,
+                contentDescription = stringResource(R.string.action_fullscreen),
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+              )
+            }
+          }
+        } else if (uri != null) {
           TrackArtwork(uri = uri, size = size, cornerRadius = 20.dp)
         } else {
           Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
@@ -378,6 +383,8 @@ private fun SwipeableArtwork(
   onPrevious: () -> Unit,
   /** 前の曲がないときに右へ払ったら、曲の頭に戻す */
   onRestart: () -> Unit,
+  /** 枠の縦横比 (横 / 縦)。アートワークは正方形 (1)、動画は映像の縦横比 */
+  aspect: Float = 1f,
   content: @Composable () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
@@ -387,7 +394,7 @@ private fun SwipeableArtwork(
   val canPrevious by rememberUpdatedState(hasPrevious)
   Box(
     modifier = Modifier
-      .aspectRatio(1f)
+      .aspectRatio(aspect)
       .graphicsLayer {
         translationX = offset.value
         alpha = 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f)
