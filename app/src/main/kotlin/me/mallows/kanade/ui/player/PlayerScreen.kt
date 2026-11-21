@@ -59,6 +59,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -142,6 +143,8 @@ fun PlayerScreen(
   val frameAspect = if (videoAspect > 0f) videoAspect else lastAspect
   val surfaceSettled = surfaceAspect > 0f && kotlin.math.abs(surfaceAspect - frameAspect) <= frameAspect * 0.02f
   val showVideo = videoReady && surfaceSettled
+  // 全画面で見ていた動画が終わって音声に移ったら、選択を戻す (戻って動画になったとき、また全画面になるのを防ぐ)
+  LaunchedEffect(state.isVideo, state.connected) { if (state.connected && !state.isVideo) fullscreenChosen = false }
   val fullscreen = state.isVideo && (fullscreenChosen || landscape)
   DisposableEffect(fullscreen) {
     onFullscreenChange(fullscreen)
@@ -576,6 +579,9 @@ private fun VideoFullscreen(
 ) {
   // 全画面に入ったときは、操作を出しておく (自動で隠れる)
   var controls by remember { mutableStateOf(true) }
+  // 操作するたびに増やして、隠れるまでの時間を数え直す
+  var touched by remember { mutableIntStateOf(0) }
+  fun touching(action: () -> Unit): () -> Unit = { touched++; action() }
   val view = LocalView.current
   // 全画面のあいだは、ステータスバーとナビゲーションバーを隠す (端から払うと一時的に出る)
   DisposableEffect(view) {
@@ -586,7 +592,7 @@ private fun VideoFullscreen(
     onDispose { insets?.show(WindowInsetsCompat.Type.systemBars()) }
   }
   BackHandler(onBack = onExit)
-  LaunchedEffect(controls, state.showPause) {
+  LaunchedEffect(controls, state.showPause, touched) {
     if (controls && state.showPause) {
       delay(CONTROLS_HIDE_MS)
       controls = false
@@ -629,11 +635,11 @@ private fun VideoFullscreen(
           horizontalArrangement = Arrangement.spacedBy(24.dp),
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))) {
+          IconButton(onClick = touching(onPrevious), modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))) {
             Icon(KanadeIcons.Previous, contentDescription = stringResource(R.string.action_previous), tint = Color.White, modifier = Modifier.size(26.dp))
           }
           IconButton(
-            onClick = onTogglePlay,
+            onClick = touching(onTogglePlay),
             modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)),
           ) {
             Icon(
@@ -644,7 +650,7 @@ private fun VideoFullscreen(
             )
           }
           IconButton(
-            onClick = onNext,
+            onClick = touching(onNext),
             enabled = state.hasNext,
             modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
           ) {
@@ -656,7 +662,7 @@ private fun VideoFullscreen(
             )
           }
         }
-        SeekBar(state = state, onSeek = onSeek, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 24.dp, vertical = 8.dp))
+        SeekBar(state = state, onSeek = { touched++; onSeek(it) }, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 24.dp, vertical = 8.dp))
       }
     }
   }
