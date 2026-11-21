@@ -34,6 +34,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -145,12 +146,19 @@ class PlaybackService : MediaSessionService() {
       override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         when (reason) {
           Player.MEDIA_ITEM_TRANSITION_REASON_AUTO, Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT ->
-            videoFrameMonitor.set(mediaItem?.mediaId)
+            videoFrameMonitor.set(mediaItem?.mediaId, player.videoSize.aspect())
           else -> videoFrameMonitor.set(null)
         }
       }
 
-      override fun onRenderedFirstFrame() = videoFrameMonitor.set(player.currentMediaItem?.mediaId)
+      override fun onRenderedFirstFrame() =
+        videoFrameMonitor.set(player.currentMediaItem?.mediaId, player.videoSize.aspect())
+
+      // 続けて再生する切り替えで、新しい動画の大きさが、あとから分かったとき
+      override fun onVideoSizeChanged(videoSize: VideoSize) {
+        val id = player.currentMediaItem?.mediaId ?: return
+        if (videoFrameMonitor.frame.value.mediaId == id && videoSize.aspect() > 0f) videoFrameMonitor.set(id, videoSize.aspect())
+      }
     })
     // 読めない曲 (再スキャンの前に端末から消えたファイル・壊れたファイル) は、止まったままにせずキューから外して次へ進む
     player.addListener(object : Player.Listener {

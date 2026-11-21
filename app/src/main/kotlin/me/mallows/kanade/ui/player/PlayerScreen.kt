@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Configuration
+import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -57,6 +58,7 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -111,6 +113,8 @@ fun PlayerScreen(
   onFullscreenChange: (Boolean) -> Unit,
   /** 今の動画の最初の映像が出たか。出るまでは、前の動画のコマが見えないよう、映像をカバーで覆う */
   videoReady: Boolean,
+  /** 今の動画の映像の縦横比。最初の映像が出るまでは0 (そのあいだは、前の縦横比のままにして、枠を跳ねさせない) */
+  videoAspect: Float,
   /** 再生元の一覧の名前 (分からなければアルバム名を出す) */
   sourceTitle: String?,
   lyrics: Lyrics?,
@@ -130,11 +134,19 @@ fun PlayerScreen(
   // 動画の全画面。自分で選んだとき、または横向きのとき (横向きの動画は、全画面で見るもの)
   var fullscreenChosen by rememberSaveable { mutableStateOf(false) }
   val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+  // 枠の縦横比。新しい動画の最初の映像が出るまで、前の縦横比のままにする
+  var lastAspect by remember { mutableFloatStateOf(16f / 9f) }
+  // 映像の面が、今の枠の縦横比の大きさに変わり終えたか。変わる前に覆いを外すと、新しい映像が、前の大きさの面に一瞬出る
+  var surfaceAspect by remember { mutableFloatStateOf(0f) }
+  LaunchedEffect(videoAspect) { if (videoAspect > 0f) lastAspect = videoAspect }
+  val frameAspect = if (videoAspect > 0f) videoAspect else lastAspect
+  val surfaceSettled = surfaceAspect > 0f && kotlin.math.abs(surfaceAspect - frameAspect) <= frameAspect * 0.02f
+  val showVideo = videoReady && surfaceSettled
   val pip = LocalPictureInPicture.current
   // 動画を映していて再生中のあいだ、ホームへ戻るとPiPの小窓に移れるようにする
-  DisposableEffect(state.isVideo, state.showPause, state.videoAspect) {
+  DisposableEffect(state.isVideo, state.showPause, videoAspect) {
     pip.eligible = state.isVideo && state.showPause
-    if (state.videoAspect > 0f) pip.aspect = state.videoAspect
+    if (videoAspect > 0f) pip.aspect = videoAspect
     onDispose { pip.eligible = false }
   }
   val fullscreen = state.isVideo && (fullscreenChosen || landscape || pip.active)
@@ -145,7 +157,9 @@ fun PlayerScreen(
   if (fullscreen) {
     VideoFullscreen(
       state = state,
-      videoReady = videoReady,
+      videoReady = showVideo,
+      videoAspect = frameAspect,
+      onSurfaceAspect = { surfaceAspect = it },
       pip = pip.active,
       onNext = onNext,
       onPrevious = onPrevious,
@@ -205,19 +219,21 @@ fun PlayerScreen(
         onPrevious = onSwipePrevious,
         onRestart = onPrevious,
         // 動画は映像の縦横比の枠にする (縦長でも、はみ出さず、枠の中に収まる)
-        aspect = if (state.isVideo) (state.videoAspect.takeIf { it > 0f } ?: (16f / 9f)) else 1f,
+        aspect = if (state.isVideo) frameAspect else 1f,
+        fade = !state.isVideo,
       ) {
         val uri = state.uri
         if (state.isVideo) {
           Box(Modifier.fillMaxSize()) {
             VideoSurface(
-              aspect = state.videoAspect,
+              aspect = frameAspect,
               onAttach = onAttachVideo,
               onDetach = onDetachVideo,
+              onSurfaceAspect = { surfaceAspect = it },
               modifier = Modifier.fillMaxSize(),
             )
             // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、画面の背景で覆う
-            if (!videoReady) Box(Modifier.fillMaxSize().background(background))
+            if (!showVideo) Box(Modifier.fillMaxSize().background(background))
             // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
             IconButton(
               onClick = { fullscreenChosen = true },
@@ -391,6 +407,11 @@ private fun SwipeableArtwork(
   onRestart: () -> Unit,
   /** 枠の縦横比 (横 / 縦)。アートワークは正方形 (1)、動画は映像の縦横比 */
   aspect: Float = 1f,
+  /**
+   * 動いている間、端を半透明にするか。動画では、しない: 映像の面 (SurfaceView) はウィンドウの背面にあり、
+   * 半透明の部品の下では透けて見えるので、前の動画のコマを覆いで隠せなくなる
+   */
+  fade: Boolean = true,
   content: @Composable () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
@@ -403,7 +424,7 @@ private fun SwipeableArtwork(
       .aspectRatio(aspect)
       .graphicsLayer {
         translationX = offset.value
-        alpha = 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f)
+        alpha = if (fade) 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f) else 1f
       }
       .pointerInput(Unit) {
         val width = size.width.toFloat()
@@ -515,16 +536,31 @@ private fun VideoSurface(
   aspect: Float,
   onAttach: (SurfaceView) -> Unit,
   onDetach: (SurfaceView) -> Unit,
+  /** 映像の面の大きさが変わった (変わり終わった) とき、その縦横比 (横 / 縦) を知らせる */
+  onSurfaceAspect: (Float) -> Unit = {},
   modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(if (aspect > 0f) aspect else 16f / 9f),
 ) {
   var view by remember { mutableStateOf<SurfaceView?>(null) }
+  val currentOnSurfaceAspect by rememberUpdatedState(onSurfaceAspect)
   DisposableEffect(view) {
     val v = view
     if (v != null) onAttach(v)
     onDispose { if (v != null) onDetach(v) }
   }
   AndroidView(
-    factory = { SurfaceView(it) },
+    factory = { context ->
+      SurfaceView(context).apply {
+        holder.addCallback(object : SurfaceHolder.Callback {
+          override fun surfaceCreated(holder: SurfaceHolder) = Unit
+
+          override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            if (height > 0) currentOnSurfaceAspect(width.toFloat() / height)
+          }
+
+          override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
+        })
+      }
+    },
     update = { if (view !== it) view = it },
     // 縦横比が分かるまでは、16:9の黒い面にしておく
     modifier = modifier,
@@ -536,6 +572,8 @@ private fun VideoSurface(
 private fun VideoFullscreen(
   state: PlayerState,
   videoReady: Boolean,
+  videoAspect: Float,
+  onSurfaceAspect: (Float) -> Unit,
   /** PiPの小窓で表示中か (操作は出さず、映像だけにする) */
   pip: Boolean,
   onNext: () -> Unit,
@@ -572,12 +610,13 @@ private fun VideoFullscreen(
       .clickable(interactionSource = null, indication = null) { controls = !controls },
   ) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-      val aspect = if (state.videoAspect > 0f) state.videoAspect else 16f / 9f
+      val aspect = videoAspect
       val fitWidth = maxWidth / maxHeight <= aspect
       VideoSurface(
         aspect = aspect,
         onAttach = onAttach,
         onDetach = onDetach,
+        onSurfaceAspect = onSurfaceAspect,
         modifier = if (fitWidth) Modifier.fillMaxWidth().aspectRatio(aspect) else Modifier.fillMaxHeight().aspectRatio(aspect),
       )
       // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、黒で覆う
