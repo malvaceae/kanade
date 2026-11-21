@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 通知のステータスバーに出る小さなアイコン (Media3の既定のアイコンを置き換える)。アプリのアイコン (ヘッドホンのインコ) の影絵を白一色で描く。
      白一色でもヘッドホンと分かるよう、帯と耳あては頭から少し離す。座標は絵と同じ (鳥の中心が231, 265) で、鳥のまわりだけを切り出す -->
+<!-- Media3が同じ名前の資源 (media3_notification_small_icon) を読んで使うので、コードから参照がなくても要る -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedResources"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="270"
