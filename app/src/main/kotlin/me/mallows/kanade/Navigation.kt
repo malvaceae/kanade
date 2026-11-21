@@ -1,5 +1,6 @@
 package me.mallows.kanade
 
+import android.content.res.Configuration
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -27,6 +28,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.graphics.graphicsLayer
@@ -174,7 +176,11 @@ fun MainNavigation(
   }
   // 画面下の固定のメニュー。フォルダの選択 (下に保存・キャンセルがある) では出さない。
   // 選択中は選択の操作バーがその場所を使う
-  val showNavBar = top != ScanFolders && !bottomBarActive.value && !videoFullscreen
+  // 横向きの動画は、プレイヤーを開いた最初の描画から全画面にする (全画面に入る知らせは、最初の描画のあとに届く。
+  // それまで下のメニューの余白が入ると、映像の面が、画面の切り替えの最中に大きさを変え、前の大きさのまま残ることがある)
+  val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+  val inVideoFullscreen = videoFullscreen || (top == Player && player.isVideo && landscape)
+  val showNavBar = top != ScanFolders && !bottomBarActive.value && !inVideoFullscreen
   val navBar = if (showNavBar) AppNavBarHeight else 0.dp
   // 簡易プレイヤーは一覧の画面に出す。プレイヤー・EQ・ライセンス・フォルダの選択の画面には出さない
   val showMini = player.hasMedia && top != Player && top != Equalizer && top != Licenses && top != ScanFolders && !bottomBarActive.value
@@ -430,7 +436,7 @@ fun MainNavigation(
           )
         }
         // 選択の操作バーと入れ替わるときは、下から滑らせて出し入れする (画面を移るときは今までどおりすぐ切り替える)
-        if (top != ScanFolders && !videoFullscreen) AnimatedVisibility(
+        if (top != ScanFolders && !inVideoFullscreen) AnimatedVisibility(
           visible = !bottomBarActive.value,
           modifier = Modifier.align(Alignment.BottomCenter),
           enter = slideInVertically(tween(SELECTION_BAR_MS)) { it } + fadeIn(tween(SELECTION_BAR_MS)),
