@@ -216,7 +216,7 @@ fun PlayerScreen(
             // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
             IconButton(
               onClick = { fullscreenChosen = true },
-              modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+              modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
             ) {
               Icon(
                 KanadeIcons.Fullscreen,
