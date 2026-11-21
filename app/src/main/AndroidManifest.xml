@@ -21,7 +21,7 @@
         android:theme="@style/Theme.Kanade">
         <activity
             android:name=".KanadeActivity"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:exported="false"
             android:supportsPictureInPicture="true" />
 

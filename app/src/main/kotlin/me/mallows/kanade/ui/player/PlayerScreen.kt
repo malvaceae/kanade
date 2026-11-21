@@ -539,8 +539,9 @@ private fun VideoFullscreen(
   onSeek: (Long) -> Unit,
   onExit: () -> Unit,
 ) {
-  // 最初は隠しておく (出しておくと、全画面にしてすぐホームへ戻ったとき、操作の表示が小窓 (PiP) に映る)。タップで出し入れする
-  var controls by remember { mutableStateOf(false) }
+  // 全画面に入ったときは、操作を出しておく (自動で隠れる)。ただし、小窓 (PiP) に入るために切り替わったときは、
+  // 操作の表示が小窓に映るので、出さない
+  var controls by remember { mutableStateOf(!pip) }
   val view = LocalView.current
   // 全画面のあいだは、ステータスバーとナビゲーションバーを隠す (端から払うと一時的に出る)
   DisposableEffect(view) {
