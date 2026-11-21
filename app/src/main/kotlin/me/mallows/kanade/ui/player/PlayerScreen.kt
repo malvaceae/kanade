@@ -189,7 +189,8 @@ fun PlayerScreen(
       modifier = Modifier
         .fillMaxWidth()
         .weight(1f)
-        .padding(horizontal = 32.dp, vertical = 16.dp),
+        // アートワークは左右に余白を空けるが、動画の映像は、画面の幅いっぱいに出す
+        .padding(horizontal = if (state.isVideo) 0.dp else 32.dp, vertical = 16.dp),
       contentAlignment = Alignment.Center,
     ) {
       val size = minOf(maxWidth, maxHeight)
