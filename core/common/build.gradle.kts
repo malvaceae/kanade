@@ -6,7 +6,7 @@ android {
   namespace = "me.mallows.kanade.core.common"
   compileSdk = 37
   defaultConfig {
-    minSdk = 23
+    minSdk = 24
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17

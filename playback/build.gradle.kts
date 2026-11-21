@@ -8,7 +8,7 @@ android {
   namespace = "me.mallows.kanade.playback"
   compileSdk = 37
   defaultConfig {
-    minSdk = 23
+    minSdk = 24
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17

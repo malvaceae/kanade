@@ -11,7 +11,7 @@ android {
   compileSdk = 37
   ndkVersion = "30.0.16248370"
   defaultConfig {
-    minSdk = 23
+    minSdk = 24
     consumerProguardFiles("consumer-rules.pro")
     // アプリと同じABIだけ作る (x86は作らない)
     ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }

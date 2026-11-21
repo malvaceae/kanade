@@ -27,6 +27,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-cast-align")
 
 set(libflac_jni_root "${CMAKE_CURRENT_SOURCE_DIR}")
 
+# fseeko/ftello は、Android 7.0 (API 24) 以降は32bitのABIでも使える (stdio.hが宣言し、実体はfseeko64に名前が変わる)。
+# libFLACは32bitのAndroidで、API 24より前だと見て fseeko を無効にする (compat.h が fseeko を fseek に置き換える) が、
+# NDKでは CMAKE_SYSTEM_VERSION が常に 1 なので、いつでも無効になる。すると、stdio.hの宣言とぶつかってビルドが通らない。
+# config.h では HAVE_FSEEKO がコメントになる (64bitでは値のない #define になる) ので、同じ形 (値なし) の定義をコンパイラへ渡して「ある」と伝える
+add_compile_definitions("HAVE_FSEEKO=")
+
 # Build libflac.
 add_subdirectory("${libflac_jni_root}/libflac"
                  EXCLUDE_FROM_ALL)

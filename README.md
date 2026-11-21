@@ -20,7 +20,7 @@ Android向けのローカル音楽プレイヤーです。端末内の音楽フ�
 
 ## 対応環境
 
-- Android 6.0 (API 23) ~ Android 17 (API 37)
+- Android 7.0 (API 24) ~ Android 17 (API 37)
 
 ## インストール
 
