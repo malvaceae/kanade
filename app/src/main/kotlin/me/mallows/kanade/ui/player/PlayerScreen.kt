@@ -109,6 +109,8 @@ fun PlayerScreen(
   onDetachVideo: (SurfaceView) -> Unit,
   /** 全画面に入る・出るときの知らせ (全画面のあいだ、下のメニューを隠すため) */
   onFullscreenChange: (Boolean) -> Unit,
+  /** 今の動画の最初の映像が出たか。出るまでは、前の動画のコマが見えないよう、映像をカバーで覆う */
+  videoReady: Boolean,
   /** 再生元の一覧の名前 (分からなければアルバム名を出す) */
   sourceTitle: String?,
   lyrics: Lyrics?,
@@ -143,6 +145,7 @@ fun PlayerScreen(
   if (fullscreen) {
     VideoFullscreen(
       state = state,
+      videoReady = videoReady,
       pip = pip.active,
       onNext = onNext,
       onPrevious = onPrevious,
@@ -213,6 +216,8 @@ fun PlayerScreen(
               onDetach = onDetachVideo,
               modifier = Modifier.fillMaxSize(),
             )
+            // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、画面の背景で覆う
+            if (!videoReady) Box(Modifier.fillMaxSize().background(background))
             // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
             IconButton(
               onClick = { fullscreenChosen = true },
@@ -530,6 +535,7 @@ private fun VideoSurface(
 @Composable
 private fun VideoFullscreen(
   state: PlayerState,
+  videoReady: Boolean,
   /** PiPの小窓で表示中か (操作は出さず、映像だけにする) */
   pip: Boolean,
   onNext: () -> Unit,
@@ -574,6 +580,8 @@ private fun VideoFullscreen(
         onDetach = onDetach,
         modifier = if (fitWidth) Modifier.fillMaxWidth().aspectRatio(aspect) else Modifier.fillMaxHeight().aspectRatio(aspect),
       )
+      // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、黒で覆う
+      if (!videoReady) Box(Modifier.fillMaxSize().background(Color.Black))
     }
     // 小窓 (PiP) のときは、操作を組み立てない (消えるアニメーションが進まず、操作が小窓に残ることがある)
     if (!pip) AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {

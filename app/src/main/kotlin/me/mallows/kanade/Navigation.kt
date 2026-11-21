@@ -114,6 +114,7 @@ fun MainNavigation(
   val player by playerViewModel.state.collectAsStateWithLifecycle()
   val sleep by playerViewModel.sleep.collectAsStateWithLifecycle()
   val lyrics by playerViewModel.lyrics.collectAsStateWithLifecycle()
+  val videoRenderedId by playerViewModel.videoRenderedId.collectAsStateWithLifecycle()
   val playSource by playerViewModel.source.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
   /** 画面をまたいで続く処理 (シートを閉じた後のメッセージなど) */
@@ -406,6 +407,7 @@ fun MainNavigation(
                     onAttachVideo = playerViewModel::attachVideo,
                     onDetachVideo = playerViewModel::detachVideo,
                     onFullscreenChange = { videoFullscreen = it },
+                    videoReady = videoRenderedId != null && videoRenderedId == player.mediaId,
                     // 別の曲の歌詞が残っていても出さない
                     lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
                   )

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.playback.CurrentLyrics
 import me.mallows.kanade.playback.LyricsMonitor
+import me.mallows.kanade.playback.VideoFrameMonitor
 import me.mallows.kanade.playback.PlaybackEvent
 import me.mallows.kanade.playback.PlaybackEvents
 import me.mallows.kanade.playback.PlayerConnection
@@ -21,11 +22,15 @@ import me.mallows.kanade.playback.PlayerState
 class PlayerViewModel @Inject constructor(
   private val connection: PlayerConnection,
   lyricsMonitor: LyricsMonitor,
+  videoFrameMonitor: VideoFrameMonitor,
   playbackEvents: PlaybackEvents,
 ) : ViewModel() {
 
   /** 再生中の曲の歌詞 */
   val lyrics: StateFlow<CurrentLyrics?> = lyricsMonitor.current
+
+  /** 最初の映像が出た動画のmediaId (動画の切り替えで、前の動画のコマを見せないために使う) */
+  val videoRenderedId: StateFlow<String?> = videoFrameMonitor.renderedMediaId
 
 
   val state: StateFlow<PlayerState> = connection.state

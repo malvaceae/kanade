@@ -70,6 +70,7 @@ class PlaybackService : MediaSessionService() {
   @Inject lateinit var outputMonitor: OutputMonitor
   @Inject lateinit var outputSettings: OutputSettings
   @Inject lateinit var lyricsMonitor: LyricsMonitor
+  @Inject lateinit var videoFrameMonitor: VideoFrameMonitor
   @Inject lateinit var playbackEvents: PlaybackEvents
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -135,6 +136,21 @@ class PlaybackService : MediaSessionService() {
         val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }?.getTrackFormat(0)
         lyricsMonitor.set(player.currentMediaItem?.mediaId, lyricsOf(format))
       }
+    })
+    // 動画の切り替えで、前の動画の最後のコマが残らないよう、新しい動画の最初のコマが出たかを画面へ知らせる。
+    // 操作による切り替え (前へ・次へ・曲の選び直し) では、映像の面が、新しい動画の最初のコマが出るまで前のコマを残すので、
+    // 「まだ」に戻し、最初のコマが出たら、その項目を「出た」とする (ログで確かめた: 操作の切り替えのあと、約0.5秒で出る)。
+    // 自動で次へ進むときと1曲リピートは、映像が途切れず流れ続けて、最初のコマの知らせは来ない (前のコマも残らない) ので、すぐ「出た」とする
+    player.addListener(object : Player.Listener {
+      override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        when (reason) {
+          Player.MEDIA_ITEM_TRANSITION_REASON_AUTO, Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT ->
+            videoFrameMonitor.set(mediaItem?.mediaId)
+          else -> videoFrameMonitor.set(null)
+        }
+      }
+
+      override fun onRenderedFirstFrame() = videoFrameMonitor.set(player.currentMediaItem?.mediaId)
     })
     // 読めない曲 (再スキャンの前に端末から消えたファイル・壊れたファイル) は、止まったままにせずキューから外して次へ進む
     player.addListener(object : Player.Listener {
