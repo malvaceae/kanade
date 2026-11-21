@@ -225,7 +225,6 @@ fun PlayerScreen(
         if (state.isVideo) {
           Box(Modifier.fillMaxSize()) {
             VideoSurface(
-              aspect = frameAspect,
               onAttach = onAttachVideo,
               onDetach = onDetachVideo,
               onSurfaceAspect = { surfaceAspect = it },
@@ -545,12 +544,11 @@ private const val SEEK_REACHED_MS = 1_000L
 /** 動画の映像。縦横比を保って、いっぱいに広げる。画面から外れる (または背景へ回る) と、映像の出力は止まる */
 @Composable
 private fun VideoSurface(
-  aspect: Float,
   onAttach: (SurfaceView) -> Unit,
   onDetach: (SurfaceView) -> Unit,
   /** 映像の面の大きさが変わった (変わり終わった) とき、その縦横比 (横 / 縦) を知らせる */
-  onSurfaceAspect: (Float) -> Unit = {},
-  modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(if (aspect > 0f) aspect else 16f / 9f),
+  onSurfaceAspect: (Float) -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   var view by remember { mutableStateOf<SurfaceView?>(null) }
   val currentOnSurfaceAspect by rememberUpdatedState(onSurfaceAspect)
@@ -625,7 +623,6 @@ private fun VideoFullscreen(
       val aspect = videoAspect
       val fitWidth = maxWidth / maxHeight <= aspect
       VideoSurface(
-        aspect = aspect,
         onAttach = onAttach,
         onDetach = onDetach,
         onSurfaceAspect = onSurfaceAspect,
