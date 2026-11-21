@@ -10,7 +10,7 @@ android {
   namespace = "me.mallows.kanade"
   compileSdk = 37
   // 同梱のネイティブライブラリ (libFLAC) からデバッグ情報を取り除くのに使う。decoder-flacと同じ版にする
-  ndkVersion = "27.1.12297006"
+  ndkVersion = "30.0.16248370"
   defaultConfig {
     applicationId = "me.mallows.kanade"
     minSdk = 23
