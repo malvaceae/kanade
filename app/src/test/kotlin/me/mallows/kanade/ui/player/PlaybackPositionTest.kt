@@ -30,4 +30,22 @@ class PlaybackPositionTest {
   fun 止まっているときはそのまま() {
     assertEquals(2920L, settledPosition(previous = 3038, now = 2920, playing = false))
   }
+
+  @Test
+  fun 長さを超える位置は前の項目のものなので使わない() {
+    // 21秒の項目の10秒付近で、1秒の項目に移った直後
+    assertEquals(0L, currentPosition(live = 10_000, published = 0, duration = 1_000))
+    assertEquals(120L, currentPosition(live = 10_000, published = 120, duration = 1_000))
+  }
+
+  @Test
+  fun 長さ以内の位置はそのまま() {
+    assertEquals(500L, currentPosition(live = 500, published = 0, duration = 1_000))
+    assertEquals(1_000L, currentPosition(live = 1_000, published = 0, duration = 1_000))
+  }
+
+  @Test
+  fun 長さが分からないときは0() {
+    assertEquals(0L, currentPosition(live = 500, published = 100, duration = 0))
+  }
 }

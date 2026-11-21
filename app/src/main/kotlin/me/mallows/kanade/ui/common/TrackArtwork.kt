@@ -45,20 +45,27 @@ private object ThumbnailCache {
   }
 }
 
+/** 読み終えた結果。[bitmap]がnullなら、絵がない */
+private class Loaded(val bitmap: Bitmap?)
+
 /** 曲のアートワーク (埋め込み画像など)。ない場合は音符の仮表示。[video]なら、動画のフレームを使い、仮表示と角の印を動画のものにする */
 @Composable
 fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRadius: Dp = 6.dp, video: Boolean = false) {
   val context = LocalContext.current
   val px = with(LocalDensity.current) { size.roundToPx() }
   val key = "$uri@$px"
-  val bitmap by produceState(initialValue = ThumbnailCache.get(key), key) {
+  // 読み込み中 (null) と、読み終えて絵がない ([Loaded.bitmap]がnull) を分ける。読み込み中に仮の絵 (音符) を出すと、本物の絵が出る前に一瞬ちらつく
+  val loaded by produceState<Loaded?>(
+    initialValue = ThumbnailCache.get(key)?.let(::Loaded) ?: if (ThumbnailCache.isMissing(key)) Loaded(null) else null,
+    key,
+  ) {
     // 同じ場所で絵が変わったとき (カバーを変えたなど) は、前の絵のまま止まらないよう、新しい絵を探し直す
     val cached = ThumbnailCache.get(key)
     if (cached != null || ThumbnailCache.isMissing(key)) {
-      value = cached
+      value = Loaded(cached)
       return@produceState
     }
-    value = withContext(Dispatchers.IO) {
+    value = Loaded(withContext(Dispatchers.IO) {
       runCatching {
         // プレイリストのカバー (アプリ内のファイル) はそのまま縮めて読む。曲はMediaStoreの縮小画像を使う
         if (uri.startsWith("file://")) decodeFile(uri.removePrefix("file://"), px)
@@ -70,7 +77,7 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       }
         .getOrNull()
         .also { ThumbnailCache.put(key, it) }
-    }
+    })
   }
   Box(
     modifier = modifier
@@ -79,7 +86,8 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
       .background(MaterialTheme.colorScheme.surfaceContainerHigh),
     contentAlignment = Alignment.Center,
   ) {
-    val image = bitmap
+    val result = loaded
+    val image = result?.bitmap
     if (image != null) {
       Image(
         bitmap = image.asImageBitmap(),
@@ -87,7 +95,7 @@ fun TrackArtwork(uri: String, size: Dp, modifier: Modifier = Modifier, cornerRad
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize(),
       )
-    } else {
+    } else if (result != null) {
       Icon(
         imageVector = if (video) KanadeIcons.Video else KanadeIcons.MusicNote,
         contentDescription = null,

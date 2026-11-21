@@ -19,10 +19,7 @@ val LocalPlaybackPosition = compositionLocalOf<() -> Long> { { 0L } }
 @Composable
 fun rememberPlaybackPosition(state: PlayerState): State<Long> {
   val read = LocalPlaybackPosition.current
-  fun now(): Long {
-    val p = read().coerceAtLeast(0)
-    return if (state.durationMs > 0) p.coerceAtMost(state.durationMs) else 0
-  }
+  fun now(): Long = currentPosition(read(), state.positionMs, state.durationMs)
   val position = remember { mutableLongStateOf(now()) }
   // 直前に見せた位置。曲が変わる・位置が飛ぶ (シークなど) と、持ち越さない
   val shown = remember(state.mediaId, state.discontinuity) { longArrayOf(NONE) }
@@ -44,3 +41,13 @@ internal const val NONE = Long.MIN_VALUE
  */
 internal fun settledPosition(previous: Long, now: Long, playing: Boolean): Long =
   if (playing && previous != NONE) maxOf(previous, now) else now
+
+/**
+ * 今の項目の再生位置。[live]はプレイヤーから読んだ位置、[published]は、今の項目の状態と同時に届いた位置。
+ * 項目が変わった直後は、[live]がまだ前の項目の位置のことがある。項目の長さ ([duration]) を超える位置は、
+ * 今の項目のものではないので使わず、[published]を使う (使うと、長さまで丸められて、バーが一瞬、右端に飛ぶ)
+ */
+internal fun currentPosition(live: Long, published: Long, duration: Long): Long {
+  val position = if (duration > 0 && live > duration) published else live
+  return if (duration > 0) position.coerceIn(0, duration) else 0
+}
