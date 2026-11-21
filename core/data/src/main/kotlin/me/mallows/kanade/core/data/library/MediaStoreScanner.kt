@@ -42,10 +42,6 @@ class MediaStoreScanner @Inject constructor(
 
   /** ボリューム名 → 画面に出す名前 (「内部共有ストレージ」「SDカード」など、端末の言葉のまま) */
   fun volumeLabels(): Map<String, String> {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-      // Android 6.0は端末の名前を取れないので、自前の名前にする
-      return storage.list().associate { it.name to if (it.primary) "内部ストレージ" else "SDカード" }
-    }
     val manager = context.getSystemService(StorageManager::class.java) ?: return emptyMap()
     return manager.storageVolumes.mapNotNull { v ->
       val name = when {
@@ -196,9 +192,7 @@ class MediaStoreScanner @Inject constructor(
         val members = MediaStore.Audio.Genres.Members.getContentUri("external", genres.getLong(0))
         resolver.query(members, arrayOf(MediaStore.Audio.Media._ID), null, null, null)?.use { c ->
           while (c.moveToNext()) {
-            // putIfAbsentはAndroid 7.0以降なので使わない
-            val id = c.getLong(0)
-            if (id !in result) result[id] = name
+            result.putIfAbsent(c.getLong(0), name)
           }
         }
       }
