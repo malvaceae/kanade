@@ -1,7 +1,9 @@
 package me.mallows.kanade.ui.permission
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -89,10 +91,17 @@ private fun AskVideoPermissionOnce(onGranted: () -> Unit) {
 fun AudioPermissionGate(content: @Composable () -> Unit) {
   val context = LocalContext.current
   var granted by remember { mutableStateOf(AudioPermissions.hasAudio(context)) }
-  var asked by remember { mutableStateOf(false) }
-  val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+  // 確認画面がもう出ない (拒否を重ねた)。このとき「許可する」を押しても何も起きないので、設定画面へ案内する
+  var blocked by remember { mutableStateOf(false) }
+  val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+    // 最初の確認で動画も尋ねたら、許可でも拒否でも、尋ねたことにする (拒否したのに、ライブラリを開いたあとでもう一度尋ねない)。
+    // 音楽の許可が先に反映されて画面が移ると、そこで動画の確認が出てしまうので、先に記録する
+    if (Manifest.permission.READ_MEDIA_VIDEO in result) {
+      context.getSharedPreferences(VIDEO_ASKED_PREFS, Context.MODE_PRIVATE).edit().putBoolean(VIDEO_ASKED_KEY, true).apply()
+    }
     granted = AudioPermissions.hasAudio(context)
-    asked = true
+    // 許可を求めた直後に許可されていなくて、理由の説明も出せない (shouldShowRequestPermissionRationale が false) なら、もう確認画面は出ない
+    blocked = !granted && context.findActivity()?.let { !ActivityCompat.shouldShowRequestPermissionRationale(it, AudioPermissions.audio()) } == true
   }
   // 設定画面で許可して戻ってきた場合に反映する
   LifecycleResumeEffect(Unit) {
@@ -110,7 +119,7 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
     val state by player.state.collectAsStateWithLifecycle()
     Box(Modifier.fillMaxSize()) {
       PermissionScreen(
-        showSettings = asked,
+        blocked = blocked,
         onRequest = { launcher.launch(AudioPermissions.request()) },
         onOpenSettings = {
           context.startActivity(
@@ -132,7 +141,7 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PermissionScreen(showSettings: Boolean, onRequest: () -> Unit, onOpenSettings: () -> Unit) {
+private fun PermissionScreen(blocked: Boolean, onRequest: () -> Unit, onOpenSettings: () -> Unit) {
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -151,9 +160,13 @@ private fun PermissionScreen(showSettings: Boolean, onRequest: () -> Unit, onOpe
       style = MaterialTheme.typography.bodyLarge,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Button(onClick = onRequest) { Text(stringResource(R.string.permission_allow)) }
-    if (showSettings) {
-      TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.permission_open_settings)) }
+    // 確認画面がもう出ないときは、「許可する」を押しても何も起きない。設定を開くことが唯一の手段なので、そちらだけを出す
+    if (blocked) {
+      Button(onClick = onOpenSettings) { Text(stringResource(R.string.permission_open_settings)) }
+    } else {
+      Button(onClick = onRequest) { Text(stringResource(R.string.permission_allow)) }
     }
   }
 }
+
+private fun Context.findActivity(): Activity? = generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<Activity>().firstOrNull()
