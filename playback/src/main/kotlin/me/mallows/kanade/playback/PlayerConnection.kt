@@ -428,8 +428,9 @@ class PlayerConnection @Inject constructor(
         player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE,
       positionMs = player.currentPosition,
       positionAt = SystemClock.elapsedRealtime(),
-      // 曲が変わった直後は、プレイヤーがまだ長さを知らないことがある。そのときはライブラリの長さを使う
-      durationMs = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: metadata.durationMs ?: 0,
+      // 曲が変わった直後は、プレイヤーの長さ (player.duration) が、題名より先に次の項目のものになる。
+      // 題名と同じ時点で届くライブラリの長さを基準にして、近いときだけ、プレイヤーの長さを使う
+      durationMs = settledDuration(player.duration.takeIf { it != C.TIME_UNSET && it > 0 }, metadata.durationMs),
       shuffle = player.shuffleModeEnabled,
       repeatMode = player.repeatMode,
       hasNext = player.hasNextMediaItem(),
@@ -445,3 +446,16 @@ class PlayerConnection @Inject constructor(
 private val SOURCE_KEY = stringPreferencesKey("play_source_key")
 private val SOURCE_TITLE = stringPreferencesKey("play_source_title")
 
+/** ライブラリの長さとの差がこれ以内なら、同じ項目の長さとみなして、プレイヤーの長さを使う */
+private const val DURATION_TOLERANCE_MS = 1_500L
+
+/**
+ * 表示する曲の長さ。[live]はプレイヤーの長さ、[library]は題名と同時に届くライブラリの長さ。
+ * 曲が変わった直後は、[live]だけが次の項目のものになることがあるので、[library]から大きく外れていたら使わない
+ */
+internal fun settledDuration(live: Long?, library: Long?): Long = when {
+  library == null || library <= 0 -> live ?: 0
+  live == null -> library
+  kotlin.math.abs(live - library) <= DURATION_TOLERANCE_MS -> live
+  else -> library
+}
