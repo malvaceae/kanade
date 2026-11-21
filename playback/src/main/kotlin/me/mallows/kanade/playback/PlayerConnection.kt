@@ -58,6 +58,11 @@ data class PlayerState(
   val hasPrevious: Boolean = false,
   /** 再生速度 (1が等速) */
   val speed: Float = 1f,
+  /**
+   * 再生位置が飛んだ回数 (シーク・曲の切り替え・1曲リピートの巻き戻しなど)。画面は、これが変わらない間は、再生位置を戻さない
+   * (連続して再生しているあいだの実際の位置は戻らない。戻って見えるのは、位置の見積もりが、更新で直される瞬間)
+   */
+  val discontinuity: Int = 0,
   /** 再生中の項目が動画か (映像を出す) */
   val isVideo: Boolean = false,
   /** 映像の縦横比 (横 / 縦、画素の縦横比を含む)。まだ分からなければ0 */
@@ -108,6 +113,9 @@ class PlayerConnection @Inject constructor(
   private val scope = MainScope()
   private val _state = MutableStateFlow(PlayerState())
   val state: StateFlow<PlayerState> = _state.asStateFlow()
+
+  /** 再生位置が飛んだ回数 ([PlayerState.discontinuity]) */
+  @Volatile private var discontinuities = 0
 
   /** 外部のアプリから開いたファイルを再生した (前回の再生元を読み込んだ後で戻さないための印) */
   @Volatile private var externalOpened = false
@@ -163,6 +171,11 @@ class PlayerConnection @Inject constructor(
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val c = MediaController.Builder(context, token).buildAsync().await()
         c.addListener(object : Player.Listener {
+          // onEventsより先に呼ばれるので、直後のpublishに反映される
+          override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+            discontinuities++
+          }
+
           override fun onEvents(player: Player, events: Player.Events) {
             publish(player)
             if (events.containsAny(
@@ -422,6 +435,7 @@ class PlayerConnection @Inject constructor(
       hasNext = player.hasNextMediaItem(),
       hasPrevious = player.hasPreviousMediaItem(),
       speed = player.playbackParameters.speed,
+      discontinuity = discontinuities,
       isVideo = player.currentMediaItem?.localConfiguration?.mimeType?.startsWith("video/") == true,
       videoAspect = player.videoSize.let { if (it.width > 0 && it.height > 0) it.width * it.pixelWidthHeightRatio / it.height else 0f },
     )

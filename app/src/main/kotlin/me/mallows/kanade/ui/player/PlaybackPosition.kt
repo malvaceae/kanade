@@ -24,10 +24,23 @@ fun rememberPlaybackPosition(state: PlayerState): State<Long> {
     return if (state.durationMs > 0) p.coerceAtMost(state.durationMs) else 0
   }
   val position = remember { mutableLongStateOf(now()) }
+  // 直前に見せた位置。曲が変わる・位置が飛ぶ (シークなど) と、持ち越さない
+  val shown = remember(state.mediaId, state.discontinuity) { longArrayOf(NONE) }
+  fun settle(n: Long): Long = settledPosition(shown[0], n, state.isPlaying).also { shown[0] = it }
   // 届いた状態が変わったら (曲・再生中かどうか・シーク) すぐ読み直し、再生中は毎コマ読む
   LaunchedEffect(state.mediaId, state.isPlaying, state.positionMs, state.durationMs) {
-    position.longValue = now()
-    while (state.isPlaying) withFrameMillis { position.longValue = now() }
+    position.longValue = settle(now())
+    while (state.isPlaying) withFrameMillis { position.longValue = settle(now()) }
   }
   return position
 }
+
+internal const val NONE = Long.MIN_VALUE
+
+/**
+ * 表示する再生位置。連続して再生しているあいだの実際の位置は戻らない ([previous]は、その間に見せた直前の位置)。
+ * プレイヤーから読む位置は見積もりなので、更新で直されるとき、小さく戻ることがある。それは表示に出さない。
+ * 位置が飛ぶ (シーク・曲の切り替えなど) ときは、呼び出し側が[previous]を[NONE]に戻すので、そのまま見せる。止まっているときも、そのまま
+ */
+internal fun settledPosition(previous: Long, now: Long, playing: Boolean): Long =
+  if (playing && previous != NONE) maxOf(previous, now) else now
