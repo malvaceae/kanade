@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,7 +43,10 @@ import me.mallows.kanade.ui.library.LibraryViewModel
 import me.mallows.kanade.ui.player.MiniPlayer
 import me.mallows.kanade.ui.player.PlayerViewModel
 
-/** OSバージョンごとに必要な権限 */
+/**
+ * OSバージョンごとに必要な権限。
+ * READ_MEDIA_* と POST_NOTIFICATIONS はAPI 33で入った定数だが、値はコンパイル時に埋め込まれ、使う前に[AndroidVersion]で判定している
+ */
 object AudioPermissions {
 
   /** 音楽ファイルの読み取り権限 */
@@ -72,6 +76,7 @@ private const val VIDEO_ASKED_KEY = "video_asked"
 /**
  * 音楽の権限だけ許可済みの人に、動画の権限を一度だけ尋ねる (系統の確認画面が出る)。拒否されても、音楽は今までどおり使える。
  * 許可されたら、動画を読み込むために再スキャンする。尋ねるのは一度だけで、あとは何も出さない
+ * READ_MEDIA_VIDEOはAPI 33の定数だが、値は埋め込まれ、[AudioPermissions.needsVideo]がAndroid 13以降でだけ真を返す
  */
 @Composable
 private fun AskVideoPermissionOnce(onGranted: () -> Unit) {
@@ -80,7 +85,7 @@ private fun AskVideoPermissionOnce(onGranted: () -> Unit) {
   LaunchedEffect(Unit) {
     val prefs = context.getSharedPreferences(VIDEO_ASKED_PREFS, Context.MODE_PRIVATE)
     if (AudioPermissions.needsVideo(context) && !prefs.getBoolean(VIDEO_ASKED_KEY, false)) {
-      prefs.edit().putBoolean(VIDEO_ASKED_KEY, true).apply()
+      prefs.edit { putBoolean(VIDEO_ASKED_KEY, true) }
       launcher.launch(Manifest.permission.READ_MEDIA_VIDEO)
     }
   }
@@ -97,7 +102,7 @@ fun AudioPermissionGate(content: @Composable () -> Unit) {
     // 最初の確認で動画も尋ねたら、許可でも拒否でも、尋ねたことにする (拒否したのに、ライブラリを開いたあとでもう一度尋ねない)。
     // 音楽の許可が先に反映されて画面が移ると、そこで動画の確認が出てしまうので、先に記録する
     if (Manifest.permission.READ_MEDIA_VIDEO in result) {
-      context.getSharedPreferences(VIDEO_ASKED_PREFS, Context.MODE_PRIVATE).edit().putBoolean(VIDEO_ASKED_KEY, true).apply()
+      context.getSharedPreferences(VIDEO_ASKED_PREFS, Context.MODE_PRIVATE).edit { putBoolean(VIDEO_ASKED_KEY, true) }
     }
     granted = AudioPermissions.hasAudio(context)
     // 許可を求めた直後に許可されていなくて、理由の説明も出せない (shouldShowRequestPermissionRationale が false) なら、もう確認画面は出ない
