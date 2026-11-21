@@ -53,7 +53,8 @@ fun FastScroller(
   minItems: Int = 40,
   bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
-  val total = state.layoutInfo.totalItemsCount
+  // 並べ直しや読み込みのたびに全体を組み直さないよう、値が変わったときだけ読み直す
+  val total by remember { derivedStateOf { state.layoutInfo.totalItemsCount } }
   if (total < minItems) return
   val scope = rememberCoroutineScope()
   var dragging by remember { mutableStateOf(false) }
@@ -73,6 +74,7 @@ fun FastScroller(
     }
   }
   val position = if (dragging) dragFraction else fraction
+  val firstVisibleIndex by remember { derivedStateOf { state.firstVisibleItemIndex } }
   val density = LocalDensity.current
   val thumbHeight = 48.dp
 
@@ -104,7 +106,7 @@ fun FastScroller(
         verticalAlignment = Alignment.CenterVertically,
       ) {
         if (dragging) {
-          label(state.firstVisibleItemIndex)?.let { text ->
+          label(firstVisibleIndex)?.let { text ->
             Box(
               Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
               contentAlignment = Alignment.Center,
