@@ -1,6 +1,7 @@
 package me.mallows.kanade.ui.equalizer
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
@@ -9,6 +10,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -55,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -307,6 +310,37 @@ private fun ResponseCurve(settings: EqSettings, modifier: Modifier) {
   }
 }
 
+/** 幅の見積もりに使う、いちばん長い [formatDb] の表記 */
+private const val WIDEST_BAND_LABEL = "+00.0dB"
+
+/**
+ * 10本のバンドごとの dB の表示。1本の幅に収まらない表記があると、折り返して行が増え、
+ * 下のスライダー (残りの高さを使う) が縮んで、全体がずれる。そのため、いちばん長い表記が1行に収まる大きさにして、折り返さない
+ */
+@Composable
+private fun BandDbLabels(bands: List<Float>, color: Color) {
+  val base = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, letterSpacing = 0.sp)
+  val measurer = rememberTextMeasurer()
+  BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val cell = constraints.maxWidth / bands.size
+    val widest = remember(base, measurer) { measurer.measure(WIDEST_BAND_LABEL, base, maxLines = 1, softWrap = false).size.width }
+    val style = if (widest <= cell) base else base.copy(fontSize = base.fontSize * (cell.toFloat() / widest))
+    Row(Modifier.fillMaxWidth()) {
+      bands.forEach { db ->
+        Text(
+          formatDb(db),
+          style = style,
+          color = color,
+          textAlign = TextAlign.Center,
+          maxLines = 1,
+          softWrap = false,
+          modifier = Modifier.weight(1f),
+        )
+      }
+    }
+  }
+}
+
 /** 10本の縦スライダー。つまみを掴んで動かし、そのまま横に動かすと、通ったバンドを続けて設定できる */
 @Composable
 private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, modifier: Modifier) {
@@ -315,17 +349,7 @@ private fun BandSliders(settings: EqSettings, onChange: (Int, Float) -> Unit, mo
   val current by rememberUpdatedState(settings)
   val bandsDescription = stringResource(R.string.eq_bands_description)
   Column(modifier) {
-    Row(Modifier.fillMaxWidth()) {
-      settings.bands.forEach { db ->
-        Text(
-          formatDb(db),
-          style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-          color = scheme.onSurfaceVariant,
-          textAlign = TextAlign.Center,
-          modifier = Modifier.weight(1f),
-        )
-      }
-    }
+    BandDbLabels(settings.bands, scheme.onSurfaceVariant)
     Canvas(
       Modifier
         .fillMaxWidth()
