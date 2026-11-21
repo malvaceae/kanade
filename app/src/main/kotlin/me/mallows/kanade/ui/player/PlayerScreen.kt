@@ -565,7 +565,8 @@ private fun VideoFullscreen(
         modifier = if (fitWidth) Modifier.fillMaxWidth().aspectRatio(aspect) else Modifier.fillMaxHeight().aspectRatio(aspect),
       )
     }
-    AnimatedVisibility(controls && !pip, enter = fadeIn(), exit = fadeOut()) {
+    // 小窓 (PiP) のときは、操作を組み立てない (消えるアニメーションが進まず、操作が小窓に残ることがある)
+    if (!pip) AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).safeDrawingPadding()) {
         IconButton(onClick = onExit, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
           Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)

@@ -47,7 +47,9 @@ class KanadeActivity : ComponentActivity() {
     // 小窓の縦横比は、許される範囲 (約 0.42 ~ 2.39) に収める
     val ratio = pip.aspect.coerceIn(0.42f, 2.39f)
     val params = PictureInPictureParams.Builder().setAspectRatio(Rational((ratio * 1000).toInt(), 1000)).build()
-    runCatching { enterPictureInPictureMode(params) }
+    // 移れたら、システムの知らせ (onPictureInPictureModeChanged) を待たずに、すぐ小窓の状態にする
+    // (待つと、小窓への移行中の1コマに、操作の表示が映る)
+    if (runCatching { enterPictureInPictureMode(params) }.getOrDefault(false)) pip.active = true
   }
 
   override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
