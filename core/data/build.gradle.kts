@@ -7,7 +7,9 @@ plugins {
 
 android {
   namespace = "me.mallows.kanade.core.data"
-  compileSdk = 37
+  compileSdk {
+    version = release(37) { minorApiLevel = 2 }
+  }
   defaultConfig {
     minSdk = 24
   }

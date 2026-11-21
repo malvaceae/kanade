@@ -10,7 +10,7 @@ android {
   namespace = "me.mallows.kanade"
   // Compose 1.13は、37.1以上でコンパイルすることを求める (targetSdkは37のまま)
   compileSdk {
-    version = release(37) { minorApiLevel = 1 }
+    version = release(37) { minorApiLevel = 2 }
   }
   // 同梱のネイティブライブラリ (libFLAC) からデバッグ情報を取り除くのに使う。decoder-flacと同じ版にする
   ndkVersion = "30.0.16248370"
