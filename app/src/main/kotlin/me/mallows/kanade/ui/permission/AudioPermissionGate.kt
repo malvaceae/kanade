@@ -1,6 +1,7 @@
 package me.mallows.kanade.ui.permission
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -47,6 +48,7 @@ import me.mallows.kanade.ui.player.PlayerViewModel
  * OSバージョンごとに必要な権限。
  * READ_MEDIA_* と POST_NOTIFICATIONS はAPI 33で入った定数だが、値はコンパイル時に埋め込まれ、使う前に[AndroidVersion]で判定している
  */
+@SuppressLint("InlinedApi")
 object AudioPermissions {
 
   /** 音楽ファイルの読み取り権限 */
@@ -78,6 +80,7 @@ private const val VIDEO_ASKED_KEY = "video_asked"
  * 許可されたら、動画を読み込むために再スキャンする。尋ねるのは一度だけで、あとは何も出さない
  * READ_MEDIA_VIDEOはAPI 33の定数だが、値は埋め込まれ、[AudioPermissions.needsVideo]がAndroid 13以降でだけ真を返す
  */
+@SuppressLint("InlinedApi")
 @Composable
 private fun AskVideoPermissionOnce(onGranted: () -> Unit) {
   val context = LocalContext.current

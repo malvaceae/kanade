@@ -1,5 +1,6 @@
 package me.mallows.kanade.ui.player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioFormat
 import android.media.MediaExtractor
@@ -55,6 +56,8 @@ private val WAV_MIMES = setOf("audio/raw", "audio/wav", "audio/x-wav", "audio/vn
 private fun MediaFormat.intOrNull(key: String): Int? = if (containsKey(key)) getInteger(key) else null
 
 /** ビット深度。PCMは符号化方式から、FLACなどは "bits-per-sample" から読む */
+// KEY_PCM_ENCODINGはAPI 24で入った定数だが、値は埋め込まれ、キーが無ければintOrNullがnullを返す (API 23では符号化方式を読まない)
+@SuppressLint("InlinedApi")
 private fun MediaFormat.bitDepth(): Int? {
   intOrNull("bits-per-sample")?.let { return it }
   return when (intOrNull(MediaFormat.KEY_PCM_ENCODING)) {
