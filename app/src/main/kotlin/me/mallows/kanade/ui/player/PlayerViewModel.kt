@@ -77,8 +77,8 @@ class PlayerViewModel @Inject constructor(
   fun previousTrack() = connection.previousTrack()
   fun seekTo(positionMs: Long) = connection.seekTo(positionMs)
 
-  /** 今の再生位置 (シークバーを描くたびに読む) */
-  fun currentPosition(): Long = connection.currentPosition()
+  /** [mediaId]の項目の今の再生位置 (シークバーを描くたびに読む)。読めないときはnull */
+  fun currentPosition(mediaId: String?): Long? = connection.currentPosition(mediaId)
   fun setSpeed(speed: Float) = connection.setSpeed(speed)
   fun toggleShuffle() = connection.toggleShuffle()
   fun cycleRepeat() = connection.cycleRepeat()

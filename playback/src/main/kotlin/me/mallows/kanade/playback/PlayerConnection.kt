@@ -109,6 +109,7 @@ data class PlaySource(val key: String, val title: String?)
 class PlayerConnection @Inject constructor(
   @param:ApplicationContext private val context: Context,
   private val dataStore: DataStore<Preferences>,
+  private val playerPosition: PlayerPosition,
 ) {
   private val scope = MainScope()
   private val _state = MutableStateFlow(PlayerState())
@@ -152,14 +153,12 @@ class PlayerConnection @Inject constructor(
   val queue: StateFlow<QueueState> = _queue.asStateFlow()
 
   private var controller: CompletableDeferred<MediaController>? = null
-  /** つながった後の操作の窓口 (再生位置をその場で読むのに使う) */
-  private var connected: MediaController? = null
 
   /**
-   * 今の再生位置。MediaControllerは、シークや曲の切り替えをその場で反映し、再生中は時間に合わせて進めた値を返す。
-   * 画面の描画ごとに読んでも軽い (再生サービスへの問い合わせはしない)
+   * [mediaId]の項目の、今の再生位置 (サービスの実際のプレイヤーの位置)。画面の描画ごとに読んでも軽い。
+   * 曲が切り替わる途中などで読めないときはnull (呼び出し側は、届いた状態の位置を使う)
    */
-  fun currentPosition(): Long = connected?.currentPosition ?: _state.value.positionMs
+  fun currentPosition(mediaId: String?): Long? = playerPosition.read(mediaId)
 
   /** 再生サービスにつなぐ。何度呼んでもよい */
   fun connect() {
@@ -186,7 +185,6 @@ class PlayerConnection @Inject constructor(
             ) publishQueue(player)
           }
         })
-        connected = c
         publish(c)
         publishQueue(c)
         deferred.complete(c)

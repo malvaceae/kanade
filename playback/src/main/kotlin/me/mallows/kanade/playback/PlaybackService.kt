@@ -72,6 +72,7 @@ class PlaybackService : MediaSessionService() {
   @Inject lateinit var outputSettings: OutputSettings
   @Inject lateinit var lyricsMonitor: LyricsMonitor
   @Inject lateinit var videoFrameMonitor: VideoFrameMonitor
+  @Inject lateinit var playerPosition: PlayerPosition
   @Inject lateinit var playbackEvents: PlaybackEvents
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -113,6 +114,7 @@ class PlaybackService : MediaSessionService() {
       .setCallback(SessionCallback())
       .build()
 
+    playerPosition.attach(player)
     // 前回の再生キューと位置に戻し、以後の変化を保存する
     persistence = PlaybackPersistence(playbackStateDao, trackDao, scope)
     persistence.attach(player)
@@ -257,6 +259,7 @@ class PlaybackService : MediaSessionService() {
   override fun onDestroy() {
     persistence.saveNow()
     session?.run {
+      playerPosition.detach(player)
       player.release()
       release()
     }
