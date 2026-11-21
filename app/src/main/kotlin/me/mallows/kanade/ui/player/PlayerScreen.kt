@@ -310,7 +310,7 @@ fun PlayerScreen(
           modifier = Modifier.padding(start = 6.dp),
         )
       }
-      Row {
+      Row(verticalAlignment = Alignment.CenterVertically) {
       if (lyrics != null) {
         androidx.compose.material3.TextButton(onClick = { sheet = "lyrics" }) {
           Text(

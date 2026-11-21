@@ -58,8 +58,7 @@ object KanadeIcons {
   /** イコライザー: 縦の3本の線とつまみ */
   val Equalizer = stroke("equalizer", "M6 4v16", "M12 4v16", "M18 4v16", "M4 14h4", "M10 8h4", "M16 16h4")
   val Queue = stroke("queue", "M4 6h16", "M4 12h16", "M4 18h10")
-  // 線の太さを含めた描画範囲 (上端はつまみの1、下端は円の22) の中心が、枠の中心 (12) になるよう、全体を0.5下げてある
-  val Timer = stroke("timer", "M12 21.5a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M12 9.5v4l2.5 2", "M9 2.5h6")
+  val Timer = stroke("timer", "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M12 9v4l2.5 2", "M9 2h6")
   val Info = stroke("info", "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M12 11v5", "M12 7.5h.01")
   val Plus = stroke("plus", "M12 5v14", "M5 12h14")
   val ToTop = stroke("to_top", "M5 4h14", "M12 20V9", "M7 13l5-5 5 5")
