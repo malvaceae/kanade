@@ -32,20 +32,14 @@ class PlaybackPositionTest {
   }
 
   @Test
-  fun 長さを超える位置は前の項目のものなので使わない() {
-    // 21秒の項目の10秒付近で、1秒の項目に移った直後
-    assertEquals(0L, currentPosition(live = 10_000, published = 0, duration = 1_000))
-    assertEquals(120L, currentPosition(live = 10_000, published = 120, duration = 1_000))
-  }
-
-  @Test
-  fun 長さ以内の位置はそのまま() {
-    assertEquals(500L, currentPosition(live = 500, published = 0, duration = 1_000))
-    assertEquals(1_000L, currentPosition(live = 1_000, published = 0, duration = 1_000))
+  fun 長さの範囲に収める() {
+    assertEquals(500L, withinDuration(position = 500, duration = 1_000))
+    assertEquals(1_000L, withinDuration(position = 1_500, duration = 1_000))
+    assertEquals(0L, withinDuration(position = -5, duration = 1_000))
   }
 
   @Test
   fun 長さが分からないときは0() {
-    assertEquals(0L, currentPosition(live = 500, published = 100, duration = 0))
+    assertEquals(0L, withinDuration(position = 500, duration = 0))
   }
 }
