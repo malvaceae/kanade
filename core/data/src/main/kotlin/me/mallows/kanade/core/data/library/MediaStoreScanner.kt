@@ -259,9 +259,9 @@ class MediaStoreScanner @Inject constructor(
   }
 
   /**
-   * 動画で読む列。Android 6.0には`album_artist`・`genre`・`year`・`relative_path`・`volume_name`の列がないので、
-   * 端末が実際に持っている列だけを読む (無い列を問い合わせると、問い合わせごと失敗するため)。
-   * 実際に確かめた違い: Android 6.0 (API 23) は上の5列が無く、Android 12 (API 31) は全部ある
+   * 動画で読む列。`album_artist`・`genre`・`year`・`relative_path`・`volume_name`は、OSによっては動画の列にない
+   * (`relative_path`と`volume_name`はAPI 29から)。端末が実際に持っている列だけを読む (無い列を問い合わせると、問い合わせごと失敗するため)。
+   * 実際に確かめた違い: Android 12 (API 31) は上の5列が全部ある
    */
   private fun videoProjection(): Array<String> {
     val available = context.contentResolver.query(
@@ -295,7 +295,7 @@ private const val FOLDERS_PER_QUERY = 400
 
 /**
  * アルバムアーティストの列。公開された定数 (`ALBUM_ARTIST`) はAPI 30以上だが、列そのものは、
- * Android 6.0・9のエミュレーターで、API 29以下にも同じ名前であることを確かめた。
+ * Android 9のエミュレーターで、API 29以下にも同じ名前であることを確かめた。
  */
 private const val ALBUM_ARTIST = "album_artist"
 
