@@ -149,6 +149,10 @@ fun PlayerScreen(
     if (videoAspect > 0f) pip.aspect = videoAspect
     onDispose { pip.eligible = false }
   }
+  // 小窓のまま、動画が終わって音声に移ったら、小窓を閉じる (閉じないと、小窓にアプリの再生画面が残る)
+  LaunchedEffect(pip.active, state.isVideo, state.hasMedia) {
+    if (pip.active && state.hasMedia && !state.isVideo) pip.close()
+  }
   val fullscreen = state.isVideo && (fullscreenChosen || landscape || pip.active)
   DisposableEffect(fullscreen) {
     onFullscreenChange(fullscreen)

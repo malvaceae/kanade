@@ -18,6 +18,9 @@ class PictureInPictureHost {
 
   /** 映像の縦横比 (横 / 縦)。小窓の形に使う */
   var aspect = 16f / 9f
+
+  /** 小窓を閉じる (音は止めずに、アプリを裏へ回す)。動画が終わって音声に移ったとき、小窓にアプリの画面が残らないようにする */
+  var close: () -> Unit = {}
 }
 
 val LocalPictureInPicture = staticCompositionLocalOf { PictureInPictureHost() }

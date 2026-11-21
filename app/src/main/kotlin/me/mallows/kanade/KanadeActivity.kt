@@ -87,6 +87,7 @@ class KanadeActivity : ComponentActivity() {
     if (savedInstanceState == null && intent?.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false) == true) {
       openPlayer.value = true
     }
+    pip.close = { moveTaskToBack(true) }
     // 画面の作り直し (回転など) では、開き直さない
     if (savedInstanceState == null) intent?.let(::openExternal)
     // ダークだけなので、ステータスバーなどのアイコンは、明るい色にする
