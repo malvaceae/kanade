@@ -152,6 +152,8 @@ fun PlayerScreen(
     onFullscreenChange(fullscreen)
     onDispose { onFullscreenChange(false) }
   }
+  // アートワークや映像の領域を2回タップしたときの、10秒の移動 (全画面でも同じ)
+  val skip = rememberDoubleTapSkip(state, onSeek, onNext)
   if (fullscreen) {
     VideoFullscreen(
       state = state,
@@ -164,6 +166,7 @@ fun PlayerScreen(
       onDetach = onDetachVideo,
       onTogglePlay = onTogglePlay,
       onSeek = onSeek,
+      onSkip = skip,
       // 横向きでは全画面から戻せないので、画面ごと閉じる。縦向きなら、全画面をやめる
       onExit = { if (landscape) onClose() else fullscreenChosen = false },
     )
@@ -210,46 +213,48 @@ fun PlayerScreen(
       contentAlignment = Alignment.Center,
     ) {
       val size = minOf(maxWidth, maxHeight)
-      SwipeableArtwork(
-        mediaId = state.mediaId,
-        hasNext = state.hasNext,
-        hasPrevious = state.hasPrevious,
-        onNext = onNext,
-        onPrevious = onSwipePrevious,
-        onRestart = onPrevious,
-        // 動画は映像の縦横比の枠にする (縦長でも、はみ出さず、枠の中に収まる)
-        aspect = if (state.isVideo) frameAspect else 1f,
-        fade = !state.isVideo,
-      ) {
-        val uri = state.uri
-        if (state.isVideo) {
-          Box(Modifier.fillMaxSize()) {
-            VideoSurface(
-              onAttach = onAttachVideo,
-              onDetach = onDetachVideo,
-              onSurfaceAspect = { surfaceAspect = it },
-              modifier = Modifier.fillMaxSize(),
-            )
-            // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、画面の背景で覆う
-            if (!showVideo) Box(Modifier.fillMaxSize().background(background))
-            // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
-            // 新しい動画の映像が出るまでは出さない (枠が前の動画の大きさのままなので、前の動画の右下に残って見える)
-            if (showVideo) IconButton(
-              onClick = { fullscreenChosen = true },
-              modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp),
-            ) {
-              Icon(
-                KanadeIcons.Fullscreen,
-                contentDescription = stringResource(R.string.action_fullscreen),
-                tint = Color.White,
-                modifier = Modifier.size(22.dp),
+      DoubleTapSkipArea(onSkip = skip, modifier = Modifier.fillMaxSize()) {
+        SwipeableArtwork(
+          mediaId = state.mediaId,
+          hasNext = state.hasNext,
+          hasPrevious = state.hasPrevious,
+          onNext = onNext,
+          onPrevious = onSwipePrevious,
+          onRestart = onPrevious,
+          // 動画は映像の縦横比の枠にする (縦長でも、はみ出さず、枠の中に収まる)
+          aspect = if (state.isVideo) frameAspect else 1f,
+          fade = !state.isVideo,
+        ) {
+          val uri = state.uri
+          if (state.isVideo) {
+            Box(Modifier.fillMaxSize()) {
+              VideoSurface(
+                onAttach = onAttachVideo,
+                onDetach = onDetachVideo,
+                onSurfaceAspect = { surfaceAspect = it },
+                modifier = Modifier.fillMaxSize(),
               )
+              // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、画面の背景で覆う
+              if (!showVideo) Box(Modifier.fillMaxSize().background(background))
+              // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
+              // 新しい動画の映像が出るまでは出さない (枠が前の動画の大きさのままなので、前の動画の右下に残って見える)
+              if (showVideo) IconButton(
+                onClick = { fullscreenChosen = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp),
+              ) {
+                Icon(
+                  KanadeIcons.Fullscreen,
+                  contentDescription = stringResource(R.string.action_fullscreen),
+                  tint = Color.White,
+                  modifier = Modifier.size(22.dp),
+                )
+              }
             }
+          } else if (uri != null) {
+            TrackArtwork(uri = uri, size = size, cornerRadius = 20.dp)
+          } else {
+            Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
           }
-        } else if (uri != null) {
-          TrackArtwork(uri = uri, size = size, cornerRadius = 20.dp)
-        } else {
-          Box(Modifier.size(size).clip(MaterialTheme.shapes.large).background(scheme.surfaceContainerHigh))
         }
       }
     }
@@ -577,7 +582,7 @@ private fun VideoSurface(
   )
 }
 
-/** 動画の全画面。黒い背景に映像を最大に出す。画面をタップすると操作を出し入れする (再生中は3秒で隠す) */
+/** 動画の全画面。黒い背景に映像を最大に出す。画面をタップすると操作を出し入れする (再生中は3秒で隠す)。左右の半分を2回タップすると、10秒戻る・進む */
 @Composable
 private fun VideoFullscreen(
   state: PlayerState,
@@ -590,6 +595,8 @@ private fun VideoFullscreen(
   onDetach: (SurfaceView) -> Unit,
   onTogglePlay: () -> Unit,
   onSeek: (Long) -> Unit,
+  /** 画面の左半分を2回タップで戻る (-1)、右半分で進む (1) */
+  onSkip: (Int) -> Unit,
   onExit: () -> Unit,
 ) {
   // 全画面に入ったときは、操作を出しておく (自動で隠れる)
@@ -613,11 +620,10 @@ private fun VideoFullscreen(
       controls = false
     }
   }
-  Box(
-    Modifier
-      .fillMaxSize()
-      .background(Color.Black)
-      .clickable(interactionSource = null, indication = null) { controls = !controls },
+  DoubleTapSkipArea(
+    onSkip = { touched++; onSkip(it) },
+    modifier = Modifier.fillMaxSize().background(Color.Black),
+    onTap = { controls = !controls },
   ) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
       val aspect = videoAspect

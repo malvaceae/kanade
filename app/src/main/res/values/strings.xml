@@ -270,6 +270,8 @@
     <string name="action_repeat">リピート</string>
     <string name="action_close">閉じる</string>
     <string name="action_fullscreen">全画面</string>
+    <string name="skip_back_label">-10秒</string>
+    <string name="skip_forward_label">+10秒</string>
     <string name="action_back">戻る</string>
     <string name="action_search">検索</string>
     <string name="action_sort">並べ替え</string>
