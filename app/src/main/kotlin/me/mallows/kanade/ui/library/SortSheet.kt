@@ -12,7 +12,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import me.mallows.kanade.R
 import me.mallows.kanade.core.data.settings.SortSetting
+import me.mallows.kanade.ui.common.rememberFullSheetState
 
 /** ソート条件を選ぶシート */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +36,7 @@ fun <S : SortOption<*>> SortSheet(
 ) {
   val selected = options.firstOrNull { it.key == current?.key } ?: default
   val descending = current?.descending == true
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.sort_title_sheet),

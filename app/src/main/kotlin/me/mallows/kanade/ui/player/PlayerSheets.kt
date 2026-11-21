@@ -14,7 +14,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,12 +27,13 @@ import androidx.compose.ui.unit.dp
 import me.mallows.kanade.R
 import me.mallows.kanade.playback.PlayerState
 import me.mallows.kanade.ui.common.audioUri
+import me.mallows.kanade.ui.common.rememberFullSheetState
 
 /** スリープタイマーの時間を選ぶシート */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepTimerSheet(active: Boolean, onSet: (minutes: Int, endOfTrack: Boolean) -> Unit, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.sleep_title),
@@ -53,7 +53,7 @@ fun SleepTimerSheet(active: Boolean, onSet: (minutes: Int, endOfTrack: Boolean) 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpeedSheet(current: Float, onSet: (Float) -> Unit, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.speed_title),

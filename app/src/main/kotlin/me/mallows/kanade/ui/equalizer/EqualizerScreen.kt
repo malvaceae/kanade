@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +66,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import me.mallows.kanade.R
 import me.mallows.kanade.audio.ReplayGainMode
+import me.mallows.kanade.ui.common.ControlledSlider
 import me.mallows.kanade.ui.common.LocalShowMessage
 import me.mallows.kanade.ui.common.LocalShowUndo
 import me.mallows.kanade.ui.player.deviceLabel
@@ -221,7 +221,7 @@ fun EqualizerScreen(onBack: () -> Unit, viewModel: EqualizerViewModel = hiltView
     SectionTitle(stringResource(R.string.eq_section_volume), stringResource(R.string.eq_section_volume_note), top = 4.dp)
     Row(Modifier.padding(horizontal = 16.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
       Text(stringResource(R.string.eq_balance), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(88.dp))
-      Slider(
+      ControlledSlider(
         value = settings.balance,
         // 中央付近では中央に吸い付ける
         onValueChange = { v -> viewModel.setBalance(((v * 20).roundToInt() / 20f).let { if (abs(it) < 0.05f) 0f else it }) },

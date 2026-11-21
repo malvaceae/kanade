@@ -33,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -44,6 +43,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.LaunchedEffect
+import me.mallows.kanade.ui.common.rememberFullSheetState
 import me.mallows.kanade.ui.selection.navigationBarHeight
 import me.mallows.kanade.ui.common.LocalPlaySource
 import me.mallows.kanade.playback.PlaySource
@@ -513,7 +513,7 @@ private fun MoveSheet(
   onDismiss: () -> Unit,
 ) {
   var number by rememberSaveable { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         pluralStringResource(R.plurals.move_title, count, count),
@@ -570,7 +570,7 @@ private fun PlaylistSortSheet(
   onSave: () -> Unit,
   onDismiss: () -> Unit,
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
       Text(
         stringResource(R.string.sort_title_sheet),

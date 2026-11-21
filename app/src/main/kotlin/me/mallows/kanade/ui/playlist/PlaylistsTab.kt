@@ -34,7 +34,6 @@ import me.mallows.kanade.ui.selection.TrackActions
 import me.mallows.kanade.core.data.db.PlaylistSummary
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue

@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -22,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import me.mallows.kanade.R
 import me.mallows.kanade.core.domain.lyrics.Lyrics
+import me.mallows.kanade.ui.common.rememberFullSheetState
 
 /** 歌詞。時刻付きなら今の行を強調して追いかけ、行を押すとその位置へ移る */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,7 +34,7 @@ fun LyricsSheet(title: String?, lyrics: Lyrics, positionMs: Long, onSeek: (Long)
     if (current >= 0) listState.animateScrollToItem((current - 2).coerceAtLeast(0))
   }
   val scheme = MaterialTheme.colorScheme
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.fillMaxHeight(0.85f)) {
       Text(
         title ?: stringResource(R.string.lyrics_title),

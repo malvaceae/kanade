@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import me.mallows.kanade.R
+import me.mallows.kanade.ui.common.rememberFullSheetState
 
 /**
  * アプリのアイコン。アイコンごとにマニフェストの入り口 (activity-alias) があり、選んだものだけを有効にする。
@@ -96,7 +96,7 @@ fun AppIconSheet(onChanged: () -> Unit, onDismiss: () -> Unit) {
   val context = LocalContext.current
   val current = remember { AppIcon.current(context) }
   var confirming by remember { mutableStateOf<AppIcon?>(null) }
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Column(Modifier.navigationBarsPadding().padding(bottom = 24.dp)) {
       Text(
         stringResource(R.string.app_icon_title),

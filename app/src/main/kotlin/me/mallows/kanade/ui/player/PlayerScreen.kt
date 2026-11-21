@@ -45,7 +45,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,6 +83,7 @@ import me.mallows.kanade.core.domain.lyrics.Lyrics
 import me.mallows.kanade.playback.PlayerConnection
 import me.mallows.kanade.playback.PlayerState
 import androidx.compose.runtime.produceState
+import me.mallows.kanade.ui.common.ControlledSlider
 import me.mallows.kanade.ui.common.TrackArtwork
 import me.mallows.kanade.ui.common.audioUri
 import me.mallows.kanade.ui.common.formatDuration
@@ -510,7 +510,7 @@ private fun SeekBar(state: PlayerState, onSeek: (Long) -> Unit, modifier: Modifi
   // 長さが分からない間は、バーを空にしておく
   val fraction = dragging ?: if (state.durationMs > 0) (shownPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f
   Column(modifier = modifier) {
-    Slider(
+    ControlledSlider(
       value = fraction,
       onValueChange = { dragging = it },
       onValueChangeFinished = {

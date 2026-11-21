@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +41,7 @@ import me.mallows.kanade.R
 import me.mallows.kanade.core.data.db.TrackEntity
 import me.mallows.kanade.ui.common.LocalSnackbarHost
 import me.mallows.kanade.ui.common.TrackArtwork
+import me.mallows.kanade.ui.common.rememberFullSheetState
 import me.mallows.kanade.ui.common.showMessage
 import me.mallows.kanade.ui.icons.KanadeIcons
 
@@ -81,7 +81,7 @@ fun AddToPlaylistSheet(
     }
   }
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
     Text(
       pluralStringResource(R.plurals.add_to_playlist_title, tracks.size, tracks.size),
       style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
