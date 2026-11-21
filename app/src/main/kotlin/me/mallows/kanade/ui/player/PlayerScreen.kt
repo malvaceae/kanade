@@ -232,7 +232,7 @@ fun PlayerScreen(
             // 全画面は、このボタンだけ (映像に触れただけでは、全画面にならない)
             IconButton(
               onClick = { fullscreenChosen = true },
-              modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+              modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(40.dp),
             ) {
               Icon(
                 KanadeIcons.Fullscreen,
@@ -414,13 +414,10 @@ private fun SwipeableArtwork(
   val currentId by rememberUpdatedState(mediaId)
   val canNext by rememberUpdatedState(hasNext)
   val canPrevious by rememberUpdatedState(hasPrevious)
+  // 映像や絵の外の余白からもスワイプできるよう、受けるのは枠全体。動くのは中の枠だけ
   Box(
     modifier = Modifier
-      .aspectRatio(aspect)
-      .graphicsLayer {
-        translationX = offset.value
-        alpha = if (fade) 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f) else 1f
-      }
+      .fillMaxSize()
       .pointerInput(Unit) {
         val width = size.width.toFloat()
         // ゆっくり動かしたときは幅の20%で切り替える。素早く払ったときは短い距離でも切り替える (一般的なスワイプと同じ)
@@ -467,8 +464,18 @@ private fun SwipeableArtwork(
           scope.launch { offset.snapTo(offset.value + dragAmount) }
         }
       },
+    contentAlignment = Alignment.Center,
   ) {
-    content()
+    Box(
+      Modifier
+        .aspectRatio(aspect)
+        .graphicsLayer {
+          translationX = offset.value
+          alpha = if (fade) 1f - (kotlin.math.abs(offset.value) / size.width).coerceIn(0f, 0.5f) else 1f
+        },
+    ) {
+      content()
+    }
   }
 }
 
