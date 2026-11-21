@@ -39,6 +39,8 @@ dependencies {
   implementation(libs.media3.exoplayer)
   implementation(libs.androidx.annotation)
   compileOnly(libs.checker.qual)
+  // 依存のクラスが参照する Kotlin のアノテーション (MigrationStatus) を、javac が読めるようにする。APKには入らない
+  compileOnly(libs.kotlin.annotations.jvm)
 }
 
 // Media3のソースは手を加えずに使うので、Lintにはかけない (見つかっても直さないため)

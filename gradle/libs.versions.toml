@@ -60,6 +60,7 @@ media3-common = { module = "androidx.media3:media3-common", version.ref = "media
 media3-decoder = { module = "androidx.media3:media3-decoder", version.ref = "media3" }
 androidx-annotation = { module = "androidx.annotation:annotation", version = "1.11.0" }
 checker-qual = { module = "org.checkerframework:checker-qual", version = "4.4.0" }
+kotlin-annotations-jvm = { module = "org.jetbrains.kotlin:kotlin-annotations-jvm", version.ref = "kotlin" }
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
 
 [plugins]
