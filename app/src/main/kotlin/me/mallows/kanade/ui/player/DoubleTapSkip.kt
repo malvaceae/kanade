@@ -65,7 +65,16 @@ internal fun skipAction(positionMs: Long, durationMs: Long, direction: Int, hasN
   }
 }
 
-private class SkipMemo(var target: Long = 0L, var at: Long = Long.MIN_VALUE)
+/**
+ * ダブルタップで移る起点の位置。直前のダブルタップから[SKIP_SETTLE_MS]以内なら、その目標 ([lastTarget]) から数える
+ * (プレイヤーの位置が目標に届く前に、続けて叩いても、前の移動を取り消さないため)。
+ * 直前のダブルタップがなければ ([lastTarget]がnull)、今の再生位置から数える
+ */
+internal fun skipBase(positionMs: Long, lastTarget: Long?, lastAt: Long, now: Long): Long =
+  if (lastTarget != null && now - lastAt < SKIP_SETTLE_MS) lastTarget else positionMs
+
+/** 直前のダブルタップの目標と、その時刻 */
+private class SkipMemo(var target: Long? = null, var at: Long = 0L)
 
 /** ダブルタップの結果 ([skipAction]) を、シークや次の曲への移動にする。受け取るのは方向 (-1 = 戻る、1 = 進む) */
 @Composable
@@ -78,7 +87,7 @@ internal fun rememberDoubleTapSkip(state: PlayerState, onSeek: (Long) -> Unit, o
   return remember {
     { direction ->
       val now = SystemClock.elapsedRealtime()
-      val base = if (now - memo.at < SKIP_SETTLE_MS) memo.target else position.value
+      val base = skipBase(position.value, memo.target, memo.at, now)
       val s = latestState
       when (val action = skipAction(base, s.durationMs, direction, s.hasNext)) {
         is Skip.SeekTo -> {
@@ -87,7 +96,7 @@ internal fun rememberDoubleTapSkip(state: PlayerState, onSeek: (Long) -> Unit, o
           latestSeek(action.positionMs)
         }
         Skip.Next -> {
-          memo.at = Long.MIN_VALUE
+          memo.target = null
           latestNext()
         }
       }
