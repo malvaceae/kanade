@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- テーマアイコン (Android 13以降) 用の、五線譜に並ぶ3羽の影絵 -->
-<!-- fillType は API 24 以降の属性だが、このアイコンは mipmap-anydpi-v26 のアダプティブアイコンからだけ使う (API 26 以降) ので、警告は当たらない -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="UnusedAttribute"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="450"
