@@ -30,6 +30,7 @@ dependencies {
 
   api(libs.media3.exoplayer)
   api(libs.media3.session)
+  implementation(libs.androidx.core.ktx)
   implementation(libs.kotlinx.coroutines.guava)
   implementation(libs.datastore.preferences)
   implementation(libs.hilt.android)
