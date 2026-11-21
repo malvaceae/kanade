@@ -7,6 +7,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.scale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -60,7 +61,7 @@ class PlaylistCovers @Inject constructor(
     val shorter = minOf(decoded.width, decoded.height)
     if (shorter <= SIZE) return decoded
     val scale = SIZE.toFloat() / shorter
-    return Bitmap.createScaledBitmap(decoded, (decoded.width * scale).toInt(), (decoded.height * scale).toInt(), true)
+    return decoded.scale((decoded.width * scale).toInt(), (decoded.height * scale).toInt())
   }
 
   fun delete(path: String?) {
