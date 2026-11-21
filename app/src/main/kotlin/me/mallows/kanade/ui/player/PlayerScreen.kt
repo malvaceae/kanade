@@ -142,18 +142,7 @@ fun PlayerScreen(
   val frameAspect = if (videoAspect > 0f) videoAspect else lastAspect
   val surfaceSettled = surfaceAspect > 0f && kotlin.math.abs(surfaceAspect - frameAspect) <= frameAspect * 0.02f
   val showVideo = videoReady && surfaceSettled
-  val pip = LocalPictureInPicture.current
-  // 動画を映していて再生中のあいだ、ホームへ戻るとPiPの小窓に移れるようにする
-  DisposableEffect(state.isVideo, state.showPause, videoAspect) {
-    pip.eligible = state.isVideo && state.showPause
-    if (videoAspect > 0f) pip.aspect = videoAspect
-    onDispose { pip.eligible = false }
-  }
-  // 小窓のまま、動画が終わって音声に移ったら、小窓を閉じる (閉じないと、小窓にアプリの再生画面が残る)
-  LaunchedEffect(pip.active, state.isVideo, state.hasMedia) {
-    if (pip.active && state.hasMedia && !state.isVideo) pip.close()
-  }
-  val fullscreen = state.isVideo && (fullscreenChosen || landscape || pip.active)
+  val fullscreen = state.isVideo && (fullscreenChosen || landscape)
   DisposableEffect(fullscreen) {
     onFullscreenChange(fullscreen)
     onDispose { onFullscreenChange(false) }
@@ -164,7 +153,6 @@ fun PlayerScreen(
       videoReady = showVideo,
       videoAspect = frameAspect,
       onSurfaceAspect = { surfaceAspect = it },
-      pip = pip.active,
       onNext = onNext,
       onPrevious = onPrevious,
       onAttach = onAttachVideo,
@@ -578,8 +566,6 @@ private fun VideoFullscreen(
   videoReady: Boolean,
   videoAspect: Float,
   onSurfaceAspect: (Float) -> Unit,
-  /** PiPの小窓で表示中か (操作は出さず、映像だけにする) */
-  pip: Boolean,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
   onAttach: (SurfaceView) -> Unit,
@@ -588,9 +574,8 @@ private fun VideoFullscreen(
   onSeek: (Long) -> Unit,
   onExit: () -> Unit,
 ) {
-  // 全画面に入ったときは、操作を出しておく (自動で隠れる)。ただし、小窓 (PiP) に入るために切り替わったときは、
-  // 操作の表示が小窓に映るので、出さない
-  var controls by remember { mutableStateOf(!pip) }
+  // 全画面に入ったときは、操作を出しておく (自動で隠れる)
+  var controls by remember { mutableStateOf(true) }
   val view = LocalView.current
   // 全画面のあいだは、ステータスバーとナビゲーションバーを隠す (端から払うと一時的に出る)
   DisposableEffect(view) {
@@ -626,8 +611,7 @@ private fun VideoFullscreen(
       // 最初の映像が出るまでは、前の動画の最後のコマが見えないよう、黒で覆う
       if (!videoReady) Box(Modifier.fillMaxSize().background(Color.Black))
     }
-    // 小窓 (PiP) のときは、操作を組み立てない (消えるアニメーションが進まず、操作が小窓に残ることがある)
-    if (!pip) AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).safeDrawingPadding()) {
         IconButton(onClick = onExit, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
           Icon(KanadeIcons.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)

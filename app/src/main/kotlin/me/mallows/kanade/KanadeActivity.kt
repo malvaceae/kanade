@@ -1,14 +1,6 @@
 package me.mallows.kanade
 
-import android.app.PictureInPictureParams
-import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Color
-import android.os.Build
-import android.util.Rational
-import androidx.compose.runtime.CompositionLocalProvider
-import me.mallows.kanade.ui.player.LocalPictureInPicture
-import me.mallows.kanade.ui.player.PictureInPictureHost
 import android.os.Bundle
 import me.mallows.kanade.playback.PlaybackService
 import androidx.compose.runtime.mutableStateOf
@@ -35,27 +27,6 @@ class KanadeActivity : ComponentActivity() {
 
   /** 通知などから開かれ、プレイヤー画面を出す必要がある */
   private val openPlayer = mutableStateOf(false)
-
-  /** 動画のPiP (小窓) の状態。再生画面とやりとりする */
-  private val pip = PictureInPictureHost()
-
-  /** ホームへ戻るとき、動画を映していれば、PiPの小窓に移る (Android 8.0以降) */
-  override fun onUserLeaveHint() {
-    super.onUserLeaveHint()
-    if (!pip.eligible || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
-    // 小窓の縦横比は、許される範囲 (約 0.42 ~ 2.39) に収める
-    val ratio = pip.aspect.coerceIn(0.42f, 2.39f)
-    val params = PictureInPictureParams.Builder().setAspectRatio(Rational((ratio * 1000).toInt(), 1000)).build()
-    // 移れたら、システムの知らせ (onPictureInPictureModeChanged) を待たずに、すぐ小窓の状態にする
-    // (待つと、小窓への移行中の1コマに、操作の表示が映る)
-    if (runCatching { enterPictureInPictureMode(params) }.getOrDefault(false)) pip.active = true
-  }
-
-  override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
-    super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-    pip.active = isInPictureInPictureMode
-  }
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
@@ -87,7 +58,6 @@ class KanadeActivity : ComponentActivity() {
     if (savedInstanceState == null && intent?.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false) == true) {
       openPlayer.value = true
     }
-    pip.close = { moveTaskToBack(true) }
     // 画面の作り直し (回転など) では、開き直さない
     if (savedInstanceState == null) intent?.let(::openExternal)
     // ダークだけなので、ステータスバーなどのアイコンは、明るい色にする
@@ -95,10 +65,8 @@ class KanadeActivity : ComponentActivity() {
     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     setContent {
       KanadeTheme {
-        CompositionLocalProvider(LocalPictureInPicture provides pip) {
-          Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            MainNavigation(openPlayerRequest = openPlayer)
-          }
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+          MainNavigation(openPlayerRequest = openPlayer)
         }
       }
     }

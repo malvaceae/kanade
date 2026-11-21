@@ -22,11 +22,10 @@
         <activity
             android:name=".KanadeActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
-            android:exported="false"
-            android:supportsPictureInPicture="true" />
+            android:exported="false" />
 
         <!--
-            アプリのアイコンは、アプリ内で切り替えられる (AppIcon.kt)。アイコンごとに入り口 (activity-alias) を置き (PiPの宣言は、入り口ごとに必要)、
+            アプリのアイコンは、アプリ内で切り替えられる (AppIcon.kt)。アイコンごとに入り口 (activity-alias) を置き、
             選んだものだけを有効にする。G (ヘッドホン) の入り口は、前からの入り口の名前 (.MainActivity) のままにして、
             更新してもホーム画面に置いたアイコンが消えないようにする。
             DEFAULT は、通知から開くとき (PlaybackService) に、今有効な入り口を探せるようにするためのもの
@@ -37,7 +36,6 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
-            android:supportsPictureInPicture="true"
             android:targetActivity=".KanadeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -51,7 +49,6 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_e"
             android:roundIcon="@mipmap/ic_launcher_e"
-            android:supportsPictureInPicture="true"
             android:targetActivity=".KanadeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -65,7 +62,6 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_h"
             android:roundIcon="@mipmap/ic_launcher_h"
-            android:supportsPictureInPicture="true"
             android:targetActivity=".KanadeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -86,7 +82,6 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
-            android:supportsPictureInPicture="true"
             android:targetActivity=".KanadeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
