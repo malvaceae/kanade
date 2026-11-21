@@ -8,7 +8,6 @@
     <string name="permission_open_settings">設定を開く</string>
 
     <string name="library_title">ライブラリ</string>
-    <string name="library_all_tracks">すべての曲</string>
     <string name="library_summary">%1$d曲 · %2$d分</string>
     <string name="library_empty">曲が見つかりません</string>
     <string name="library_empty_hint">スキャン対象のフォルダに曲がありません。</string>
@@ -93,7 +92,6 @@
     <string name="action_play_next">次に再生</string>
     <string name="action_add_to_queue">キューに追加</string>
     <string name="action_add_to_playlist">プレイリスト</string>
-    <string name="action_add_to_playlist_long">プレイリストに追加</string>
     <string name="message_play_next">%d曲を次に再生に追加しました</string>
     <string name="message_added_to_queue">%d曲をキューに追加しました</string>
 
@@ -202,7 +200,6 @@
 
     <string name="eq_title">イコライザー</string>
     <string name="eq_custom">カスタム</string>
-    <string name="eq_preset_title">プリセット</string>
     <string name="eq_save_preset">保存</string>
     <string name="eq_reset">リセット</string>
     <string name="eq_preamp">プリアンプ</string>
@@ -212,7 +209,6 @@
     <string name="eq_limiter_desc">音割れを防ぐ</string>
     <string name="eq_curve_description">周波数特性</string>
     <string name="eq_bands_description">10バンドのイコライザー。つまみを掴んで上下に動かし、横になぞると続けて設定できます。</string>
-    <string name="action_open_eq">イコライザー</string>
 
     <string name="output_section">出力</string>
     <string name="output_device">出力先</string>
