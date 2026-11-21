@@ -400,6 +400,8 @@ fun MainNavigation(
                     onClose = { backStack.removeLastOrNull() },
                     onOpenQueue = { backStack.add(Queue) },
                     onOpenSource = {
+                      // 一覧が戻る履歴にあるかどうかで、左右の向きが変わってしまうので、下のメニューと同じくフェードで移る
+                      menuMove.pending = true
                       val destination = sourceDestination(playSource)
                       if (destination == null) {
                         // 一覧を開けない再生元 (選択した曲・検索・外から開いた曲) は、再生キューを開く
