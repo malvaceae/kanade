@@ -45,6 +45,8 @@ fun AppNavBar(selected: NavItem?, onSelect: (NavItem) -> Unit, modifier: Modifie
   Row(
     modifier = modifier
       .fillMaxWidth()
+      // 背景の色が付いている下の余白 (ナビゲーションバーの分) を押しても、背後の画面が反応しないようにする
+      .blockTouches()
       .background(MaterialTheme.colorScheme.surfaceContainer)
       .navigationBarsPadding()
       .height(AppNavBarHeight)

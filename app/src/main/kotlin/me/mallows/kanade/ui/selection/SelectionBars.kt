@@ -36,6 +36,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.AnimatedVisibility
+import me.mallows.kanade.ui.common.blockTouches
 import me.mallows.kanade.ui.icons.KanadeIcons
 
 /** 選択モードの上部バー: 「N曲を選択中」「すべて選択」「×」 */
@@ -94,6 +95,8 @@ fun SelectionBottomBar(actions: List<BarAction>, modifier: Modifier = Modifier) 
   Row(
     modifier = modifier
       .fillMaxWidth()
+      // 背景の色が付いている下の余白 (ナビゲーションバーの分) を押しても、背後の画面が反応しないようにする
+      .blockTouches()
       .background(MaterialTheme.colorScheme.surfaceContainer)
       .navigationBarsPadding()
       .height(72.dp)
