@@ -29,6 +29,13 @@ class LyricsMonitor @Inject constructor() {
 data class CurrentLyrics(val mediaId: String, val lyrics: Lyrics?)
 
 /**
+ * 今の曲 ([mediaId]) の歌詞。別の曲の歌詞が残っていても出さない。
+ * 曲は、ライブラリの曲 (MediaStoreのIDの文字列) も、外から開いたファイル ("ext:" で始まる文字列) もあるので、IDの文字列そのもので比べる
+ */
+fun CurrentLyrics?.forMedia(mediaId: String?): Lyrics? =
+  if (this != null && mediaId != null && this.mediaId == mediaId) lyrics else null
+
+/**
  * 曲に埋め込まれた歌詞を読む。
  * FLAC・Oggは Vorbisコメント (LYRICS・UNSYNCEDLYRICS)、MP4は ©lyr (Media3はUSLTとして渡す)、
  * MP3は ID3のUSLT (Media3は解析しないため、ここで読む)。

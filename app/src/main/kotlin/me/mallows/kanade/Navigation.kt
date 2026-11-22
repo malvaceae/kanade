@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import me.mallows.kanade.playback.forMedia
 import me.mallows.kanade.ui.selection.SELECTION_BAR_MS
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.slideInVertically
@@ -430,7 +431,7 @@ fun MainNavigation(
                     // 今の動画の最初の映像が出るまでは0 (枠は前の縦横比のまま)
                     videoAspect = if (videoFrame.mediaId != null && videoFrame.mediaId == player.mediaId) videoFrame.aspect else 0f,
                     // 別の曲の歌詞が残っていても出さない
-                    lyrics = lyrics?.takeIf { it.mediaId == player.mediaStoreId?.toString() }?.lyrics,
+                    lyrics = lyrics.forMedia(player.mediaId),
                   )
                 }
               }
