@@ -19,10 +19,15 @@
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.Kanade">
+        <!--
+            launchMode=singleTask: ファイラーなどから開かれたとき、呼んだアプリのタスクの上に新しい画面を作らず、
+            起動中のKanadeがあればそちらを前面に出して、新しい Intent を渡す (KanadeActivity.onNewIntent)。なければ、Kanade自身のタスクで開く
+        -->
         <activity
             android:name=".KanadeActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!--
             アプリのアイコンは、アプリ内で切り替えられる (AppIcon.kt)。アイコンごとに入り口 (activity-alias) を置き、
