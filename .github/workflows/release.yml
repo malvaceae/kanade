@@ -173,13 +173,13 @@ jobs:
           tools="$ANDROID_HOME/build-tools/${build_tools}"
 
           # 証明書のSHA-256
-          "${tools}/apksigner" verify --print-certs "$apk" > certs.txt
-          actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' certs.txt)
+          "${tools}/apksigner" verify --print-certs-pem "$apk" > certs.txt
+          actual=$(openssl x509 -in certs.txt -outform DER | sha256sum | cut -d' ' -f1)
           echo "certificate SHA-256: ${actual}"
           test "$actual" = "$EXPECTED_SHA256"
 
           # versionNameとタグが一致
-          version=$("${tools}/aapt2" dump badging "$apk" | sed -n "s/^package:.* versionName='\([^']*\)'.*/\1/p")
+          version=$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest version-name "$apk")
           echo "versionName: ${version}"
           test "v${version}" = "$GITHUB_REF_NAME"
 
