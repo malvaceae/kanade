@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.core.DataStore
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -89,6 +90,12 @@ data class QueueItem(
   /** プレイヤー上の位置 (シャッフル中は表示の順と違う) */
   val index: Int = -1,
 )
+
+/**
+ * [PlayerConnection.removeUpcoming] で外した1曲。元に戻すために、画面に出している内容 ([item]) に加えて、
+ * プレイヤー上の項目 ([mediaItem]) も持つ。外部のアプリから開いたファイルは、IDから作り直せない (URIが要る) ため
+ */
+class RemovedQueueItem internal constructor(internal val item: QueueItem, internal val mediaItem: MediaItem)
 
 /** 再生キュー。[upcoming]は今の曲の後ろに並んでいる曲 (プレイヤー上の並び順) */
 data class QueueState(
@@ -340,21 +347,23 @@ class PlayerConnection @Inject constructor(
   }
 
   /** 今の曲の後ろの曲のうち、[positions] (0始まり) の曲を外す。元に戻すための内容を返す */
-  suspend fun removeUpcoming(positions: Set<Int>): List<Pair<Int, QueueItem>> {
+  suspend fun removeUpcoming(positions: Set<Int>): List<RemovedQueueItem> {
     val c = awaitController() ?: return emptyList()
     val items = _queue.value.upcoming
-    val removed = positions.sorted().mapNotNull { p -> items.getOrNull(p)?.let { p to it } }
+    // 外す前に、プレイヤー上の項目も控える
+    val removed = positions.sorted().mapNotNull { p -> items.getOrNull(p) }.map { RemovedQueueItem(it, c.getMediaItemAt(it.index)) }
     // プレイヤー上の位置の後ろから消すと、位置がずれない
-    removed.sortedByDescending { it.second.index }.forEach { (_, item) -> c.removeMediaItem(item.index) }
+    removed.sortedByDescending { it.item.index }.forEach { c.removeMediaItem(it.item.index) }
     return removed
   }
 
   /** [removeUpcoming]で外した曲を元の位置に戻す */
-  suspend fun restoreUpcoming(removed: List<Pair<Int, QueueItem>>) {
+  suspend fun restoreUpcoming(removed: List<RemovedQueueItem>) {
     val c = awaitController() ?: return
-    // 前から元の位置に入れ直す
-    removed.sortedBy { it.second.index }.forEach { (_, item) ->
-      c.addMediaItem(item.index.coerceAtMost(c.mediaItemCount), mediaItemRequest(item.mediaStoreId, item.queued))
+    // 前から元の位置に入れ直す。ライブラリの曲はIDから、外部のファイルは (IDがないので) 外した項目そのものから入れる
+    removed.sortedBy { it.item.index }.forEach { r ->
+      val request = if (r.mediaItem.isExternal) r.mediaItem else mediaItemRequest(r.item.mediaStoreId, r.item.queued)
+      c.addMediaItem(r.item.index.coerceAtMost(c.mediaItemCount), request)
     }
   }
 
