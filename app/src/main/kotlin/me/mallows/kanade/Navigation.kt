@@ -413,7 +413,6 @@ fun MainNavigation(
                         if (backStack.lastOrNull() != destination) backStack.add(destination)
                       }
                     },
-                    onOpenEqualizer = { backStack.add(Equalizer) },
                     onTogglePlay = playerViewModel::togglePlayPause,
                     onNext = playerViewModel::next,
                     onPrevious = playerViewModel::previous,

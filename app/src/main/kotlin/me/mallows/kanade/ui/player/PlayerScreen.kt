@@ -97,7 +97,6 @@ fun PlayerScreen(
   onOpenQueue: () -> Unit,
   /** 曲名とアーティストの行をタップしたとき。再生元の一覧を開く */
   onOpenSource: () -> Unit,
-  onOpenEqualizer: () -> Unit,
   onTogglePlay: () -> Unit,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
@@ -358,9 +357,6 @@ fun PlayerScreen(
           style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
           color = if (changed) scheme.primary else scheme.onSurfaceVariant,
         )
-      }
-      androidx.compose.material3.TextButton(onClick = onOpenEqualizer) {
-        Text("EQ", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = scheme.onSurfaceVariant)
       }
       IconButton(onClick = { sheet = "info" }) {
         Icon(KanadeIcons.Info, contentDescription = stringResource(R.string.action_track_info), tint = scheme.onSurfaceVariant)
