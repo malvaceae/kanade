@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  # ビルド・テスト・lint
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # libFLACはサブモジュール
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build, unit test, lint
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug --console=plain
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports
+          path: |
+            app/build/reports
+            app/build/test-results
+          if-no-files-found: ignore
+
+  # リリースノートの下書きを作る
+  notes:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      notes: ${{ steps.extract.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # 前のタグをたどるため、全履歴を取る
+          fetch-depth: 0
+
+      - name: Fetch GitHub OIDC token
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const token = await core.getIDToken('https://api.anthropic.com');
+            fs.writeFileSync(`${process.env.RUNNER_TEMP}/oidc-token`, token);
+
+      - name: Install Claude Code
+        run: npm install --prefix "$RUNNER_TEMP/claude-code" @anthropic-ai/claude-code
+
+      - name: Write release notes with Claude
+        env:
+          ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_IDENTITY_TOKEN_FILE: ${{ runner.temp }}/oidc-token
+          # ghでリリースを読む用
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: |
+            Androidの音楽プレーヤー「Kanade」の、GitHubのリリースノートの本文を、日本語で書いてください。
+            対象のタグは ${{ github.ref_name }} です。
+
+            ## 手順
+            1. `git describe --tags --abbrev=0 "${{ github.ref_name }}^"` で、前のタグを調べる。
+            2. `git log` で、前のタグから ${{ github.ref_name }} までの、コミットの件名を読む。変更されたファイルは、`git diff --name-only` で調べる。
+            3. `gh release list` で、公開済みのリリースを調べ、新しい順に2件を、`gh release view <タグ> --json body --jq .body` で読む。今回のタグと、下書きは、除く。
+            4. その2件と同じ構成 (見出し、箇条書き、インストールの節) と文体で、今回の本文の全体を書く。
+               インストールの節は、見本と同じ文面で、APKのファイル名だけを、今回のもの (kanade-${{ github.ref_name }}.apk) にする。
+
+            ## 変更の書き方
+            - ユーザーに見える変更だけを書く (新しい機能、見た目や操作の変更、不具合の修正、対応環境の変更)。
+            - 依存ライブラリの更新、警告の整理、テスト、CI、内部の作り直しなど、ユーザーに見えない変更は書かない。
+            - 注意書き、テストの状況、同じ内容の繰り返しは書かない。
+            - 調べた内容にないことは、書かない (でっち上げない)。
+
+            ## 注意
+            - 実行してよいのは、読み取りのコマンド (git describe、git log、git diff --name-only、gh release list、gh release view) だけ。
+            - 前のタグや、過去のリリースの本文など、必要な情報を読めなかったときは、本文を作らず、notes を空にして返す。
+            - 最後に、本文の全体を、JSONの notes に入れて返す。
+        run: |
+          "$RUNNER_TEMP/claude-code/node_modules/.bin/claude" -p "$PROMPT" \
+            --model claude-sonnet-5-5 \
+            --allowedTools "Bash(git describe:*),Bash(git log:*),Bash(git diff --name-only:*),Bash(gh release list:*),Bash(gh release view:*)" \
+            --output-format json \
+            --json-schema '{
+              "type": "object",
+              "properties": {
+                "notes": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "notes"
+              ]
+            }' > result.json
+
+      - name: Extract notes
+        id: extract
+        run: |
+          notes=$(jq -r '.structured_output.notes // empty' result.json)
+          # 空なら失敗させる
+          test -n "$notes"
+          delimiter=$(openssl rand -hex 16)
+          {
+            echo "notes<<${delimiter}"
+            printf '%s\n' "$notes"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+  # 署名つきAPKを作り、リリースの下書きを作る
+  release:
+    needs: notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Check that the tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ vars.KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "${RUNNER_TEMP}/release.keystore"
+          {
+            echo "kanade.release.storeFile=${RUNNER_TEMP}/release.keystore"
+            echo "kanade.release.storePassword=${KEYSTORE_PASSWORD}"
+            echo "kanade.release.keyAlias=${KEY_ALIAS}"
+          } >> "$HOME/.gradle/gradle.properties"
+
+      - name: Build signed release APK
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      - name: Verify signature and version
+        env:
+          EXPECTED_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          build_tools=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          tools="$ANDROID_HOME/build-tools/${build_tools}"
+
+          # 証明書のSHA-256
+          "${tools}/apksigner" verify --print-certs "$apk" > certs.txt
+          actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' certs.txt)
+          echo "certificate SHA-256: ${actual}"
+          test "$actual" = "$EXPECTED_SHA256"
+
+          # versionNameとタグが一致
+          version=$("${tools}/aapt2" dump badging "$apk" | sed -n "s/^package:.* versionName='\([^']*\)'.*/\1/p")
+          echo "versionName: ${version}"
+          test "v${version}" = "$GITHUB_REF_NAME"
+
+          cp "$apk" "kanade-${GITHUB_REF_NAME}.apk"
+
+      # リリースの下書きを作る
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ needs.notes.outputs.notes }}
+        run: |
+          printf '%s\n' "$NOTES" > notes.md
+          gh release create "$GITHUB_REF_NAME" "kanade-${GITHUB_REF_NAME}.apk" \
+            --draft \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md
